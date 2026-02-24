@@ -38,6 +38,9 @@ const https = require('https');
 
 const app = express();
 
+// Confiar no proxy do Railway para rate limit funcionar corretamente
+app.set('trust proxy', true);
+
 let server;
 
 const HTTPS_ENABLED = process.env.HTTPS_ENABLED === 'false';
