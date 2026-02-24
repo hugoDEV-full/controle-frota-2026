@@ -82,16 +82,26 @@ if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
 
-// Cria um pool de conexões usando MYSQL* do Railway
-const pool = mysql.createPool({
-  host: process.env.MYSQLHOST,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+// Parse MYSQL_URL para o pool principal também
+const appMysqlUrl = process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL;
+let poolConfig = {};
+
+if (appMysqlUrl) {
+  const url = new URL(appMysqlUrl);
+  poolConfig = {
+    host: url.hostname,
+    user: url.username,
+    password: url.password,
+    database: url.pathname.substring(1),
+    port: url.port || 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  };
+}
+
+// Cria um pool de conexões usando MYSQL_URL parseado
+const pool = mysql.createPool(poolConfig);
 
 
 // compatibilidade nas requisições
@@ -6560,12 +6570,18 @@ app.post(
 //////////////////////////////////fim editar ususarios e motoristas
 
 /////////////////////////////////////////////GPS conecção com os dados recebidos em database GPS, tabela gps_history
-// Usa diretamente as variáveis MYSQL* do Railway (sem precisar de DB_* ou GSP_DB_*)
-const gpsHost = process.env.MYSQLHOST;
-const gpsUser = process.env.MYSQLUSER;
-const gpsPassword = process.env.MYSQLPASSWORD;
-const gpsDatabase = process.env.MYSQLDATABASE;
-const gpsPort = process.env.MYSQLPORT;
+// Parse MYSQL_URL ou MYSQL_PUBLIC_URL para obter conexão (Railway)
+const mysqlUrl = process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL;
+let gpsHost, gpsUser, gpsPassword, gpsDatabase, gpsPort;
+
+if (mysqlUrl) {
+  const url = new URL(mysqlUrl);
+  gpsHost = url.hostname;
+  gpsUser = url.username;
+  gpsPassword = url.password;
+  gpsDatabase = url.pathname.substring(1);
+  gpsPort = url.port || 3306;
+}
 
 // Debug: mostrar o que será usado para GPS
 console.log('>> [DEBUG] Configuração GPS:');
