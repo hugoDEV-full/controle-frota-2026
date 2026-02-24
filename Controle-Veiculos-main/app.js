@@ -103,12 +103,37 @@ if (appMysqlUrl) {
 // Cria um pool de conexões usando MYSQL_URL parseado
 const pool = mysql.createPool(poolConfig);
 
+const util = require('util');
+
+// Auto-executar seed se necessário (apenas na primeira inicialização)
+const query = util.promisify(pool.query).bind(pool);
+
+async function ensureTablesExist() {
+  try {
+    // Verifica se a tabela usuarios existe (indica que o seed já rodou)
+    await query('SELECT 1 FROM usuarios LIMIT 1');
+    console.log('>> [INIT] Tabelas já existem — pulando seed automático');
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      console.log('>> [INIT] Tabelas não encontradas — executando seed automático...');
+      try {
+        require('./seed-database.js');
+        console.log('>> [INIT] Seed automático executado com sucesso!');
+      } catch (seedErr) {
+        console.error('>> [INIT] Erro ao executar seed automático:', seedErr.message);
+      }
+    } else {
+      console.error('>> [INIT] Erro ao verificar tabelas:', err.message);
+    }
+  }
+}
+
+// Executa verificação assíncrona
+ensureTablesExist();
+
 
 // compatibilidade nas requisições
 const db = pool;
-
-const util = require('util');
-const query = util.promisify(db.query).bind(db);
 
 // ===== Início do Servidor =====
 //const express = require('express');
