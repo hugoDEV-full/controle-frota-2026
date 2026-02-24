@@ -6560,33 +6560,35 @@ app.post(
 //////////////////////////////////fim editar ususarios e motoristas
 
 /////////////////////////////////////////////GPS conecção com os dados recebidos em database GPS, tabela gps_history
-// Debug: mostrar variáveis GSP_DB_*
-console.log('>> [DEBUG] GSP_DB_* no ambiente:');
-console.log('  GSP_DB_HOST:', process.env.GSP_DB_HOST ? '✅' : '❌');
-console.log('  GSP_DB_USER:', process.env.GSP_DB_USER ? '✅' : '❌');
-console.log('  GSP_DB_PASSWORD:', process.env.GSP_DB_PASSWORD ? '✅' : '❌');
-console.log('  GSP_DB_NAME:', process.env.GSP_DB_NAME ? '✅' : '❌');
-console.log('  GSP_DB_PORT:', process.env.GSP_DB_PORT || '❌ não definido');
+// Se GSP_DB_* não estiver configurado, usa DB_* (mesmo banco do sistema)
+const gpsHost = process.env.GSP_DB_HOST || process.env.DB_HOST;
+const gpsUser = process.env.GSP_DB_USER || process.env.DB_USER;
+const gpsPassword = process.env.GSP_DB_PASSWORD || process.env.DB_PASSWORD;
+const gpsDatabase = process.env.GSP_DB_NAME || process.env.DB_NAME;
+const gpsPort = process.env.GSP_DB_PORT || process.env.DB_PORT;
 
-const GPS_ENABLED = Boolean(
-  process.env.GSP_DB_HOST &&
-  process.env.GSP_DB_USER &&
-  process.env.GSP_DB_PASSWORD &&
-  process.env.GSP_DB_NAME
-);
+// Debug: mostrar o que será usado para GPS
+console.log('>> [DEBUG] Configuração GPS:');
+console.log('  Host:', gpsHost ? '✅' : '❌');
+console.log('  User:', gpsUser ? '✅' : '❌');
+console.log('  Password:', gpsPassword ? '✅' : '❌');
+console.log('  Database:', gpsDatabase ? '✅' : '❌');
+console.log('  Port:', gpsPort || '❌ não definido');
+
+const GPS_ENABLED = Boolean(gpsHost && gpsUser && gpsPassword && gpsDatabase);
 
 let poolGps;
 let queryGps;
 
 if (GPS_ENABLED) {
   // Pool GPS
-  // === CONFIGURAÇÃO GPS usando as variáveis *_DEV ===
+  // Usa GSP_DB_* se existir, senão usa DB_* (mesmo banco do sistema)
   poolGps = mysql.createPool({
-    host: process.env.GSP_DB_HOST,
-    port: process.env.GSP_DB_PORT ? Number(process.env.GSP_DB_PORT) : undefined,
-    user: process.env.GSP_DB_USER,
-    password: process.env.GSP_DB_PASSWORD,
-    database: process.env.GSP_DB_NAME,
+    host: gpsHost,
+    port: gpsPort ? Number(gpsPort) : undefined,
+    user: gpsUser,
+    password: gpsPassword,
+    database: gpsDatabase,
     waitForConnections: true,
     connectionLimit: 5
   });
