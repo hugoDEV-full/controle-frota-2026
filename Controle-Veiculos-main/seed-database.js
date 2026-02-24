@@ -236,6 +236,29 @@ async function seedDatabase() {
     
     console.log('✅ Tabelas criadas com sucesso!');
     
+    // Adicionar colunas que podem faltar em tabelas existentes
+    console.log('🔧 Verificando colunas que faltam...');
+    
+    // Adicionar device_id na tabela veiculos se não existir
+    try {
+      await connection.execute(`ALTER TABLE veiculos ADD COLUMN device_id VARCHAR(100)`);
+      console.log('✅ Coluna device_id adicionada à tabela veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna device_id já existe em veiculos');
+      }
+    }
+    
+    // Adicionar user_id na tabela notificacoes se não existir
+    try {
+      await connection.execute(`ALTER TABLE notificacoes ADD COLUMN user_id INT`);
+      console.log('✅ Coluna user_id adicionada à tabela notificacoes');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna user_id já existe em notificacoes');
+      }
+    }
+    
     // 1) Criar usuário admin com bcrypt
     console.log('👤 Criando usuários admin...');
     const hashedPassword = await bcrypt.hash('Hugo2026*', 10);
@@ -285,9 +308,16 @@ async function seedDatabase() {
           ano = VALUES(ano), 
           km = VALUES(km), 
           ultimaTrocaOleo = VALUES(ultimaTrocaOleo),
-          device_id = VALUES(device_id)
+          device_id = COALESCE(VALUES(device_id), device_id)
       `, [nome, placa, ano, km, ultimaTrocaOleo, device_id]);
     }
+    
+    // Atualizar veículos existentes sem device_id
+    await connection.execute(`
+      UPDATE veiculos 
+      SET device_id = CONCAT('DEVICE', LPAD(id, 3, '0')) 
+      WHERE device_id IS NULL OR device_id = ''
+    `);
 
     // 3) Inserir motoristas de exemplo
     console.log('👨‍✈️ Inserindo motoristas de exemplo...');
