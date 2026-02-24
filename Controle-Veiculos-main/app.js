@@ -6560,6 +6560,14 @@ app.post(
 //////////////////////////////////fim editar ususarios e motoristas
 
 /////////////////////////////////////////////GPS conecção com os dados recebidos em database GPS, tabela gps_history
+// Debug: mostrar variáveis GSP_DB_*
+console.log('>> [DEBUG] GSP_DB_* no ambiente:');
+console.log('  GSP_DB_HOST:', process.env.GSP_DB_HOST ? '✅' : '❌');
+console.log('  GSP_DB_USER:', process.env.GSP_DB_USER ? '✅' : '❌');
+console.log('  GSP_DB_PASSWORD:', process.env.GSP_DB_PASSWORD ? '✅' : '❌');
+console.log('  GSP_DB_NAME:', process.env.GSP_DB_NAME ? '✅' : '❌');
+console.log('  GSP_DB_PORT:', process.env.GSP_DB_PORT || '❌ não definido');
+
 const GPS_ENABLED = Boolean(
   process.env.GSP_DB_HOST &&
   process.env.GSP_DB_USER &&
