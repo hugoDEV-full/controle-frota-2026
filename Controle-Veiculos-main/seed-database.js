@@ -483,6 +483,135 @@ async function seedDatabase() {
     await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE004', 'Device Corolla', NOW())`);
     await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE005', 'Device HB20', NOW())`);
     
+    // Inserir dados de uso com coordenadas GPS simuladas
+    console.log('🚗 Inserindo usos com coordenadas GPS...');
+    const usosComCoordenadas = [
+      {
+        veiculo_id: 1,
+        motorista: 'João Silva',
+        km_inicial: 45000,
+        km_final: 45050,
+        data_hora_inicial: '2024-01-15 08:00:00',
+        data_hora_final: '2024-01-15 17:30:00',
+        finalidade: 'Visita ao cliente',
+        descricao: 'Reunião de apresentação',
+        start_lat: -23.5505,
+        start_lng: -46.6333,
+        end_lat: -23.5605,
+        end_lng: -46.6433
+      },
+      {
+        veiculo_id: 2,
+        motorista: 'Maria Santos',
+        km_inicial: 32000,
+        km_final: 32075,
+        data_hora_inicial: '2024-01-16 09:15:00',
+        data_hora_final: '2024-01-16 18:45:00',
+        finalidade: 'Entrega de material',
+        descricao: 'Entrega de documentos',
+        start_lat: -23.5480,
+        start_lng: -46.6310,
+        end_lat: -23.5580,
+        end_lng: -46.6410
+      },
+      {
+        veiculo_id: 3,
+        motorista: 'Carlos Oliveira',
+        km_inicial: 58000,
+        km_final: 58030,
+        data_hora_inicial: '2024-01-17 07:30:00',
+        data_hora_final: '2024-01-17 16:00:00',
+        finalidade: 'Manutenção programada',
+        descricao: 'Levar para oficina',
+        start_lat: -23.5520,
+        start_lng: -46.6340,
+        end_lat: -23.5620,
+        end_lng: -46.6440
+      },
+      {
+        veiculo_id: 4,
+        motorista: 'Ana Costa',
+        km_inicial: 15000,
+        km_final: 15025,
+        data_hora_inicial: '2024-01-18 10:00:00',
+        data_hora_final: '2024-01-18 14:30:00',
+        finalidade: 'Reunião externa',
+        descricao: 'Reunião com fornecedor',
+        start_lat: -23.5490,
+        start_lng: -46.6320,
+        end_lat: -23.5590,
+        end_lng: -46.6420
+      },
+      {
+        veiculo_id: 5,
+        motorista: 'Pedro Lima',
+        km_inicial: 42000,
+        km_final: 42060,
+        data_hora_inicial: '2024-01-19 08:45:00',
+        data_hora_final: '2024-01-19 17:15:00',
+        finalidade: 'Serviço de campo',
+        descricao: 'Instalação no cliente',
+        start_lat: -23.5510,
+        start_lng: -46.6330,
+        end_lat: -23.5610,
+        end_lng: -46.6430
+      }
+    ];
+
+    for (const uso of usosComCoordenadas) {
+      await connection.execute(`
+        INSERT INTO uso_veiculos (
+          veiculo_id, motorista, km_inicial, km_final, 
+          data_hora_inicial, data_hora_final, finalidade, descricao,
+          start_lat, start_lng, end_lat, end_lng, data_criacao
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      `, [
+        uso.veiculo_id, uso.motorista, uso.km_inicial, uso.km_final,
+        uso.data_hora_inicial, uso.data_hora_final, uso.finalidade, uso.descricao,
+        uso.start_lat, uso.start_lng, uso.end_lat, uso.end_lng
+      ]);
+    }
+
+    // Inserir dados simulados no GPS history
+    console.log('📍 Inserindo dados de GPS history simulados...');
+    const gpsData = [
+      // DEVICE001 - Fiesta (percurso São Paulo)
+      { fk_device: 'DEVICE001', latitude: -23.5505, longitude: -46.6333, datahora_recebido: '2024-01-15 08:00:00' },
+      { fk_device: 'DEVICE001', latitude: -23.5510, longitude: -46.6340, datahora_recebido: '2024-01-15 09:00:00' },
+      { fk_device: 'DEVICE001', latitude: -23.5520, longitude: -46.6350, datahora_recebido: '2024-01-15 10:00:00' },
+      { fk_device: 'DEVICE001', latitude: -23.5580, longitude: -46.6400, datahora_recebido: '2024-01-15 14:00:00' },
+      { fk_device: 'DEVICE001', latitude: -23.5605, longitude: -46.6433, datahora_recebido: '2024-01-15 17:30:00' },
+      
+      // DEVICE002 - Onix
+      { fk_device: 'DEVICE002', latitude: -23.5480, longitude: -46.6310, datahora_recebido: '2024-01-16 09:15:00' },
+      { fk_device: 'DEVICE002', latitude: -23.5500, longitude: -46.6330, datahora_recebido: '2024-01-16 12:00:00' },
+      { fk_device: 'DEVICE002', latitude: -23.5550, longitude: -46.6380, datahora_recebido: '2024-01-16 15:00:00' },
+      { fk_device: 'DEVICE002', latitude: -23.5580, longitude: -46.6410, datahora_recebido: '2024-01-16 18:45:00' },
+      
+      // DEVICE003 - Palio
+      { fk_device: 'DEVICE003', latitude: -23.5520, longitude: -46.6340, datahora_recebido: '2024-01-17 07:30:00' },
+      { fk_device: 'DEVICE003', latitude: -23.5570, longitude: -46.6390, datahora_recebido: '2024-01-17 11:00:00' },
+      { fk_device: 'DEVICE003', latitude: -23.5620, longitude: -46.6440, datahora_recebido: '2024-01-17 16:00:00' },
+      
+      // DEVICE004 - Corolla
+      { fk_device: 'DEVICE004', latitude: -23.5490, longitude: -46.6320, datahora_recebido: '2024-01-18 10:00:00' },
+      { fk_device: 'DEVICE004', latitude: -23.5540, longitude: -46.6370, datahora_recebido: '2024-01-18 12:30:00' },
+      { fk_device: 'DEVICE004', latitude: -23.5590, longitude: -46.6420, datahora_recebido: '2024-01-18 14:30:00' },
+      
+      // DEVICE005 - HB20
+      { fk_device: 'DEVICE005', latitude: -23.5510, longitude: -46.6330, datahora_recebido: '2024-01-19 08:45:00' },
+      { fk_device: 'DEVICE005', latitude: -23.5530, longitude: -46.6350, datahora_recebido: '2024-01-19 11:00:00' },
+      { fk_device: 'DEVICE005', latitude: -23.5560, longitude: -46.6380, datahora_recebido: '2024-01-19 14:00:00' },
+      { fk_device: 'DEVICE005', latitude: -23.5610, longitude: -46.6430, datahora_recebido: '2024-01-19 17:15:00' }
+    ];
+
+    for (const gps of gpsData) {
+      await connection.execute(`
+        INSERT INTO gps_history (fk_device, latitude, longitude, datahora_recebido)
+        VALUES (?, ?, ?, ?)
+      `, [gps.fk_device, gps.latitude, gps.longitude, gps.datahora_recebido]);
+    }
+    
     console.log('✅ Carga inicial concluída com sucesso!');
     
     // 7) Inserir manutenções de exemplo
