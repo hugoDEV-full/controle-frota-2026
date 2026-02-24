@@ -1,0 +1,10 @@
+{
+  "name": "controle-frota-2026-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "install": "npm --prefix Controle-Veiculos-main install",
+    "start": "npm --prefix Controle-Veiculos-main start",
+    "dev": "npm --prefix Controle-Veiculos-main run dev"
+  }
+}
