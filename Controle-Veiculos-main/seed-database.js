@@ -91,10 +91,9 @@ async function seedDatabase() {
       )
     `);
     
-    // Recriar tabela veículos com todas as colunas necessárias
-    await connection.execute(`DROP TABLE IF EXISTS veiculos`);
+    // Tabela veículos (já existe, vai adicionar colunas depois)
     await connection.execute(`
-      CREATE TABLE veiculos (
+      CREATE TABLE IF NOT EXISTS veiculos (
         id INT AUTO_INCREMENT PRIMARY KEY,
         placa VARCHAR(20) NOT NULL UNIQUE,
         nome VARCHAR(255) NOT NULL,
@@ -125,6 +124,10 @@ async function seedDatabase() {
         finalidade TEXT,
         descricao TEXT,
         data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        start_lat DECIMAL(10, 7),
+        start_lng DECIMAL(10, 7),
+        end_lat DECIMAL(10, 7),
+        end_lng DECIMAL(10, 7),
         FOREIGN KEY (veiculo_id) REFERENCES veiculos(id)
       )
     `);
@@ -226,6 +229,15 @@ async function seedDatabase() {
       )
     `);
 
+    // Tabela devices
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS devices (
+        dev_id VARCHAR(100) PRIMARY KEY,
+        dev_name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Tabela geofences
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS geofences (
@@ -241,7 +253,70 @@ async function seedDatabase() {
     // Adicionar colunas que podem faltar em tabelas existentes
     console.log('🔧 Verificando colunas que faltam...');
     
-    // Tabela veículos foi recriada com todas as colunas necessárias
+    // Adicionar colunas que faltam em veiculos
+    try {
+      await connection.execute(`ALTER TABLE veiculos ADD COLUMN device_id VARCHAR(100)`);
+      console.log('✅ Coluna device_id adicionada à tabela veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna device_id já existe em veiculos');
+      }
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE veiculos ADD COLUMN marca VARCHAR(255)`);
+      console.log('✅ Coluna marca adicionada à tabela veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna marca já existe em veiculos');
+      }
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE veiculos ADD COLUMN dispositivo VARCHAR(100)`);
+      console.log('✅ Coluna dispositivo adicionada à tabela veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna dispositivo já existe em veiculos');
+      }
+    }
+    
+    // Adicionar colunas que faltam em uso_veiculos
+    try {
+      await connection.execute(`ALTER TABLE uso_veiculos ADD COLUMN start_lat DECIMAL(10, 7)`);
+      console.log('✅ Coluna start_lat adicionada à tabela uso_veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna start_lat já existe em uso_veiculos');
+      }
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE uso_veiculos ADD COLUMN start_lng DECIMAL(10, 7)`);
+      console.log('✅ Coluna start_lng adicionada à tabela uso_veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna start_lng já existe em uso_veiculos');
+      }
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE uso_veiculos ADD COLUMN end_lat DECIMAL(10, 7)`);
+      console.log('✅ Coluna end_lat adicionada à tabela uso_veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna end_lat já existe em uso_veiculos');
+      }
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE uso_veiculos ADD COLUMN end_lng DECIMAL(10, 7)`);
+      console.log('✅ Coluna end_lng adicionada à tabela uso_veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna end_lng já existe em uso_veiculos');
+      }
+    }
     
     // Adicionar user_id na tabela notificacoes se não existir
     try {
@@ -399,6 +474,14 @@ async function seedDatabase() {
       INSERT INTO geofences (nome, geom, created_at) 
       VALUES ('Área de Estacionamento', ST_GeomFromText('POLYGON((-46.650 -23.550, -46.648 -23.550, -46.648 -23.548, -46.650 -23.548, -46.650 -23.550))'), NOW())
     `);
+    
+    // Inserir dados de exemplo na tabela devices
+    console.log('📱 Inserindo devices de exemplo...');
+    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE001', 'Device Fiesta', NOW())`);
+    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE002', 'Device Onix', NOW())`);
+    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE003', 'Device Palio', NOW())`);
+    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE004', 'Device Corolla', NOW())`);
+    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE005', 'Device HB20', NOW())`);
     
     console.log('✅ Carga inicial concluída com sucesso!');
     
