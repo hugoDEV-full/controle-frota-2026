@@ -1,0 +1,22 @@
+<!-- views/oops.ejs -->
+<div class="d-flex align-items-center justify-content-center vh-100">
+  <div class="card shadow-sm text-center p-4" style="max-width: 400px;">
+    <div class="card-body">
+      <h1 class="display-4 text-warning mb-3">Oops!</h1>
+      <p class="lead mb-4"><%= message %></p>
+      <a href="<%= linkUrl %>" id="confirm-btn" class="btn btn-primary">
+        <%= linkText %>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Quando o usuário apertar Enter em qualquer lugar, dispara o click no botão
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('confirm-btn').click();
+    }
+  });
+</script>

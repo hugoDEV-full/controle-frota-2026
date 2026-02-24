@@ -1,0 +1,2719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial - Sistema de Controle de Frota</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+        /* Estilos para impressão e PDF */
+        @media print {
+            .no-print { display: none !important; }
+            .page-break-before { page-break-before: always !important; }
+            .page-break-after { page-break-after: always !important; }
+            .page-break-inside { page-break-inside: avoid !important; }
+            
+            body { font-size: 12px; }
+            .tutorial-section { page-break-before: always !important; }
+            .tutorial-section:first-child { page-break-before: auto !important; }
+        }
+        
+        .tutorial-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 0.5rem;
+            background: #fff;
+        }
+        
+        .step-number {
+            background: #007bff;
+            color: white;
+            border-radius: 999px;
+            min-width: 38px;
+            height: 38px;
+            padding: 0 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">
+                    <i class="bi bi-book me-2"></i>
+                    Tutorial - Sistema de Controle de Frota
+                </h1>
+                
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle me-2"></i>Instruções de Uso</h5>
+                    <p>Este tutorial contém as funcionalidades do sistema com passo a passo, validações e rotas envolvidas.</p>
+                </div>
+            </div>
+        </div>
+
+    <!-- Sumário -->
+        <div class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">📋</span>
+                Sumário
+            </h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Funcionalidades:</h4>
+                        <li><a href="#galeria-imagens" class="text-decoration-none">📸 Galeria de Imagens</a></li>
+                        <li><a href="#roteiro" class="text-decoration-none">0. Roteiro (Login → Logout)</a></li>
+                        <li><a href="#introducao" class="text-decoration-none">1. Introdução ao Sistema</a></li>
+                        <li><a href="#login" class="text-decoration-none">2. Login e Autenticação</a></li>
+                        <li><a href="#dashboard" class="text-decoration-none">3. Dashboard Principal</a></li>
+                        <li><a href="#veiculos" class="text-decoration-none">4. Gestão de Veículos</a></li>
+                        <li><a href="#motoristas" class="text-decoration-none">5. Gestão de Motoristas</a></li>
+                        <li><a href="#usuarios" class="text-decoration-none">6. Gestão de Usuários</a></li>
+                        <li><a href="#uso-veiculos" class="text-decoration-none">7. Uso de Veículos</a></li>
+                        <li><a href="#relatorios" class="text-decoration-none">8. Relatórios</a></li>
+                        <li><a href="#manutencoes" class="text-decoration-none">9. Manutenções</a></li>
+                        <li><a href="#multas" class="text-decoration-none">10. Multas</a></li>
+                        <li><a href="#reembolsos" class="text-decoration-none">11. Reembolsos</a></li>
+                        <li><a href="#notificacoes" class="text-decoration-none">12. Notificações</a></li>
+      </ul>
+                </div>
+                <div class="col-md-6">
+                    <h4>Funcionalidades Avançadas:</h4>
+                    <ul class="list-unstyled">
+                        <li><a href="#auditoria" class="text-decoration-none">13. Sistema de Auditoria</a></li>
+                        <li><a href="#conserto-viavel" class="text-decoration-none">14. Conserto Viável</a></li>
+                        <li><a href="#busca-global" class="text-decoration-none">15. Busca Global</a></li>
+                        <li><a href="#gps" class="text-decoration-none">16. GPS e Localização</a></li>
+                        <li><a href="#sessoes" class="text-decoration-none">17. Sessões Ativas</a></li>
+                        <li><a href="#sessoes-filestore" class="text-decoration-none">17.1 Sessões (Session File Store)</a></li>
+                        <li><a href="#viagens" class="text-decoration-none">18. Histórico de Viagens</a></li>
+                        <li><a href="#dispositivos" class="text-decoration-none">19. Dispositivos GPS</a></li>
+                        <li><a href="#tutorial-sistema" class="text-decoration-none">20. Tutorial</a></li>
+                        <li><a href="#validacoes" class="text-decoration-none">21. Validações do Sistema</a></li>
+                        <li><a href="#estatisticas" class="text-decoration-none">22. Informações do Sistema</a></li>
+                        <li><a href="#faq" class="text-decoration-none">23. FAQ (Perguntas Frequentes)</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <h5><i class="bi bi-lightbulb me-2"></i>Exemplo de Uso</h5>
+                <p>Veja um exemplo de como um usuário navega pelo sistema: <a href="#exemplo-uso" class="text-decoration-none">Clique aqui para ver o exemplo</a></p>
+            </div>
+        <!-- Galeria de Imagens do Sistema -->
+        <div id="galeria-imagens" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">📸</span>
+                Galeria de Imagens do Sistema
+            </h2>
+
+            <div class="alert alert-info">
+                <h5><i class="bi bi-info-circle me-2"></i>Imagens do Sistema</h5>
+                <p>Esta seção apresenta capturas de tela reais do Sistema de Controle de Frota, mostrando todas as funcionalidades e telas disponíveis.</p>
+            </div>
+
+            <!-- Login e Autenticação -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-key me-2"></i>Login e Autenticação</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Tela de Login</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135427.png" class="img-fluid rounded shadow" alt="Tela de Login">
+                            <p class="mt-2"><small class="text-muted">Interface de autenticação com validação de email e senha</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Recuperação de Senha</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135441.png" class="img-fluid rounded shadow" alt="Recuperação de Senha">
+                            <p class="mt-2"><small class="text-muted">Sistema de recuperação de senha por email</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Principal -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard Principal</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5>Visão Geral da Frota</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135453.png" class="img-fluid rounded shadow" alt="Dashboard Principal">
+                            <p class="mt-2"><small class="text-muted">Dashboard com estatísticas, mapa GPS e lista de veículos</small></p>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Estatísticas em Tempo Real</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135502.png" class="img-fluid rounded shadow" alt="Estatísticas">
+                            <p class="mt-2"><small class="text-muted">Indicadores de performance da frota</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gestão de Veículos -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-truck me-2"></i>Gestão de Veículos</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Cadastro de Veículos</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135511.png" class="img-fluid rounded shadow" alt="Cadastro de Veículos">
+                            <p class="mt-2"><small class="text-muted">Formulário completo com dados técnicos e documentação</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Lista de Veículos</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135527.png" class="img-fluid rounded shadow" alt="Lista de Veículos">
+                            <p class="mt-2"><small class="text-muted">Visualização tabular com filtros e paginação</small></p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h5>Upload de Fotos</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135536.png" class="img-fluid rounded shadow" alt="Upload de Fotos">
+                            <p class="mt-2"><small class="text-muted">Sistema de upload com preview para frente, traseira e banco</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Edição de Veículos</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135545.png" class="img-fluid rounded shadow" alt="Edição de Veículos">
+                            <p class="mt-2"><small class="text-muted">Formulário de edição com todos os campos preenchidos</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gestão de Motoristas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-person-badge me-2"></i>Gestão de Motoristas</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Cadastro de Motoristas</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135551.png" class="img-fluid rounded shadow" alt="Cadastro de Motoristas">
+                            <p class="mt-2"><small class="text-muted">Formulário com dados pessoais e validações CNH</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Upload de CNH</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135556.png" class="img-fluid rounded shadow" alt="Upload de CNH">
+                            <p class="mt-2"><small class="text-muted">Sistema de upload para frente e verso da CNH</small></p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h5>Lista de Motoristas</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135606.png" class="img-fluid rounded shadow" alt="Lista de Motoristas">
+                            <p class="mt-2"><small class="text-muted">Visualização de motoristas cadastrados</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Fotos das CNH</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135615.png" class="img-fluid rounded shadow" alt="Galeria de CNH">
+                            <p class="mt-2"><small class="text-muted">Galeria organizada das fotos de CNH</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Uso de Veículos -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Uso de Veículos</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Registro de Uso</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135629.png" class="img-fluid rounded shadow" alt="Registro de Uso">
+                            <p class="mt-2"><small class="text-muted">Formulário para registrar uso com validações</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Controle de Quilometragem</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135654.png" class="img-fluid rounded shadow" alt="Controle de KM">
+                            <p class="mt-2"><small class="text-muted">Sistema de controle e validação de quilometragem</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sistema GPS e Mapas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-map me-2"></i>Sistema GPS e Mapas</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5>Mapa Interativo</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135729.png" class="img-fluid rounded shadow" alt="Mapa GPS">
+                            <p class="mt-2"><small class="text-muted">Mapa com marcadores, trajetos e funcionalidades avançadas</small></p>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Controle de Dispositivos</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 135755.png" class="img-fluid rounded shadow" alt="Dispositivos GPS">
+                            <p class="mt-2"><small class="text-muted">Administração de dispositivos GPS</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relatórios e Administração -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-graph-up me-2"></i>Relatórios e Administração</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Relatório de Uso</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140111.png" class="img-fluid rounded shadow" alt="Relatório de Uso">
+                            <p class="mt-2"><small class="text-muted">Relatórios detalhados com filtros e paginação</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Sistema de Auditoria</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140118.png" class="img-fluid rounded shadow" alt="Auditoria">
+                            <p class="mt-2"><small class="text-muted">Logs de ações do sistema para administradores</small></p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h5>Gestão de Usuários</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140126.png" class="img-fluid rounded shadow" alt="Gestão de Usuários">
+                            <p class="mt-2"><small class="text-muted">Controle de usuários e permissões</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Configurações do Sistema</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140132.png" class="img-fluid rounded shadow" alt="Configurações">
+                            <p class="mt-2"><small class="text-muted">Configurações avançadas do sistema</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Funcionalidades Avançadas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-gear me-2"></i>Funcionalidades Avançadas</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Manutenções</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140141.png" class="img-fluid rounded shadow" alt="Sistema de Manutenções">
+                            <p class="mt-2"><small class="text-muted">Controle preventivo e corretivo de manutenções</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Notificações</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140148.png" class="img-fluid rounded shadow" alt="Sistema de Notificações">
+                            <p class="mt-2"><small class="text-muted">Alertas automáticos de manutenção</small></p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h5>Conserto Viável</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140200.png" class="img-fluid rounded shadow" alt="Análise FIPE">
+                            <p class="mt-2"><small class="text-muted">Análise de viabilidade econômica de consertos</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Busca Global</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140209.png" class="img-fluid rounded shadow" alt="Busca Global">
+                            <p class="mt-2"><small class="text-muted">Sistema de busca em todo o sistema</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interface Mobile e Responsividade -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-phone me-2"></i>Interface Responsiva</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Visualização Mobile</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140217.png" class="img-fluid rounded shadow" alt="Interface Mobile">
+                            <p class="mt-2"><small class="text-muted">Design responsivo para dispositivos móveis</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Navegação Touch</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140225.png" class="img-fluid rounded shadow" alt="Navegação Touch">
+                            <p class="mt-2"><small class="text-muted">Interface otimizada para toque</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sessões com Session File Store -->
+            <div id="sessoes-filestore" class="tutorial-section">
+                <h2 class="mb-4">
+                    <span class="step-number">17.1</span>
+                    Sessões com Session File Store (Disco)
+                </h2>
+
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle me-2"></i>Descrição</h5>
+                    <p>Utilizamos <code>express-session</code> com <code>session-file-store</code> para armazenar as sessões em disco. </p>
+                </div>
+
+              
+                <div class="success-box">
+                    <h5><i class="bi bi-check2-circle me-2"></i>Resultado esperado</h5>
+                    <p>Sessões persistentes em disco, continuidade mesmo após reinicializações rápidas do processo.</p>
+                </div>
+                
+                <!-- Explicação simples para o usuário final -->
+                <div class="highlight-box mt-3">
+                    <h5><i class="bi bi-person-check me-2"></i>Como a sessão funciona</h5>
+                    <ul class="mb-0">
+                        <li><strong>O que é:</strong> depois do login, o sistema guarda um “comprovante” (cookie) para reconhecer você sem pedir senha a cada página.</li>
+                        <li><strong>Onde fica:</strong> esse comprovante é seguro e o servidor salva sua sessão em disco por um tempo limitado.</li>
+                        <li><strong>Tempo:</strong> se ficar muito tempo sem usar, a sessão expira e você precisa entrar de novo.</li>
+                        <li><strong>Várias abas:</strong> pode usar várias abas no mesmo navegador; todas aproveitam a mesma sessão.</li>
+                        <li><strong>Logout:</strong> ao clicar em “Sair”, a sessão é encerrada. Em computador compartilhado, sempre use “Sair”.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Recursos Visuais Avançados -->
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-eye me-2"></i>Recursos Visuais Avançados</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Gráficos e Dashboards</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140231.png" class="img-fluid rounded shadow" alt="Gráficos">
+                            <p class="mt-2"><small class="text-muted">Visualizações gráficas de dados</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Mapa Heatmap</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140237.png" class="img-fluid rounded shadow" alt="Heatmap">
+                            <p class="mt-2"><small class="text-muted">Mapa de calor mostrando áreas de uso intenso</small></p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h5>Simulação de Viagens</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140245.png" class="img-fluid rounded shadow" alt="Simulação">
+                            <p class="mt-2"><small class="text-muted">Recurso de simulação de percursos</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Histórico Visual</h5>
+                            <img src="/fotos-sistemas/Captura de tela 2025-10-09 140253.png" class="img-fluid rounded shadow" alt="Histórico Visual">
+                            <p class="mt-2"><small class="text-muted">Visualização cronológica de atividades</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ do Sistema -->
+            <div id="faq" class="tutorial-section">
+                <h2 class="mb-4">
+                    <span class="step-number">23</span>
+                    FAQ — Perguntas Frequentes
+                </h2>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>1) Esqueci minha senha. O que fazer?</h5>
+                    <p>Acesse <code>/forgot-password</code>, informe seu email e siga as instruções enviadas. Depois, use o link de redefinição (<code>/reset-password/:token</code>).</p>
+                </div></div>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>2) Fui deslogado automaticamente. Por quê?</h5>
+                    <p>Por segurança, a sessão expira após um período de inatividade ou ao atingir o tempo máximo (ex.: 24h). Faça login novamente.</p>
+                </div></div>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>3) Posso abrir o sistema em várias abas?</h5>
+                    <p>Sim. No mesmo navegador, as abas compartilham a mesma sessão. Em outro dispositivo, será criada uma nova sessão.</p>
+                </div></div>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>4) Erro ao enviar arquivos/fotos. Como resolver?</h5>
+                    <p>Verifique o tamanho (limite por arquivo) e o formato permitido (imagens). Tente novamente e, se persistir, contate o suporte.</p>
+                </div></div>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>5) Não vejo meus dados atualizados.</h5>
+                    <p>Atualize a página. Se ainda não aparecer, verifique filtros/intervalos de datas. Persistindo, reporte a data/hora e a tela ao suporte.</p>
+                </div></div>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>6) Permissões insuficientes.</h5>
+                    <p>Algumas ações exigem perfil de administrador. Solicite a um admin para ajustar seu acesso se necessário.</p>
+                </div></div>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>7) Minha sessão é segura?</h5>
+                    <p>Sim. O cookie de sessão é <em>httpOnly</em> e, em HTTPS, marcado como <em>secure</em>. A sessão é armazenada no servidor com prazo de expiração.</p>
+                </div></div>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>8) Qual navegador devo usar?</h5>
+                    <p>Recomendamos versões atuais do Chrome, Edge ou Firefox. Evite abas anônimas se precisar manter a sessão por mais tempo.</p>
+                </div></div>
+
+                <div class="card mb-3"><div class="card-body">
+                    <h5>9) Como reporto um problema?</h5>
+                    <p>Envie descrição, tela/URL, horário aproximado e, se possível, captura de tela. Isso agiliza a análise.</p>
+                </div></div>
+            </div>
+
+            <div class="highlight-box mt-4">
+                <h5><i class="bi bi-lightbulb me-2"></i>Todas as Funcionalidades Documentadas</h5>
+                <p>Esta galeria apresenta <strong>todas as 37 telas e funcionalidades</strong> disponíveis no Sistema de Controle de Frota, desde autenticação até recursos avançados como GPS, manutenções e relatórios.</p>
+                <p><strong>Próximo:</strong> <a href="#roteiro" class="text-decoration-none">Consulte o roteiro detalhado de uso →</a></p>
+            </div>
+        </div>
+        <div id="roteiro" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">0</span>
+                Roteiro (Login → Logout)
+            </h2>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>1) Login</h5>
+                    <p><strong>Rotas:</strong> GET /login, POST /login</p>
+                    <p><strong>View:</strong> login.ejs</p>
+                    <ol>
+                        <li>Acesse /login, informe email e senha, envie.</li>
+                        <li>Se válido, você é redirecionado para /.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>2) Dashboard</h5>
+                    <p><strong>Rota:</strong> GET /</p>
+                    <p><strong>View:</strong> dashboard.ejs</p>
+                    <ul>
+                        <li>Veja estatísticas e acesse os módulos.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>3) Veículos</h5>
+                    <p><strong>Rotas:</strong> GET /veiculos, GET/POST /registrar-veiculo, GET/POST /editar-veiculo/:id</p>
+                    <p><strong>Views:</strong> veiculos.ejs, registrar-veiculo.ejs, editar-veiculo.ejs</p>
+                    <ul>
+                        <li>Liste, registre (admin) e edite veículos.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>4) Motoristas</h5>
+                    <p><strong>Rotas:</strong> GET/POST /registro-motorista, GET/POST /editar-motorista/:id</p>
+                    <p><strong>Views:</strong> registro-motorista.ejs, editar-motorista.ejs</p>
+                    <ul>
+                        <li>Cadastre e edite dados do motorista e CNH.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>5) Usuários</h5>
+                    <p><strong>Rotas:</strong> GET /usuarios, GET/POST /registrar-usuario, GET/POST /editar-usuario/:id</p>
+                    <p><strong>Views:</strong> usuarios.ejs, registrar-usuario.ejs, edit-usuario.ejs</p>
+                    <ul>
+                        <li>Liste, cadastre e edite usuários e perfis.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>6) Uso de Veículos</h5>
+                    <p><strong>Rotas:</strong> GET/POST /usar/:id, GET/POST /editar-uso/:id</p>
+                    <p><strong>Views:</strong> usar.ejs, editarUso.ejs</p>
+                    <ul>
+                        <li>Registre usos, respeitando validações de sobreposição e KM.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>7) Relatórios</h5>
+                    <p><strong>Rotas:</strong> conforme seção Relatórios</p>
+                    <ul>
+                        <li>Filtre e visualize relatórios de uso, multas e consumo.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>8) Mapa de Usos</h5>
+                    <p><strong>Rota:</strong> GET /mapa-usos</p>
+                    <p><strong>View:</strong> mapa-usos.ejs</p>
+                    <ul>
+                        <li>Visualize marcadores, trajetos, heatmap e simulações.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>9) Manutenções</h5>
+                    <p><strong>Rotas:</strong> GET /manutencoes e correlatas</p>
+                    <ul>
+                        <li>Consulte registros preventivos e corretivos.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>10) Auditoria</h5>
+                    <p><strong>Rota:</strong> GET /auditoria</p>
+                    <ul>
+                        <li>Veja ações registradas do sistema (admin).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>11) Logout</h5>
+                    <p><strong>Rota:</strong> GET /logout</p>
+                    <ul>
+                        <li>Encerre a sessão com segurança.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Roteiro detalhado por rota (visão do usuário) -->
+        <div id="roteiro-rotas" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">0.1</span>
+                Roteiro detalhado por rota (visão do usuário)
+            </h2>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Autenticação</h5>
+                <ul>
+                    <li><strong>GET /login</strong> — Abrir página de login (login.ejs) e informar credenciais.</li>
+                    <li><strong>POST /login</strong> — Enviar email e senha; se ok, redireciona para /.</li>
+                    <li><strong>GET /forgot-password</strong> — Informar email para recuperar senha (forgot-password.ejs).</li>
+                    <li><strong>POST /forgot-password</strong> — Solicitar envio de email de recuperação.</li>
+                    <li><strong>GET /reset-password/:token</strong> — Criar nova senha (reset-password.ejs).</li>
+                    <li><strong>POST /reset-password/:token</strong> — Confirmar nova senha.</li>
+                    <li><strong>GET /logout</strong> — Encerrar sessão.</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Dashboard e Sessões</h5>
+                <ul>
+                    <li><strong>GET /</strong> — Ver painel (dashboard.ejs).</li>
+                    <li><strong>GET /session-info/json</strong> — Consultar tempo de sessão (JSON).</li>
+                    <li><strong>GET /active-sessions</strong> — Ver sessões ativas (active-sessions.ejs).</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Usuários</h5>
+                <ul>
+                    <li><strong>GET /usuarios</strong> — Listar (usuarios.ejs).</li>
+                    <li><strong>GET /register</strong> — Cadastrar (register.ejs).</li>
+                    <li><strong>POST /register</strong> — Salvar cadastro.</li>
+                    <li><strong>GET /editar-usuario/:id</strong> — Editar (edit-usuario.ejs).</li>
+                    <li><strong>POST /editar-usuario/:id</strong> — Salvar edição.</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Motoristas</h5>
+                <ul>
+                    <li><strong>GET /registro-motorista</strong> — Cadastrar (registro-motorista.ejs).</li>
+                    <li><strong>POST /api/cadastro-motorista</strong> — Salvar cadastro.</li>
+                    <li><strong>GET /edit-motorista/:id</strong> — Editar (edit-motorista.ejs).</li>
+                    <li><strong>POST /edit-motorista/:id</strong> — Salvar edição.</li>
+                    <li><strong>GET /motoristas</strong> — Listar (motoristas.ejs).</li>
+                    <li><strong>DELETE /api/deletar-motorista/:id</strong> — Excluir motorista.</li>
+                    <li><strong>GET /motoristas/fotos-cnh</strong> — Ver fotos CNH (fotosCnh.ejs).</li>
+                    <li><strong>GET /api/motorista/:id/cnh</strong> — Baixar CNH.</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Veículos</h5>
+                <ul>
+                    <li><strong>GET /registrar-veiculo</strong> — Cadastrar (registrar-veiculo.ejs).</li>
+                    <li><strong>POST /registrar-veiculo</strong> — Salvar veículo.</li>
+                    <li><strong>GET /editar-veiculo/:id</strong> — Editar (editar-veiculo.ejs).</li>
+                    <li><strong>POST /editar-veiculo/:id</strong> — Salvar edição.</li>
+                    <li><strong>POST /excluir-veiculo/:id</strong> — Excluir.</li>
+                    <li><strong>GET /veiculos/:id/foto_frente|foto_traseira|foto_banco</strong> — Ver fotos.</li>
+                    <li><strong>GET /devices-com-veiculo</strong> — Consultar devices atrelados (JSON).</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Uso de Veículos</h5>
+                <ul>
+                    <li><strong>GET /usar/:id</strong> — Iniciar/registrar (usar.ejs).</li>
+                    <li><strong>POST /usar/:id</strong> — Salvar uso.</li>
+                    <li><strong>GET /editar-uso/:id</strong> — Editar (editarUso.ejs).</li>
+                    <li><strong>POST /editar-uso/:id</strong> — Salvar edição.</li>
+                    <li><strong>POST /excluir-uso/:id</strong> — Excluir uso.</li>
+                    <li><strong>POST /excluir-multiplos-usos</strong> — Excluir em lote.</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Multas</h5>
+                <ul>
+                    <li><strong>GET /registrar-multa/:veiculo_id</strong> — Abrir form (registrarMulta.ejs).</li>
+                    <li><strong>POST /registrar-multa/:veiculo_id</strong> — Registrar multa.</li>
+                    <li><strong>POST /multar/:uso_id</strong> — Lançar multa para uso.</li>
+                    <li><strong>GET /relatorio-multas</strong> — Relatório (relatorioMultas.ejs).</li>
+                    <li><strong>POST /excluir-multa/:id</strong> — Excluir multa.</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Relatórios</h5>
+                <ul>
+                    <li><strong>GET /relatorio-uso</strong> — Relatório de uso (relatorio_uso.ejs).</li>
+                    <li><strong>GET /api/relatorio-uso</strong> — Dados DataTables.</li>
+                    <li><strong>GET /relatorio-veiculos</strong> — Relatório veículos (relatorio-veiculos.ejs).</li>
+                    <li><strong>GET /api/relatorio-veiculos</strong> — Dados veículos.</li>
+                    <li><strong>GET /relatorio-violacoes</strong> — Relatório violações (relatorioViolacoes.ejs).</li>
+                    <li><strong>GET /relatorio-consumo</strong> — Consumo (relatorioConsumo.ejs).</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Manutenções</h5>
+                <ul>
+                    <li><strong>GET /manutencoes</strong> — Listagem (manutencoes.ejs).</li>
+                    <li><strong>GET /veiculos/:veiculo_id/manutencoes</strong> — Listar por veículo.</li>
+                    <li><strong>GET /veiculos/:veiculo_id/manutencoes/novo</strong> — Form nova (manutencao-nova.ejs).</li>
+                    <li><strong>POST /veiculos/:veiculo_id/manutencoes</strong> — Criar.</li>
+                    <li><strong>GET /manutencoes/:id</strong> — Detalhe (manutencao-detalhe.ejs).</li>
+                    <li><strong>GET /manutencoes/:id/edit</strong> — Editar (manutencao-edit.ejs).</li>
+                    <li><strong>POST /manutencoes/:id/edit</strong> — Salvar.</li>
+                    <li><strong>POST /manutencoes/:id/delete</strong> — Excluir.</li>
+                    <li><strong>POST /manutencoes/:id/upload</strong> — Enviar anexos.</li>
+                    <li><strong>POST /manutencoes/:id/arquivo/:arquivoId/delete</strong> — Excluir anexo.</li>
+                    <li><strong>GET /manutencoes/arquivo/:id/download</strong> — Download de anexo.</li>
+                    <li><strong>GET /manutencoes/estatisticas</strong> — Estatísticas (manutencoes-estatisticas.ejs).</li>
+                    <li><strong>GET /manutencoes/config</strong> — Lista veículos (manutencoes-config-list.ejs).</li>
+                    <li><strong>GET /manutencoes/config/:veiculo_id</strong> — Configurar thresholds (manutencoes-config.ejs).</li>
+                    <li><strong>POST /manutencoes/config</strong> — Salvar threshold.</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>GPS, Mapas e Viagens</h5>
+                <ul>
+                    <li><strong>GET /gps-history</strong> — Histórico GPS (gps-history.ejs).</li>
+                    <li><strong>GET /trips-history-view</strong> — Viagens (trips-history.ejs).</li>
+                    <li><strong>GET /viagensComUso</strong> — Viagens com uso (viagensComUso.ejs).</li>
+                    <li><strong>GET /mapa-usos</strong> — Mapa de usos (mapa-usos.ejs).</li>
+                    <li><strong>GET /admin/gps-controle</strong> — Admin GPS (adminGpsControle.ejs).</li>
+                    <li><strong>GET /stats-gps</strong> — Estatísticas GPS (stats-gps.ejs).</li>
+                    <li><strong>GET /stats-gps-usos</strong> — Estatísticas de usos (stats-gps-usos.ejs).</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Dispositivos GPS</h5>
+                <ul>
+                    <li><strong>GET /cadastrar-dispositivo</strong> — Cadastrar (cadastrar-dispositivo.ejs).</li>
+                    <li><strong>POST /cadastrar-dispositivo</strong> — Salvar.</li>
+                    <li><strong>GET /listar-dispositivos</strong> — Listar (listar-dispositivos.ejs).</li>
+                    <li><strong>GET /editar-dispositivo/:id</strong> — Editar (editar-dispositivo.ejs).</li>
+                    <li><strong>POST /editar-dispositivo/:id</strong> — Salvar.</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Busca e Auditoria</h5>
+                <ul>
+                    <li><strong>GET /search</strong> — Busca global (searchResults.ejs).</li>
+                    <li><strong>GET /auditoria</strong> — Auditoria (auditoria.ejs).</li>
+                </ul>
+            </div></div>
+
+            <div class="card mb-3"><div class="card-body">
+                <h5>Notificações</h5>
+                <ul>
+                    <li><strong>GET /notificacoes</strong> — Listar (notificacoes.ejs).</li>
+                    <li><strong>POST /troca-feita/:id</strong> — Confirmar troca de óleo.</li>
+                    <li><strong>POST /excluir-notificacao-alteracao-km/:id</strong> — Excluir notificação.</li>
+                </ul>
+            </div></div>
+
+            <div class="card"><div class="card-body">
+                <h5>Tutorial</h5>
+                <ul>
+                    <li><strong>GET /tutorial</strong> — Tutorial (tutorial.ejs).</li>
+                </ul>
+            </div></div>
+        </div>
+
+        <!-- Exemplo Prático de Uso -->
+        <div id="exemplo-uso" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">📋</span>
+                Exemplo Prático de Uso do Sistema
+            </h2>
+            
+            <div class="alert alert-info">
+                <h5><i class="bi bi-info-circle me-2"></i>Exemplo de Uso</h5>
+                <p>Este exemplo mostra como um usuário navega pelo sistema desde o login até algumas funcionalidades.</p>
+            </div>
+            
+            <h4>Exemplo de Passo a Passo:</h4>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>1. Login no Sistema</h5>
+                    <p><strong>Rota:</strong> GET /login</p>
+                    <p><strong>View:</strong> login.ejs</p>
+                    <p><strong>O que fazer:</strong></p>
+                    <ol>
+                        <li>Acesse a URL do sistema</li>
+                        <li>Digite seu email e senha</li>
+                        <li>Clique em "Entrar"</li>
+                    </ol>
+                    <p><strong>Validações:</strong> Email válido, senha mínima 8 caracteres</p>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>2. Dashboard Principal</h5>
+                    <p><strong>Rota:</strong> GET /</p>
+                    <p><strong>View:</strong> dashboard.ejs</p>
+                    <p><strong>O que fazer:</strong></p>
+                    <ol>
+                        <li>Visualize estatísticas gerais da frota</li>
+                        <li>Navegue pelo mapa GPS</li>
+                        <li>Veja lista de veículos disponíveis</li>
+                        <li>Acesse relatórios e funcionalidades</li>
+                    </ol>
+                    <p><strong>Funcionalidades disponíveis:</strong> Estatísticas, mapa GPS, lista de veículos, relatórios</p>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>3. Cadastro de Motorista (Primeira vez)</h5>
+                    <p><strong>Rota:</strong> GET /registro-motorista</p>
+                    <p><strong>View:</strong> registro-motorista.ejs</p>
+                    <p><strong>O que fazer:</strong></p>
+                    <ol>
+                        <li>Preencha nome</li>
+                        <li>Digite CPF (formato: 000.000.000-00)</li>
+                        <li>Digite número da CNH (9 dígitos)</li>
+                        <li>Selecione categoria da CNH</li>
+                        <li>Digite data de validade da CNH</li>
+                        <li>Faça upload das fotos da CNH (frente e verso)</li>
+                        <li>Clique em "Cadastrar"</li>
+                    </ol>
+                    <p><strong>Validações:</strong> CPF válido, CNH única, data não vencida, fotos obrigatórias</p>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>4. Registrar Uso de Veículo</h5>
+                    <p><strong>Rota:</strong> GET /usar/:id</p>
+                    <p><strong>View:</strong> usar.ejs</p>
+                    <p><strong>O que fazer:</strong></p>
+                    <ol>
+                        <li>Selecione o veículo desejado</li>
+                        <li>Verifique o KM inicial (deve ser igual ao KM atual do veículo)</li>
+                        <li>Digite o KM final (deve ser maior que o inicial)</li>
+                        <li>Digite a data/hora final</li>
+                        <li>Selecione a finalidade (trabalho/pessoal)</li>
+                        <li>Digite uma descrição da viagem</li>
+                        <li>Faça upload da foto do odômetro (opcional)</li>
+                        <li>Clique em "Registrar Uso"</li>
+                    </ol>
+                    <p><strong>Validações:</strong> KM consistente, data válida, CNH válida, sem sobreposição</p>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>5. Visualizar Relatórios</h5>
+                    <p><strong>Rota:</strong> GET /relatorio-uso</p>
+                    <p><strong>View:</strong> relatorio_uso.ejs</p>
+                    <p><strong>O que fazer:</strong></p>
+                    <ol>
+                        <li>Acesse o menu "Relatórios"</li>
+                        <li>Selecione "Relatório de Uso"</li>
+                        <li>Use filtros para buscar usos específicos</li>
+                        <li>Navegue pelas páginas de resultados</li>
+                        <li>Clique em usos para ver detalhes</li>
+                    </ol>
+                    <p><strong>Funcionalidades:</strong> Filtros, paginação, busca, exportação</p>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>6. Visualizar Mapa de Usos</h5>
+                    <p><strong>Rota:</strong> GET /mapa-usos</p>
+                    <p><strong>View:</strong> mapa-usos.ejs</p>
+                    <p><strong>O que fazer:</strong></p>
+                    <ol>
+                        <li>Acesse o menu "Mapa de Usos"</li>
+                        <li>Navegue pelas páginas de usos</li>
+                        <li>Use a busca para filtrar por motorista/placa</li>
+                        <li>Clique em marcadores para ver detalhes</li>
+                        <li>Use "Mostrar trajeto" para ver rotas</li>
+                        <li>Ative heatmap para ver densidade</li>
+                        <li>Use "Simular" para reproduzir viagens</li>
+                    </ol>
+                    <p><strong>Funcionalidades:</strong> Mapa interativo, simulação, heatmap, filtros</p>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>7. Editar Uso (se necessário)</h5>
+                    <p><strong>Rota:</strong> GET /editar-uso/:id</p>
+                    <p><strong>View:</strong> editarUso.ejs</p>
+                    <p><strong>O que fazer:</strong></p>
+                    <ol>
+                        <li>Clique em "Editar" no uso desejado</li>
+                        <li>Modifique os campos necessários</li>
+                        <li>Atualize foto do odômetro se necessário</li>
+                        <li>Clique em "Salvar Alterações"</li>
+                    </ol>
+                    <p><strong>Validações:</strong> Apenas o próprio motorista pode editar, mesmas validações do cadastro</p>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>8. Logout</h5>
+                    <p><strong>Rota:</strong> GET /logout</p>
+                    <p><strong>O que fazer:</strong></p>
+                    <ol>
+                        <li>Clique no menu do usuário</li>
+                        <li>Selecione "Sair"</li>
+                        <li>Confirme o logout</li>
+                    </ol>
+                    <p><strong>Resultado:</strong> Sessão encerrada, redirecionamento para login</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 1. Introdução ao Sistema -->
+        <div id="introducao" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">1</span>
+                Introdução ao Sistema
+            </h2>
+            
+            <p class="lead">O Sistema de Controle de Frota é uma aplicação web desenvolvida em Node.js com Express e EJS, projetada para gerenciar veículos, motoristas, usuários e operações relacionadas ao controle de frota.</p>
+            
+            <h4>Funcionalidades Disponíveis:</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Dashboard Principal</strong> - Visão geral da frota</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Gestão de Veículos</strong> - Cadastro e edição</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Gestão de Motoristas</strong> - Cadastro com CNH</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Gestão de Usuários</strong> - Controle de acesso</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Uso de Veículos</strong> - Registro de viagens</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Relatórios</strong> - Uso, veículos, multas, consumo</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Manutenções</strong> - Preventivas e corretivas</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Multas</strong> - Registro e controle</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Reembolsos</strong> - Gestão financeira</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Notificações</strong> - Alertas de manutenção</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Auditoria</strong> - Logs do sistema</li>
+                        <li><i class="bi bi-check-circle text-success me-2"></i> <strong>Conserto Viável</strong> - Análise FIPE</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <h5><i class="bi bi-info-circle me-2"></i>Tipos de Usuário</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Administrador (admin):</strong> Acesso às funcionalidades
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Usuário (user):</strong> Acesso limitado para registro de uso e consultas
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 2. Login e Autenticação -->
+        <div id="login" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">2</span>
+                Login e Autenticação
+            </h2>
+            
+            <h4>Rotas de Autenticação:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /login</h5>
+                    <p><strong>View:</strong> login.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de login</p>
+                    <p><strong>Requer:</strong> CSRF Protection</p>
+                    <p><strong>Funcionalidades Detalhadas:</strong></p>
+                    <ul>
+                        <li><strong>Formulário de Login:</strong> Campos para email e senha</li>
+                        <li><strong>Validação Frontend:</strong> Verificação de campos obrigatórios</li>
+                        <li><strong>Proteção CSRF:</strong> Token de segurança obrigatório</li>
+                        <li><strong>Design Responsivo:</strong> Interface adaptável a diferentes telas</li>
+                    </ul>
+                    <p><strong>O que o usuário PODE fazer:</strong></p>
+                    <ul>
+                        <li>Digitar email e senha</li>
+                        <li>Clique em "Entrar" para fazer login</li>
+                        <li>Acessar link "Esqueci minha senha"</li>
+                        <li>Ver mensagens de erro de validação</li>
+                    </ul>
+                    <p><strong>O que o usuário NÃO pode fazer:</strong></p>
+                    <ul>
+                        <li>Fazer login sem preencher campos obrigatórios</li>
+                        <li>Acessar sem CSRF token válido</li>
+                        <li>Fazer login com credenciais inválidas</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /login</h5>
+                    <p><strong>Funcionalidade:</strong> Processa login do usuário</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection + Rate Limiting</p>
+                    <p><strong>Funcionalidades Detalhadas:</strong></p>
+                    <ul>
+                        <li><strong>Validação de Dados:</strong> Email válido e senha mínima 8 caracteres</li>
+                        <li><strong>Autenticação:</strong> Verificação de credenciais via Passport.js</li>
+                        <li><strong>Rate Limiting:</strong> Limite de tentativas de login</li>
+                        <li><strong>Regeneração de Sessão:</strong> Nova sessão após login bem-sucedido</li>
+                        <li><strong>Redirecionamento:</strong> Direcionamento para dashboard após login</li>
+                    </ul>
+                    <p><strong>O que o usuário PODE fazer:</strong></p>
+                    <ul>
+                        <li>Fazer login com credenciais válidas</li>
+                        <li>Ser redirecionado para dashboard após login</li>
+                        <li>Ver mensagens de erro específicas</li>
+                    </ul>
+                    <p><strong>O que o usuário NÃO pode fazer:</strong></p>
+                    <ul>
+                        <li>Fazer login com email inválido</li>
+                        <li>Fazer login com senha menor que 8 caracteres</li>
+                        <li>Fazer login com credenciais incorretas</li>
+                        <li>Fazer login sem CSRF token</li>
+                        <li>Fazer muitas tentativas de login rapidamente</li>
+                    </ul>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Email deve ser válido: <code>body('email').isEmail().normalizeEmail()</code></li>
+                        <li>Senha deve ter pelo menos 8 caracteres: <code>body('password').isLength({ min: 8 })</code></li>
+                        <li>Rate limiting: <code>authLimiter</code></li>
+                        <li>CSRF Protection</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /logout</h5>
+                    <p><strong>Funcionalidade:</strong> Encerra sessão do usuário</p>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Registra logout na auditoria</li>
+                        <li>Destroi sessão</li>
+                        <li>Redireciona para login</li>
+      </ol>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /forgot-password</h5>
+                    <p><strong>View:</strong> forgot-password.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de recuperação de senha</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /forgot-password</h5>
+                    <p><strong>Funcionalidade:</strong> Processa solicitação de recuperação de senha</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Email é obrigatório</li>
+                        <li>Email deve ser válido: <code>validator.normalizeEmail()</code></li>
+                        <li>Rate limiting: <code>authLimiter</code></li>
+                    </ul>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Gera token de recuperação</li>
+                        <li>Define expiração (1 hora)</li>
+                        <li>Envia email com link de recuperação</li>
+      </ol>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /reset-password/:token</h5>
+                    <p><strong>View:</strong> reset-password.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário para nova senha</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Token deve ser válido e não expirado</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /reset-password/:token</h5>
+                    <p><strong>Funcionalidade:</strong> Processa nova senha</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Senha é obrigatória</li>
+                        <li>Token deve ser válido e não expirado</li>
+                        <li>Senha forte (mínimo 8 caracteres)</li>
+                    </ul>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Valida token</li>
+                        <li>Hash da nova senha</li>
+                        <li>Atualiza senha no banco</li>
+                        <li>Limpa token de recuperação</li>
+      </ol>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 3. Dashboard Principal -->
+        <div id="dashboard" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">3</span>
+                Dashboard Principal
+            </h2>
+            
+            <h4>Rota Principal:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /</h5>
+                    <p><strong>View:</strong> dashboard.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Página principal do sistema</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Funcionalidades Detalhadas:</strong></p>
+                    <ul>
+                        <li><strong>Estatísticas Gerais:</strong> Resumo de veículos, usos, motoristas</li>
+                        <li><strong>Mapa GPS Interativo:</strong> Visualização em tempo real da frota</li>
+                        <li><strong>Lista de Veículos:</strong> Veículos disponíveis e em uso</li>
+                        <li><strong>Relatórios Rápidos:</strong> Acesso direto a relatórios</li>
+                        <li><strong>Notificações:</strong> Alertas e avisos do sistema</li>
+                        <li><strong>Navegação:</strong> Menu principal para as funcionalidades</li>
+                    </ul>
+                    <p><strong>O que o usuário PODE fazer:</strong></p>
+                    <ul>
+                        <li>Visualizar estatísticas gerais da frota</li>
+                        <li>Navegar pelo mapa GPS interativo</li>
+                        <li>Ver lista de veículos disponíveis</li>
+                        <li>Acessar relatórios e funcionalidades</li>
+                        <li>Ver notificações e alertas</li>
+                        <li>Navegar para outras seções do sistema</li>
+                    </ul>
+                    <p><strong>O que o usuário NÃO pode fazer:</strong></p>
+                    <ul>
+                        <li>Acessar sem estar autenticado</li>
+                        <li>Modificar dados diretamente no dashboard</li>
+                        <li>Ver informações de outros usuários (sem permissão)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h4>Funcionalidades do Dashboard:</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Informações Gerais:</h5>
+                    <ul>
+                        <li>Total de veículos cadastrados</li>
+                        <li>Motoristas com CNH válida/inválida</li>
+                        <li>Total de multas registradas</li>
+                        <li>Total de usos registrados</li>
+                        <li>Motoristas ativos</li>
+      </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Relatórios Estatísticos:</h5>
+                    <ul>
+                        <li>Uso por dia, mês e ano</li>
+                        <li>Multas por mês, ano e motorista</li>
+                        <li>KM rodados por motorista, viagem, dia, mês e ano</li>
+                        <li>Viagens por dia, mês e ano (trabalho/pessoal)</li>
+                        <li>Tempo de uso por dia, mês, ano e motorista</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h4>Mapa GPS:</h4>
+            <ul>
+                <li>Seleção de dispositivos GPS</li>
+                <li>Visualização em tempo real</li>
+                <li>Histórico de localização</li>
+                <li>Geofences (áreas restritas)</li>
+                <li>Controles de zoom e navegação</li>
+            </ul>
+            
+            <h4>Lista de Veículos:</h4>
+            <ul>
+                <li>Registrar uso de veículo</li>
+                <li>Registrar multas (apenas admin)</li>
+                <li>Editar veículo</li>
+                <li>Excluir veículo (apenas admin)</li>
+                <li>Ver relatório de uso</li>
+                <li>Registrar novo veículo (apenas admin)</li>
+            </ul>
+        </div>
+        
+        <!-- 4. Gestão de Veículos -->
+        <div id="veiculos" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">4</span>
+                Gestão de Veículos
+            </h2>
+            
+            <h4>Rotas de Veículos:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /registrar-veiculo</h5>
+                    <p><strong>View:</strong> registrar-veiculo.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de cadastro de veículo</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Funcionalidades Detalhadas:</strong></p>
+                    <ul>
+                        <li><strong>Formulário de Cadastro:</strong> Campos para todos os dados do veículo</li>
+                        <li><strong>Integração FIPE:</strong> Busca automática de marca, modelo e ano</li>
+                        <li><strong>Upload de Fotos:</strong> Frente, traseira e banco do veículo</li>
+                        <li><strong>Dispositivos GPS:</strong> Lista de dispositivos disponíveis</li>
+                        <li><strong>Validação Frontend:</strong> Verificação de campos obrigatórios</li>
+                    </ul>
+                    <p><strong>O que o usuário PODE fazer:</strong></p>
+                    <ul>
+                        <li>Preencher dados do veículo</li>
+                        <li>Buscar marca/modelo/ano via FIPE</li>
+                        <li>Fazer upload de fotos do veículo</li>
+                        <li>Selecionar dispositivo GPS</li>
+                        <li>Cadastrar novo veículo</li>
+                    </ul>
+                    <p><strong>O que o usuário NÃO pode fazer:</strong></p>
+                    <ul>
+                        <li>Acessar sem ser admin</li>
+                        <li>Cadastrar sem preencher campos obrigatórios</li>
+                        <li>Fazer upload de arquivos não-imagem</li>
+                        <li>Cadastrar placa duplicada</li>
+                    </ul>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Busca dispositivos GPS disponíveis</li>
+                        <li>Renderiza formulário com lista de dispositivos</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /registrar-veiculo</h5>
+                    <p><strong>Funcionalidade:</strong> Processa cadastro de veículo</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para fotos (frente, traseira, banco)</p>
+                    <p><strong>Funcionalidades Detalhadas:</strong></p>
+                    <ul>
+                        <li><strong>Validação de Dados:</strong> Verificação de todos os campos obrigatórios</li>
+                        <li><strong>Processamento de Upload:</strong> Salvamento de fotos no servidor</li>
+                        <li><strong>Integração FIPE:</strong> Busca automática de dados do veículo</li>
+                        <li><strong>Criação de Manutenções:</strong> Manutenções padrão criadas automaticamente</li>
+                        <li><strong>Associação GPS:</strong> Vinculação com dispositivo GPS selecionado</li>
+                    </ul>
+                    <p><strong>O que o usuário PODE fazer:</strong></p>
+                    <ul>
+                        <li>Cadastrar veículo com dados válidos</li>
+                        <li>Fazer upload de fotos do veículo</li>
+                        <li>Associar dispositivo GPS</li>
+                        <li>Ver confirmação de cadastro</li>
+                    </ul>
+                    <p><strong>O que o usuário NÃO pode fazer:</strong></p>
+                    <ul>
+                        <li>Cadastrar sem ser admin</li>
+                        <li>Cadastrar com placa duplicada</li>
+                        <li>Fazer upload de arquivos não-imagem</li>
+                        <li>Cadastrar com dados inválidos</li>
+                        <li>Fazer upload de arquivos maiores que 5MB</li>
+                    </ul>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> nome, placa, km, ultimaTrocaOleo, modelo, ano, cor, device_id</li>
+                        <li><strong>Placa:</strong> Formato ABC-1234 (3 letras + hífen + 4 números)</li>
+                        <li><strong>KM:</strong> Apenas números inteiros >= 0</li>
+                        <li><strong>Última Troca de Óleo:</strong> Apenas números inteiros >= 0</li>
+                        <li><strong>Dispositivo GPS:</strong> Deve ser selecionado um dispositivo disponível</li>
+                        <li><strong>Fotos:</strong> Máximo 5MB cada, apenas imagens</li>
+                    </ul>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Valida dados obrigatórios</li>
+                        <li>Processa upload de fotos</li>
+                        <li>Insere veículo no banco</li>
+                        <li>Cria manutenções padrão</li>
+                        <li>Redireciona para dashboard</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /editar-veiculo/:id</h5>
+                    <p><strong>View:</strong> editar-veiculo.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de edição de veículo</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Funcionalidades Detalhadas:</strong></p>
+                    <ul>
+                        <li><strong>Formulário de Edição:</strong> Campos pré-preenchidos com dados atuais</li>
+                        <li><strong>Fotos Atuais:</strong> Exibição das fotos já cadastradas</li>
+                        <li><strong>Dispositivos GPS:</strong> Lista de dispositivos disponíveis</li>
+                        <li><strong>Validação Frontend:</strong> Verificação de campos obrigatórios</li>
+                        <li><strong>Histórico:</strong> Visualização de alterações anteriores</li>
+                    </ul>
+                    <p><strong>O que o usuário PODE fazer:</strong></p>
+                    <ul>
+                        <li>Visualizar dados atuais do veículo</li>
+                        <li>Editar campos permitidos</li>
+                        <li>Alterar fotos do veículo</li>
+                        <li>Trocar dispositivo GPS</li>
+                        <li>Salvar alterações</li>
+                    </ul>
+                    <p><strong>O que o usuário NÃO pode fazer:</strong></p>
+                    <ul>
+                        <li>Editar veículo inexistente</li>
+                        <li>Editar veículo em uso</li>
+                        <li>Alterar placa para uma já existente</li>
+                        <li>Fazer upload de arquivos não-imagem</li>
+                    </ul>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Veículo deve existir</li>
+                        <li>Busca dispositivos GPS disponíveis</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /editar-veiculo/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Processa edição de veículo</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para fotos (frente, traseira, banco)</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> nome, placa, km, ultimaTrocaOleo, modelo, ano, cor</li>
+                        <li><strong>Placa:</strong> Formato ABC-1234</li>
+                        <li><strong>KM:</strong> Apenas números inteiros >= 0</li>
+                        <li><strong>Fotos:</strong> Máximo 5MB cada, apenas imagens</li>
+                        <li><strong>Uso em Andamento:</strong> Não permite editar se veículo estiver em uso</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /excluir-veiculo/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui veículo</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Veículo deve existir</li>
+                        <li>Não pode ter uso em andamento</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h4>Dispositivos GPS:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /cadastrar-dispositivo</h5>
+                    <p><strong>View:</strong> cadastrar-dispositivo.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Cadastra dispositivo GPS</p>
+                    <p><strong>Requer:</strong> Admin + Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /devices-com-veiculo</h5>
+                    <p><strong>Funcionalidade:</strong> API para dispositivos com veículos</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <h4>Fotos de Veículos:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /veiculos/:id/foto_frente</h5>
+                    <p><strong>Funcionalidade:</strong> Exibe foto frontal do veículo</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /veiculos/:id/foto_traseira</h5>
+                    <p><strong>Funcionalidade:</strong> Exibe foto traseira do veículo</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /veiculos/:id/foto_banco</h5>
+                    <p><strong>Funcionalidade:</strong> Exibe foto do banco do veículo</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 5. Gestão de Motoristas -->
+        <div id="motoristas" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">5</span>
+                Gestão de Motoristas
+            </h2>
+            
+            <h4>Rotas de Motoristas:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /registro-motorista</h5>
+                    <p><strong>View:</strong> registro-motorista.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de cadastro de motorista</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Verifica se motorista já está cadastrado</li>
+                        <li>Se já cadastrado, exibe dados existentes</li>
+                        <li>Se não cadastrado, exibe formulário vazio</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /registro-motorista</h5>
+                    <p><strong>Funcionalidade:</strong> Processa cadastro de motorista</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para fotos da CNH (frente e verso)</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> nome, cpf, cnh, categoria, data_validade</li>
+                        <li><strong>CPF:</strong> Formato 000.000.000-00, dígitos verificadores válidos</li>
+                        <li><strong>CNH:</strong> 9 dígitos numéricos, deve ser única</li>
+                        <li><strong>Data de Validade:</strong> Formato YYYY-MM-DD, não pode estar vencida</li>
+                        <li><strong>Fotos CNH:</strong> Obrigatórias, máximo 5MB cada, apenas imagens</li>
+                        <li><strong>Email:</strong> Preenchido automaticamente com email do usuário logado</li>
+                    </ul>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Valida dados obrigatórios</li>
+                        <li>Processa upload de fotos da CNH</li>
+                        <li>Insere motorista no banco</li>
+                        <li>Redireciona para dashboard</li>
+      </ol>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /motoristas</h5>
+                    <p><strong>View:</strong> motoristas.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Lista todos os motoristas</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /editar-motorista/:id</h5>
+                    <p><strong>View:</strong> edit-motorista.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de edição de motorista</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /editar-motorista/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Processa edição de motorista</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para fotos da CNH (frente e verso)</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> nome, cpf, cnh, categoria, data_validade</li>
+                        <li><strong>CPF:</strong> Formato 000.000.000-00, dígitos verificadores válidos</li>
+                        <li><strong>CNH:</strong> 9 dígitos numéricos, deve ser única</li>
+                        <li><strong>Data de Validade:</strong> Formato YYYY-MM-DD, não pode estar vencida</li>
+                        <li><strong>Fotos CNH:</strong> Opcionais, máximo 5MB cada, apenas imagens</li>
+      </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>DELETE /motoristas/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui motorista</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Motorista deve existir</li>
+                        <li>Não pode ter uso em andamento</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h4>Fotos da CNH:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /fotos-cnh/:id</h5>
+                    <p><strong>View:</strong> fotosCnh.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe fotos da CNH do motorista</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 6. Gestão de Usuários -->
+        <div id="usuarios" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">6</span>
+                Gestão de Usuários
+            </h2>
+            
+            <h4>Rotas de Usuários:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /usuarios</h5>
+                    <p><strong>View:</strong> usuarios.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Lista todos os usuários</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /register</h5>
+                    <p><strong>View:</strong> register.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de cadastro de usuário</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /register</h5>
+                    <p><strong>Funcionalidade:</strong> Processa cadastro de usuário</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> email, password, role</li>
+                        <li><strong>Email:</strong> Deve ser válido e único</li>
+                        <li><strong>Senha:</strong> Mínimo 8 caracteres</li>
+                        <li><strong>Role:</strong> Deve ser 'admin' ou 'user'</li>
+                    </ul>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Valida dados obrigatórios</li>
+                        <li>Hash da senha</li>
+                        <li>Insere usuário no banco</li>
+                        <li>Redireciona para lista de usuários</li>
+      </ol>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /usuarios/:id/edit</h5>
+                    <p><strong>View:</strong> edit-usuario.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de edição de usuário</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /usuarios/:id/edit</h5>
+                    <p><strong>Funcionalidade:</strong> Processa edição de usuário</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> email, role</li>
+                        <li><strong>Email:</strong> Deve ser válido</li>
+                        <li><strong>Role:</strong> Deve ser 'admin' ou 'user'</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 7. Uso de Veículos -->
+        <div id="uso-veiculos" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">7</span>
+                Uso de Veículos
+            </h2>
+            
+            <h4>Rotas de Uso de Veículos:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /usar/:id</h5>
+                    <p><strong>View:</strong> usar.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário para registrar uso de veículo</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Veículo deve existir</li>
+                        <li>Usuário deve ter cadastro de motorista</li>
+                        <li>CNH do motorista deve estar válida</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /usar/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Processa registro de uso de veículo</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para foto do odômetro</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> km_inicial, km_final, data_hora_final, finalidade, descricao</li>
+                        <li><strong>KM Inicial:</strong> Deve ser igual ao KM atual do veículo</li>
+                        <li><strong>KM Final:</strong> Deve ser maior que o KM inicial</li>
+                        <li><strong>Limite de Autonomia:</strong> Consumo não pode ultrapassar 700 km</li>
+                        <li><strong>Data Final:</strong> Não pode ser anterior à data inicial</li>
+                        <li><strong>CNH Válida:</strong> CNH do motorista deve estar dentro da validade</li>
+                        <li><strong>Sobreposição:</strong> Não permite sobreposição de uso de veículo ou motorista</li>
+                        <li><strong>Foto Odômetro:</strong> Opcional, máximo 1MB, apenas imagens</li>
+                    </ul>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Valida dados obrigatórios</li>
+                        <li>Verifica sobreposição de uso</li>
+                        <li>Processa upload de foto</li>
+                        <li>Insere uso no banco</li>
+                        <li>Atualiza KM do veículo</li>
+                        <li>Redireciona para dashboard</li>
+      </ol>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /editar-uso/:id</h5>
+                    <p><strong>View:</strong> editarUso.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de edição de uso</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Uso deve existir</li>
+                        <li>Busca multas relacionadas ao uso</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /editar-uso/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Processa edição de uso</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para foto do odômetro</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Permissão:</strong> Apenas o próprio motorista pode editar</li>
+                        <li><strong>Campos Obrigatórios:</strong> km_final, data_hora_final, finalidade, descricao</li>
+                        <li><strong>KM Final:</strong> Deve ser maior que o KM inicial</li>
+                        <li><strong>Data Final:</strong> Não pode ser anterior à data inicial</li>
+                        <li><strong>Sobreposição:</strong> Não permite sobreposição de uso</li>
+                        <li><strong>Foto Odômetro:</strong> Opcional, máximo 1MB, apenas imagens</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /excluir-uso/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui uso de veículo</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Uso deve existir</li>
+                        <li>Apenas administradores podem excluir</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /excluir-multiplos-usos</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui múltiplos usos</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Lista de IDs deve ser válida</li>
+                        <li>Apenas administradores podem excluir</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h4>Validações de Uso de Veículos:</h4>
+            <div class="warning-box">
+                <strong>IMPORTANTE:</strong> O sistema não permite sobreposição de uso de veículos ou motoristas no mesmo período.
+            </div>
+            <ul>
+                <li><strong>Veículo:</strong> Não pode haver outro uso do mesmo veículo no período</li>
+                <li><strong>Motorista:</strong> Não pode haver outro uso do mesmo motorista no período</li>
+                <li><strong>Consulta SQL:</strong> <code>WHERE (veiculo_id = ? OR motorista = ?) AND (data_hora_inicial < ?) AND ((data_hora_final IS NULL) OR (data_hora_final > ?))</code></li>
+                <li><strong>Exemplo de Erro:</strong> "Erro: Já existe um uso nesse período."</li>
+            </ul>
+        </div>
+        
+        <!-- 8. Relatórios -->
+        <div id="relatorios" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">8</span>
+                Relatórios
+            </h2>
+            
+            <h4>Rotas de Relatórios:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /relatorio-uso</h5>
+                    <p><strong>View:</strong> relatorio_uso.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe relatório de uso de veículos</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Filtros:</strong></p>
+                    <ul>
+                        <li>Usuários comuns: apenas seus próprios usos</li>
+                        <li>Administradores: todos os usos</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /api/relatorio-uso</h5>
+                    <p><strong>Funcionalidade:</strong> API para relatório de uso (DataTables)</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Paginação</li>
+                        <li>Ordenação</li>
+                        <li>Busca</li>
+                        <li>Filtros por usuário</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /relatorio-veiculos</h5>
+                    <p><strong>View:</strong> relatorio-veiculos.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe relatório de veículos</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /api/relatorio-veiculos</h5>
+                    <p><strong>Funcionalidade:</strong> API para relatório de veículos</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Filtros por veículo</li>
+                        <li>Filtros por data</li>
+                        <li>Filtros por KM</li>
+                        <li>Paginação</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /relatorio-multas</h5>
+                    <p><strong>View:</strong> relatorioMultas.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe relatório de multas</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /relatorio-consumo</h5>
+                    <p><strong>View:</strong> relatorioConsumo.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe relatório de consumo</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /relatorio-violacoes</h5>
+                    <p><strong>View:</strong> relatorioViolacoes.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe relatório de violações</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /relatorio-violacoes</h5>
+                    <p><strong>Funcionalidade:</strong> Processa relatório de violações</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Filtros:</strong></p>
+                    <ul>
+                        <li>Data inicial e final</li>
+                        <li>Veículo específico</li>
+                        <li>Tipo de violação</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 9. Manutenções -->
+        <div id="manutencoes" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">9</span>
+                Manutenções
+            </h2>
+            
+            <h4>Rotas de Manutenções:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes</h5>
+                    <p><strong>View:</strong> manutencoes.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Lista as manutenções</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Filtros:</strong></p>
+                    <ul>
+                        <li>Por veículo</li>
+                        <li>Por data</li>
+                        <li>Por status</li>
+                        <li>Por tipo</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes/config</h5>
+                    <p><strong>View:</strong> manutencoes-config-list.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Lista veículos para configurar manutenções</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes/config/:veiculo_id</h5>
+                    <p><strong>View:</strong> manutencoes-por-veiculo.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Configura manutenções para veículo específico</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /manutencoes</h5>
+                    <p><strong>Funcionalidade:</strong> Cria nova manutenção</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> veiculo_id, tipo, descricao</li>
+                        <li><strong>Veículo:</strong> Deve existir</li>
+                        <li><strong>Tipo:</strong> Deve ser válido</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes/:id/edit</h5>
+                    <p><strong>View:</strong> manutencao-edit.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de edição de manutenção</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /manutencoes/:id/edit</h5>
+                    <p><strong>Funcionalidade:</strong> Processa edição de manutenção</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para fotos</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> tipo, descricao</li>
+                        <li><strong>Manutenção:</strong> Deve existir</li>
+                        <li><strong>Fotos:</strong> Máximo 10MB total, apenas imagens</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /manutencoes/:id/delete</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui manutenção</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Manutenção deve existir</li>
+                        <li>Apenas administradores podem excluir</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes/:id</h5>
+                    <p><strong>View:</strong> manutencao-detalhe.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe detalhes da manutenção</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /manutencoes/:id/upload</h5>
+                    <p><strong>Funcionalidade:</strong> Upload de fotos para manutenção</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para fotos</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Manutenção deve existir</li>
+                        <li>Fotos: máximo 10MB total, apenas imagens</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes/arquivo/:id/download</h5>
+                    <p><strong>Funcionalidade:</strong> Download de arquivo de manutenção</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /manutencoes/arquivo/:id/delete</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui arquivo de manutenção</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes/estatisticas</h5>
+                    <p><strong>View:</strong> manutencoes-estatisticas.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe estatísticas de manutenções</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <h4>Manutenções Manuais:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes-manuais</h5>
+                    <p><strong>View:</strong> manutencoes.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Lista manutenções manuais</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes-manuais/novo</h5>
+                    <p><strong>View:</strong> manutencao-nova.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de nova manutenção manual</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /manutencoes-manuais/novo</h5>
+                    <p><strong>Funcionalidade:</strong> Processa nova manutenção manual</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> veiculo_id, tipo, descricao</li>
+                        <li><strong>Veículo:</strong> Deve existir</li>
+                        <li><strong>Tipo:</strong> Deve ser válido</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /manutencoes-manuais/:id/editar</h5>
+                    <p><strong>View:</strong> manutencao-edit.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de edição de manutenção manual</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /manutencoes-manuais/:id/editar</h5>
+                    <p><strong>Funcionalidade:</strong> Processa edição de manutenção manual</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para fotos</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /manutencoes-manuais/:id/marcar-realizada</h5>
+                    <p><strong>Funcionalidade:</strong> Marca manutenção como realizada</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 10. Multas -->
+        <div id="multas" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">10</span>
+                Multas
+            </h2>
+            
+            <h4>Rotas de Multas:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /registrar-multa/:veiculo_id</h5>
+                    <p><strong>View:</strong> registrarMulta.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de registro de multa</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Veículo deve existir</li>
+                        <li>Busca uso do veículo no período</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /registrar-multa/:veiculo_id</h5>
+                    <p><strong>Funcionalidade:</strong> Processa registro de multa</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> multa, data</li>
+                        <li><strong>Descrição da Multa:</strong> Deve ser preenchida</li>
+                        <li><strong>Data:</strong> Formato YYYY-MM-DD</li>
+                        <li><strong>Uso:</strong> Deve existir uso do veículo no período</li>
+                    </ul>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Valida dados obrigatórios</li>
+                        <li>Busca uso do veículo no período</li>
+                        <li>Associa multa ao uso e motorista</li>
+                        <li>Insere multa no banco</li>
+                        <li>Redireciona para relatório de multas</li>
+      </ol>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /multar/:uso_id</h5>
+                    <p><strong>Funcionalidade:</strong> Registra multa para uso específico</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Descrição da Multa:</strong> Obrigatória</li>
+                        <li><strong>Uso:</strong> Deve existir</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /excluir-multa/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui multa</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li>Multa deve existir</li>
+                        <li>Apenas administradores podem excluir</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 11. Reembolsos -->
+        <div id="reembolsos" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">11</span>
+                Reembolsos
+            </h2>
+            
+            <h4>Rotas de Reembolsos:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /reembolsos</h5>
+                    <p><strong>View:</strong> reembolsos.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Lista reembolsos e exibe formulário</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Lista reembolsos</li>
+                        <li>Formulário para novo reembolso</li>
+                        <li>Gráficos de reembolsos</li>
+                        <li>Agregações por período</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /reembolsos</h5>
+                    <p><strong>Funcionalidade:</strong> Processa novo reembolso</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Upload:</strong> Multer para comprovante</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> motorista_id, valor</li>
+                        <li><strong>Motorista:</strong> Deve existir</li>
+                        <li><strong>Valor:</strong> Deve ser numérico positivo</li>
+                        <li><strong>Comprovante:</strong> Opcional, apenas imagens</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 12. Notificações -->
+        <div id="notificacoes" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">12</span>
+                Notificações
+            </h2>
+            
+            <h4>Rotas de Notificações:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /notificacoes</h5>
+                    <p><strong>View:</strong> notificacoes.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe notificações do sistema</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Veículos que precisam trocar óleo</li>
+                        <li>Notificações de alteração de KM</li>
+                        <li>Alertas de manutenção</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /excluir-notificacao-alteracao-km/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui notificação de alteração de KM</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 13. Auditoria -->
+        <div id="auditoria" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">13</span>
+                Sistema de Auditoria
+            </h2>
+            
+            <h4>Rotas de Auditoria:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /auditoria</h5>
+                    <p><strong>View:</strong> auditoria.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe logs de auditoria do sistema</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Filtros:</strong></p>
+                    <ul>
+                        <li>Por usuário</li>
+                        <li>Por data</li>
+                        <li>Por rota</li>
+                        <li>Por método HTTP</li>
+                    </ul>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Lista ações dos usuários</li>
+                        <li>Detalhes de cada ação</li>
+                        <li>Filtros</li>
+                        <li>Paginação</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 14. Conserto Viável -->
+        <div id="conserto-viavel" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">14</span>
+                Conserto Viável
+            </h2>
+            
+            <h4>Rotas de Conserto Viável:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /conserto-viavel</h5>
+                    <p><strong>View:</strong> conserto-viavel.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe análise de viabilidade de conserto</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Lista avaliações de conserto</li>
+                        <li>Integração com API FIPE</li>
+                        <li>Cálculo de percentual de viabilidade</li>
+                        <li>Histórico de avaliações</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /conserto-viavel</h5>
+                    <p><strong>Funcionalidade:</strong> Avalia viabilidade de conserto</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Validações:</strong></p>
+                    <ul>
+                        <li><strong>Campos Obrigatórios:</strong> marca, modelo, ano, custo_conserto</li>
+                        <li><strong>Dados FIPE:</strong> Deve ser válido</li>
+                        <li><strong>Custo:</strong> Deve ser numérico positivo</li>
+                    </ul>
+                    <p><strong>Processo:</strong></p>
+                    <ol>
+                        <li>Consulta API FIPE</li>
+                        <li>Calcula percentual de viabilidade</li>
+                        <li>Salva avaliação no banco</li>
+                        <li>Retorna resultado</li>
+      </ol>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /salvar-avaliacao</h5>
+                    <p><strong>Funcionalidade:</strong> Salva avaliação de conserto</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /excluir-avaliacao/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui avaliação de conserto</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <h4>APIs FIPE:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /api/marcas</h5>
+                    <p><strong>Funcionalidade:</strong> Lista marcas de veículos</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /api/modelos</h5>
+                    <p><strong>Funcionalidade:</strong> Lista modelos de veículos</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /api/anos</h5>
+                    <p><strong>Funcionalidade:</strong> Lista anos de veículos</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 15. Busca Global -->
+        <div id="busca-global" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">15</span>
+                Busca Global
+            </h2>
+            
+            <h4>Rotas de Busca:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /search</h5>
+                    <p><strong>View:</strong> searchResults.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Busca global no sistema</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Busca em veículos</li>
+                        <li>Busca em motoristas</li>
+                        <li>Busca em usuários</li>
+                        <li>Busca em usos</li>
+                        <li>Busca em manutenções</li>
+                        <li>Busca em multas</li>
+      </ul>
+                </div>
+            </div>
+  </div>
+
+        <!-- 16. GPS e Localização -->
+        <div id="gps" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">16</span>
+                GPS e Localização
+            </h2>
+            
+            <h4>Rotas de GPS:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /gps-history</h5>
+                    <p><strong>View:</strong> gps-history.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe histórico de localização GPS</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /admin/gps-controle</h5>
+                    <p><strong>View:</strong> adminGpsControle.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Controle administrativo de GPS</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /ultimas-localizacoes</h5>
+                    <p><strong>Funcionalidade:</strong> API para últimas localizações</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /api/mapa-usos</h5>
+                    <p><strong>Funcionalidade:</strong> API para mapa de usos</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /api/mapa-usos/ultimos</h5>
+                    <p><strong>Funcionalidade:</strong> API para últimos usos no mapa</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <h4>Geofences:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /admin/geofences/criar</h5>
+                    <p><strong>Funcionalidade:</strong> Cria geofence</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /geofences-json</h5>
+                    <p><strong>Funcionalidade:</strong> API para geofences</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /admin/geofences/excluir/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui geofence</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 17. Sessões Ativas -->
+        <div id="sessoes" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">17</span>
+                Sessões Ativas
+            </h2>
+            
+            <h4>Rotas de Sessões:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /active-sessions</h5>
+                    <p><strong>View:</strong> active-sessions.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe sessões ativas do sistema</p>
+                    <p><strong>Requer:</strong> Autenticação + Admin + CSRF Protection</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Lista usuários logados</li>
+                        <li>Tempo de sessão</li>
+                        <li>Tempo restante</li>
+                        <li>Email do usuário</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /session-info/json</h5>
+                    <p><strong>Funcionalidade:</strong> API para informações de sessão</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 18. Histórico de Viagens -->
+        <div id="viagens" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">18</span>
+                Histórico de Viagens
+            </h2>
+            
+            <h4>Rotas de Viagens:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /trips-history-view</h5>
+                    <p><strong>View:</strong> trips-history.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe histórico de viagens</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /trips-history</h5>
+                    <p><strong>Funcionalidade:</strong> API para histórico de viagens</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /viagensComUso</h5>
+                    <p><strong>View:</strong> viagensComUso.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe viagens com uso</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /mapa-usos</h5>
+                    <p><strong>View:</strong> mapa-usos.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe mapa interativo de usos com simulação</p>
+                    <p><strong>Requer:</strong> Autenticação</p>
+                    <p><strong>Funcionalidades Detalhadas:</strong></p>
+                    <ul>
+                        <li><strong>Mapa Interativo:</strong> Visualização de usos em mapa com Leaflet</li>
+                        <li><strong>Paginação Principal:</strong> Navegação entre páginas de usos (10, 25, 50, 100 por página)</li>
+                        <li><strong>Busca Global:</strong> Pesquisa por motorista, placa ou finalidade</li>
+                        <li><strong>Marcadores:</strong> Pontos de início/fim de cada uso com popups informativos</li>
+                        <li><strong>Trajetos:</strong> Linhas mostrando rotas percorridas pelos veículos</li>
+                        <li><strong>Heatmap:</strong> Visualização de densidade de pontos GPS</li>
+                        <li><strong>Simulação:</strong> Reprodução animada de viagens com controles play/pause/step</li>
+                        <li><strong>Filtros de Data:</strong> Filtro por período nos "Últimos usos"</li>
+                        <li><strong>Gráficos:</strong> Distribuição por finalidade e estatísticas</li>
+                        <li><strong>Controles de Mapa:</strong> Ajustar visualização, mostrar/ocultar trajetos</li>
+                    </ul>
+                    <p><strong>O que o usuário PODE fazer:</strong></p>
+                    <ul>
+                        <li>Navegar entre páginas de usos</li>
+                        <li>Buscar usos por motorista, placa ou finalidade</li>
+                        <li>Visualizar marcadores no mapa</li>
+                        <li>Mostrar/ocultar trajetos individuais</li>
+                        <li>Mostrar/ocultar as rotas da página atual</li>
+                        <li>Ativar/desativar heatmap</li>
+                        <li>Ajustar visualização do mapa para mostrar os marcadores</li>
+                        <li>Simular viagens com controles de reprodução</li>
+                        <li>Filtrar "Últimos usos" por data</li>
+                        <li>Ver estatísticas e gráficos</li>
+                        <li>Abrir detalhes de uso clicando em marcadores</li>
+                    </ul>
+                    <p><strong>O que o usuário NÃO pode fazer:</strong></p>
+                    <ul>
+                        <li>Editar usos diretamente no mapa</li>
+                        <li>Criar novos usos no mapa</li>
+                        <li>Excluir usos no mapa</li>
+                        <li>Modificar dados de GPS</li>
+                        <li>Acessar sem autenticação</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 19. Dispositivos GPS -->
+        <div id="dispositivos" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">19</span>
+                Dispositivos GPS
+            </h2>
+            
+            <h4>Rotas de Dispositivos:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /cadastrar-dispositivo</h5>
+                    <p><strong>View:</strong> cadastrar-dispositivo.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de cadastro de dispositivo</p>
+                    <p><strong>Requer:</strong> Admin + Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /cadastrar-dispositivo</h5>
+                    <p><strong>Funcionalidade:</strong> Processa cadastro de dispositivo</p>
+                    <p><strong>Requer:</strong> Admin + Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /listar-dispositivos</h5>
+                    <p><strong>View:</strong> listar-dispositivos.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Lista dispositivos GPS</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /editar-dispositivo/:id</h5>
+                    <p><strong>View:</strong> editar-dispositivo.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe formulário de edição de dispositivo</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /editar-dispositivo/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Processa edição de dispositivo</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>POST /excluir-dispositivo/:id</h5>
+                    <p><strong>Funcionalidade:</strong> Exclui dispositivo</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 20. Tutorial -->
+        <div id="tutorial-sistema" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">20</span>
+                Tutorial
+            </h2>
+            
+            <h4>Rota do Tutorial:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>GET /tutorial</h5>
+                    <p><strong>View:</strong> tutorial.ejs</p>
+                    <p><strong>Funcionalidade:</strong> Exibe tutorial do sistema</p>
+                    <p><strong>Requer:</strong> Autenticação + CSRF Protection</p>
+                    <p><strong>Funcionalidades:</strong></p>
+                    <ul>
+                        <li>Tutorial das funcionalidades disponíveis</li>
+                        <li>Passo a passo</li>
+                        <li>Validações e rotas</li>
+                        <li>Download em PDF</li>
+                        <li>Impressão nativa</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 21. Validações do Sistema -->
+        <div id="validacoes" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">21</span>
+                Validações do Sistema
+            </h2>
+            
+            <h4>Validações Implementadas:</h4>
+            <div class="card">
+                <div class="card-body">
+                    <h5>Sanitização de Dados</h5>
+                    <ul>
+                        <li><strong>XSS Protection:</strong> <code>validator.escape()</code> em todos os campos de texto</li>
+                        <li><strong>CSRF Protection:</strong> Token obrigatório nas rotas POST/PUT/DELETE</li>
+                        <li><strong>Rate Limiting:</strong> Limite de tentativas de login</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>Validações de Arquivo</h5>
+                    <ul>
+                        <li><strong>Imagens:</strong> Apenas image/*, máximo 5MB</li>
+                        <li><strong>Fotos CNH:</strong> Obrigatórias, máximo 5MB cada</li>
+                        <li><strong>Fotos Veículos:</strong> Opcionais, máximo 5MB cada</li>
+                        <li><strong>Fotos Manutenção:</strong> Máximo 10MB total</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>Validações de Formato</h5>
+                    <ul>
+                        <li><strong>Email:</strong> <code>isEmail().normalizeEmail()</code></li>
+                        <li><strong>CPF:</strong> Formato 000.000.000-00, dígitos verificadores</li>
+                        <li><strong>CNH:</strong> 9 dígitos numéricos</li>
+                        <li><strong>Placa:</strong> Formato ABC-1234</li>
+                        <li><strong>Data:</strong> Formato YYYY-MM-DD</li>
+                        <li><strong>Data/Hora:</strong> Formato YYYY-MM-DDTHH:MM</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5>Validações de Negócio</h5>
+                    <ul>
+                        <li><strong>Sobreposição de Uso:</strong> Não permite uso simultâneo de veículo/motorista</li>
+                        <li><strong>CNH Válida:</strong> Data de validade não pode estar vencida</li>
+                        <li><strong>KM Consistente:</strong> KM final deve ser maior que inicial</li>
+                        <li><strong>Limite de Autonomia:</strong> Consumo máximo de 700 km</li>
+                        <li><strong>Uso em Andamento:</strong> Não permite edição se veículo em uso</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 22. Informações do Sistema -->
+        <div id="estatisticas" class="tutorial-section">
+            <h2 class="mb-4">
+                <span class="step-number">22</span>
+                Informações do Sistema
+            </h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Rotas:</h4>
+                    <ul>
+                        <li><strong>Total:</strong> 139 rotas</li>
+                        <li><strong>GET:</strong> 89 rotas</li>
+                        <li><strong>POST:</strong> 45 rotas</li>
+                        <li><strong>DELETE:</strong> 5 rotas</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h4>Views EJS:</h4>
+                    <ul>
+                        <li><strong>Total:</strong> 52 views</li>
+                        <li><strong>Principais:</strong> dashboard, login, veículos, motoristas</li>
+                        <li><strong>Relatórios:</strong> uso, veículos, multas, consumo</li>
+                        <li><strong>Administração:</strong> usuários, auditoria, GPS</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Funcionalidades:</h4>
+                    <ul>
+                        <li>Gestão de frota</li>
+                        <li>Sistema de GPS em tempo real</li>
+                        <li>Relatórios</li>
+                        <li>Auditoria</li>
+                        <li>Integração com API FIPE</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h4>Segurança:</h4>
+                    <ul>
+                        <li>Autenticação via Passport.js</li>
+                        <li>CSRF Protection</li>
+                        <li>Rate Limiting</li>
+                        <li>Sanitização de dados</li>
+                        <li>Controle de permissões</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

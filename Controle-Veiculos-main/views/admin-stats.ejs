@@ -1,0 +1,430 @@
+<% /* views/admin-stats.ejs — dashboard com modal por motorista */ %>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title><%= title || 'Estatísticas (Admin)' %></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    :root{ --kpi-height:120px; --card-radius:.75rem }
+    body{background:#f8f9fa}
+    .kpi-card{min-height:var(--kpi-height); border-radius:var(--card-radius)}
+    .kpi-value{font-size:1.6rem; font-weight:700}
+    .small-muted{font-size:.85rem; color:#6c757d}
+    #map{height:360px; border-radius:.5rem}
+    .driver-row:hover{background:#fbfcfd}
+  </style>
+</head>
+<body>
+  <div class="container my-4">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <h3 class="mb-0">Dashboard — Estatísticas da Frota</h3>
+        <small class="text-muted">Visão consolidada para administradores</small>
+      </div>
+      <div class="text-end">
+        <small class="text-muted d-block">Usuário: <%= user && user.email ? user.email : '—' %></small>
+        <div class="mt-2">
+          <button id="btnRefresh" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="Atualizar">⟳</button>
+          <button id="btnExportCsv" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" title="Exportar CSV">⇩</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- filtros (idênticos) -->
+    <form id="filterForm" class="row g-2 mb-3" method="get" action="/admin/stats">
+      <div class="col-auto"><label class="form-label small">Início</label><input class="form-control" type="date" name="start" value="<%= filters && filters.start ? filters.start : '' %>"></div>
+      <div class="col-auto"><label class="form-label small">Fim</label><input class="form-control" type="date" name="end" value="<%= filters && filters.end ? filters.end : '' %>"></div>
+      <div class="col-auto">
+        <label class="form-label small">Veículo</label>
+        <select class="form-select" name="veiculo_id">
+          <option value="">Todos</option>
+          <% if (Array.isArray(veiculosList)) veiculosList.forEach(v=>{ %>
+            <option value="<%= v.id %>" <%= (filters && String(filters.veiculo_id) === String(v.id)) ? 'selected' : '' %>><%= v.placa %> <%= v.nome ? '— '+v.nome : '' %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-auto"><label class="form-label small">Motorista</label>
+        <select class="form-select" name="motorista">
+          <option value="">Todos</option>
+          <% if (Array.isArray(motoristasList)) motoristasList.forEach(m=>{ %>
+            <option value="<%= m.nome %>" <%= (filters && filters.motorista === m.nome) ? 'selected' : '' %>><%= m.nome %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-auto d-flex align-items-end"><button class="btn btn-primary">Filtrar</button></div>
+    </form>
+
+    <!-- KPIs top row -->
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="card kpi-card p-3" style="border-left:4px solid #0d6efd">
+          <small class="small-muted">Veículos</small>
+          <div class="kpi-value"><%= stats && stats.kpi_frota ? stats.kpi_frota.total_veiculos : 0 %></div>
+          <small class="text-muted">Cadastrados</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card kpi-card p-3" style="border-left:4px solid #198754">
+          <small class="small-muted">Motoristas</small>
+          <div class="kpi-value"><%= stats && stats.kpi_frota ? stats.kpi_frota.total_motoristas : 0 %></div>
+          <small class="text-muted">Total</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card kpi-card p-3" style="border-left:4px solid #dc3545">
+          <small class="small-muted">Gasto Combustível</small>
+          <div class="kpi-value">R$ <%= Number(stats && stats.abastecimentos_totais && stats.abastecimentos_totais.gasto || 0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+          <small class="text-muted">Período</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card kpi-card p-3" style="border-left:4px solid #ffc107">
+          <small class="small-muted">Consumo estimado</small>
+          <div class="kpi-value">
+            <% if (stats && stats.consumo_medio_l_km != null) { %>
+              <%= (stats.consumo_medio_l_km * 100).toFixed(2) %> L / 100 km
+            <% } else { %> — <% } %>
+          </div>
+          <small class="text-muted">Estimativa</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- middle row: chart + top vehicles -->
+    <div class="row mt-4 g-3">
+      <div class="col-lg-8">
+        <div class="card p-3">
+          <h6>Gasto com Abastecimento (por dia)</h6>
+          <canvas id="chartAbastecimento" height="120"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card p-3 mb-3">
+          <h6>Top veículos por gasto</h6>
+          <ul class="list-group list-group-flush">
+            <% if (Array.isArray(stats && stats.top_veiculos_abastecimento) && stats.top_veiculos_abastecimento.length) { %>
+              <% stats.top_veiculos_abastecimento.forEach(v => { %>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <div><strong><%= v.placa %></strong><br><small class="text-muted"><%= v.qtd %>x</small></div>
+                  <div>R$ <%= Number(v.gasto||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+                </li>
+              <% }) %>
+            <% } else { %>
+              <li class="list-group-item">Sem dados.</li>
+            <% } %>
+          </ul>
+        </div>
+
+        <div class="card p-3">
+          <h6>Infrações — Top motoristas</h6>
+          <ul class="list-group list-group-flush">
+            <% if (Array.isArray(stats && stats.multas_por_motorista) && stats.multas_por_motorista.length) { %>
+              <% stats.multas_por_motorista.forEach(m=>{ %>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <div><%= m.motorista || '—' %><br><small class="text-muted"><%= m.qtd %> multas</small></div>
+                  <div>R$ <%= Number(m.total_valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+                </li>
+              <% }) %>
+            <% } else { %>
+              <li class="list-group-item">Sem dados.</li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- drivers list with button to open modal -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between">
+            <h6 class="mb-0">Motoristas</h6>
+            <small class="text-muted">Clique em "Ver KPIs" para abrir o painel do motorista</small>
+          </div>
+          <div class="table-responsive mt-2">
+            <table class="table table-hover table-sm">
+              <thead class="table-light">
+                <tr>
+                  <th>Nome</th>
+                  <th>CPF</th>
+                  <th class="text-end">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (Array.isArray(motoristasList)) { %>
+                  <% motoristasList.forEach(m => { %>
+                    <tr class="driver-row">
+                      <td><%= m.nome %></td>
+                      <td><%= m.cpf || '—' %></td>
+                      <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary btn-driver-kpis" data-id="<%= m.id %>" data-name="<%= m.nome %>">Ver KPIs</button>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr><td colspan="3">Sem motoristas cadastrados.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- map + daily summary -->
+    <div class="row mt-4 g-3">
+      <div class="col-lg-8">
+        <div class="card p-3">
+          <h6>Mapa — pontos recentes & geofences</h6>
+          <div id="map"></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <h6>Resumo diário</h6>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead><tr><th>Dia</th><th class="text-end">Gasto</th><th class="text-end">Litros</th><th class="text-end">Qtd</th></tr></thead>
+              <tbody>
+                <% if (Array.isArray(stats && stats.abastecPorDia) && stats.abastecPorDia.length) { %>
+                  <% stats.abastecPorDia.forEach(r => { %>
+                    <tr>
+                      <td><%= r.dia %></td>
+                      <td class="text-end">R$ <%= Number(r.gasto||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                      <td class="text-end"><%= Number(r.litros||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                      <td class="text-end"><%= r.qtd %></td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr><td colspan="4">Sem dados.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal motorista -->
+  <div class="modal fade" id="driverModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="driverModalTitle">KPIs Motorista</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="driverContent">
+            <!-- preenchido por JS -->
+            <div class="text-center py-4">Carregando...</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btnCloseModal" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // inicializa tooltips
+    document.addEventListener('DOMContentLoaded', () => {
+      const tlist = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tlist.forEach(el => new bootstrap.Tooltip(el));
+    });
+
+    // dados injetados
+    const stats = <%- JSON.stringify(stats || {}) %>;
+
+    // Chart geral (abastecimentos por dia)
+    (function(){
+      const ctx = document.getElementById('chartAbastecimento');
+      if (!ctx) return;
+      const labels = (stats.abastecPorDia||[]).map(r=>r.dia);
+      const gasto = (stats.abastecPorDia||[]).map(r=>Number(r.gasto||0));
+      const litros = (stats.abastecPorDia||[]).map(r=>Number(r.litros||0));
+      new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [
+          { label:'Gasto (R$)', data: gasto, yAxisID:'y', backgroundColor: 'rgba(13,110,253,0.7)'},
+          { label:'Litros', data: litros, type:'line', yAxisID:'y1', tension:0.3, borderColor:'#198754' }
+        ] },
+        options: { interaction:{mode:'index',intersect:false}, scales:{ y:{position:'left'}, y1:{position:'right', grid:{drawOnChartArea:false}} } }
+      });
+    })();
+
+    // mapa (pontos + geofences)
+    (function(){
+      try {
+        const map = L.map('map').setView([-15.8,-47.9],5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        const pontos = stats.pontos_recentes || [];
+        const markers = L.layerGroup();
+        pontos.forEach(p=>{
+          const lat = Number(p.start_lat);
+          const lng = Number(p.start_lng);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            L.circleMarker([lat,lng], { radius:5, color:'#0d6efd' }).bindPopup(`<strong>Veíc:</strong> ${p.veiculo_id || ''}<br><small>${p.ts || ''}</small>`).addTo(markers);
+          }
+        });
+        markers.addTo(map);
+
+        (stats.geofences || []).forEach(g=>{
+          if (g && g.geojson) {
+            try { L.geoJSON(g.geojson, { style:{ color:'#e03', weight:2, fillOpacity:0.06 } }).addTo(map); } catch(e){}
+          }
+        });
+
+        const all = [];
+        markers.getLayers().forEach(l=>all.push(l));
+        if (all.length) {
+          const group = L.featureGroup(all);
+          map.fitBounds(group.getBounds().pad(0.2));
+        }
+      } catch(e) { console.warn('map error', e && e.message); }
+    })();
+
+    // botão refresh
+    document.getElementById('btnRefresh').addEventListener('click', ()=> document.getElementById('filterForm').requestSubmit());
+
+    // export CSV (mesma ideia de antes)
+    document.getElementById('btnExportCsv').addEventListener('click', () => {
+      try {
+        const rows = [];
+        rows.push(['Resumo diário - Abastecimento']);
+        rows.push(['dia','gasto','litros','qtd']);
+        (stats.abastecPorDia||[]).forEach(r=>rows.push([r.dia, r.gasto, r.litros, r.qtd]));
+        rows.push([]);
+        rows.push(['Top veículos','placa','gasto','litros','qtd']);
+        (stats.top_veiculos_abastecimento||[]).forEach(r=>rows.push([r.placa, r.gasto, r.litros, r.qtd]));
+        rows.push([]);
+        rows.push(['Top motoristas (multas)','motorista','qtd','valor']);
+        (stats.multas_por_motorista||[]).forEach(r=>rows.push([r.motorista, r.qtd, r.total_valor]));
+
+        const csv = rows.map(r => r.map(c => `"${(c===null||c===undefined)?'':String(c).replace(/"/g,'""')}"`).join(',')).join('\\n');
+        const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `estatisticas_frota_${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      } catch(e){ alert('Erro export CSV: '+(e&&e.message)); }
+    });
+
+    // driver modal logic — fetch KPIs por motorista e renderiza modal
+    const driverModalEl = document.getElementById('driverModal');
+    const driverModal = new bootstrap.Modal(driverModalEl, { backdrop:'static' });
+    document.querySelectorAll('.btn-driver-kpis').forEach(btn => {
+      btn.addEventListener('click', async (ev) => {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
+        const url = `/admin/stats/driver/${encodeURIComponent(id)}?start=${encodeURIComponent((new URLSearchParams(location.search)).get('start')||'')}&end=${encodeURIComponent((new URLSearchParams(location.search)).get('end')||'')}`;
+        const content = document.getElementById('driverContent');
+        content.innerHTML = `<div class="text-center py-4">Carregando KPIs de <strong>${name}</strong>...</div>`;
+        driverModal.show();
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('Resposta ' + res.status);
+          const payload = await res.json();
+          renderDriverModal(payload);
+        } catch (err) {
+          content.innerHTML = `<div class="alert alert-danger">Erro ao carregar KPIs: ${err && err.message}</div>`;
+        }
+      });
+    });
+
+    // monta conteúdo do modal com KPIs do motorista
+    function renderDriverModal(payload) {
+      const content = document.getElementById('driverContent');
+      if (!payload || payload.error) {
+        content.innerHTML = `<div class="alert alert-warning">Sem dados para este motorista.</div>`;
+        return;
+      }
+      const m = payload.motorista || {};
+      const u = payload.usage || {};
+      const a = payload.abaste || {};
+      const mu = payload.multas || {};
+      const r = payload.reembolsos || {};
+      const d = payload.derived || {};
+      const series = payload.series || [];
+
+      content.innerHTML = `
+        <div class="row">
+          <div class="col-md-8">
+            <h5>${m.nome || '—'}</h5>
+            <small class="text-muted">CPF: ${m.cpf || '—'}</small>
+            <div class="mt-3">
+              <div class="row text-center">
+                <div class="col">
+                  <div class="h4 mb-0">${u.total_viagens || 0}</div>
+                  <small class="text-muted">Viagens</small>
+                </div>
+                <div class="col">
+                  <div class="h4 mb-0">${Number(u.distancia_total_km || 0).toLocaleString('pt-BR',{maximumFractionDigits:2})} km</div>
+                  <small class="text-muted">Distância total</small>
+                </div>
+                <div class="col">
+                  <div class="h4 mb-0">${Number(a.litros_total || 0).toLocaleString('pt-BR',{maximumFractionDigits:2})} L</div>
+                  <small class="text-muted">Litros</small>
+                </div>
+                <div class="col">
+                  <div class="h4 mb-0">R$ ${Number(a.gasto_total || 0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+                  <small class="text-muted">Gasto</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <strong>Multas:</strong> ${mu.qtd_multas || 0} (R$ ${Number(mu.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})})
+            </div>
+
+            <div class="mt-3">
+              <strong>Reembolsos:</strong> ${r.qtd_reembolsos || 0} (R$ ${Number(r.total_reembolsos||0).toLocaleString('pt-BR',{minimumFractionDigits:2})})
+            </div>
+
+            <div class="mt-3">
+              <strong>Score de eficiência:</strong>
+              <div class="d-flex align-items-center">
+                <div style="width:90%;" class="me-2">
+                  <div class="progress" style="height:12px;">
+                    <div class="progress-bar ${d.score>60?'bg-danger':d.score>30?'bg-warning':'bg-success'}" role="progressbar" style="width:${d.score}%"></div>
+                  </div>
+                </div>
+                <div style="width:10%;"><strong>${d.score}</strong></div>
+              </div>
+              <small class="text-muted">Combina gasto/km e multas (0=melhor,100=pior)</small>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <canvas id="driverMiniChart" height="140"></canvas>
+            <small class="text-muted">Gasto por dia (período)</small>
+          </div>
+        </div>
+      `;
+
+      // criar mini chart
+      try {
+        const ctx = document.getElementById('driverMiniChart');
+        const labels = (series||[]).map(r=>r.dia);
+        const gasto = (series||[]).map(r=>Number(r.gasto||0));
+        const litros = (series||[]).map(r=>Number(r.litros||0));
+        new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets: [{ label:'Gasto', data: gasto }, { label:'Litros', data: litros, type:'line', borderColor:'#198754'}] },
+          options: { interaction:{mode:'index',intersect:false}, plugins:{legend:{display:true}} }
+        });
+      } catch(e) { console.warn('mini chart error', e && e.message); }
+    }
+  </script>
+</body>
+</html>

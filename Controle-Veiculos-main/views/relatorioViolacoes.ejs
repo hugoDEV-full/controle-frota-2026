@@ -1,0 +1,69 @@
+<div class="container mt-4">
+  <h1>Relatório de Violações por Motorista</h1>
+
+  <form method="post" action="/relatorio-violacoes" class="row g-3 mb-4">
+  
+    <div class="col-md-3">
+      <label class="form-label">Motorista</label>
+      <input type="text" name="motorista" value="<%= filtro.motorista %>" class="form-control">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Veículo</label>
+      <input type="text" name="veiculo" value="<%= filtro.veiculo %>" class="form-control">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">De</label>
+      <input type="date" name="from" value="<%= filtro.from %>" class="form-control">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Até</label>
+      <input type="date" name="to" value="<%= filtro.to %>" class="form-control">
+    </div>
+    <div class="col-12 text-end">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+    </div>
+  </form>
+
+  <% if (!dados.length) { %>
+    <div class="alert alert-info">Nenhuma viagem encontrada para os filtros aplicados.</div>
+  <% } else { %>
+    <table class="table table-striped">
+      <thead class="table-dark">
+        <tr>
+          <th>#</th>
+          <th>Motorista</th>
+          <th>Placa</th>
+          <th>Início</th>
+          <th>Fim</th>
+          <th>Pontos GPS</th>
+          <th>Vel. Excedida</th>
+          <th>Eventos Bruscos</th>
+          <th>Paradas >30s</th>
+          <th>Houve Violação?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% dados.forEach((d, i) => { %>
+          <tr>
+            <td><%= i + 1 %></td>
+            <td><%= d.motorista %></td>
+            <td><%= d.placa %></td>
+            <td><%= new Date(d.inicio).toLocaleString() %></td>
+            <td><%= new Date(d.fim).toLocaleString() %></td>
+            <td><%= d.pontos %></td>
+            <td><%= d.speedViol %></td>
+            <td><%= d.harshEvents %></td>
+            <td><%= d.stops %></td>
+            <td>
+              <% if (d.houveViolacao) { %>
+                <span class="text-danger fw-bold">Sim</span>
+              <% } else { %>
+                <span class="text-success">Não</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>

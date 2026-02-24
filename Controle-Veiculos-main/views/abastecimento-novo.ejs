@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title><%= title %></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-4 mb-5">
+    <h1><%= title %></h1>
+    <p>Usuário: <strong><%= user?.email || '—' %></strong></p>
+
+    <% if (errors && errors.length) { %>
+      <div class="alert alert-danger">
+        <ul class="mb-0">
+          <% errors.forEach(err => { %> <li><%= err %></li> <% }) %>
+        </ul>
+      </div>
+    <% } %>
+
+    <form action="/abastecimento" method="POST" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="row g-3">
+
+        <div class="col-md-4">
+          <label for="data_hora" class="form-label" data-bs-toggle="tooltip" title="Informe data e hora do abastecimento (ex.: 23/08/2025 14:30).">
+            Data e hora
+            <i class="bi bi-info-circle ms-1" aria-hidden="true"></i>
+          </label>
+          <!-- datetime-local precisa do formato 'YYYY-MM-DDTHH:MM' — mostramos placeholder em formato BR -->
+          <input id="data_hora" name="data_hora" type="datetime-local" required
+                 class="form-control <%= errorFields.includes('data_hora') ? 'is-invalid' : '' %>"
+                 value="<%= data.data_hora || '' %>"
+                 data-bs-toggle="tooltip" data-bs-placement="top"
+                 title="Use o seletor ou informe no formato local. Ex.: 23/08/2025 14:30">
+          <div class="invalid-feedback">Informe data e hora do abastecimento.</div>
+        </div>
+
+        <div class="col-md-4">
+          <label for="veiculo_id" class="form-label" data-bs-toggle="tooltip" title="Selecione um veículo cadastrado. Se não selecionar, informe a placa abaixo.">
+            Veículo
+          </label>
+          <select id="veiculo_id" name="veiculo_id" class="form-select" data-bs-toggle="tooltip" data-bs-placement="top" title="Opcional — selecionar preenche automaticamente a placa.">
+            <option value="">-- selecione (opcional) --</option>
+            <% vehicles.forEach(v => { %>
+              <option value="<%= v.id %>" data-placa="<%= v.placa %>">
+                <%= v.nome || ('#' + v.id) %> — <%= v.placa || '—' %> / <%= v.nome_marca || '—' %> <%= v.nome_modelo || '' %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label for="placa" class="form-label" data-bs-toggle="tooltip" title="Informe a placa caso não tenha selecionado um veículo. Formato: ABC1D23 ou ABC-1234 dependendo do estado.">
+            Placa (se veículo não selecionado)
+          </label>
+          <input id="placa" name="placa" type="text" class="form-control" value="<%= data.placa || '' %>"
+                 placeholder="Ex.: ABC1D23"
+                 data-bs-toggle="tooltip" data-bs-placement="top" title="Ex.: ABC1D23 — deixe em letras maiúsculas sem espaços.">
+        </div>
+
+        <div class="col-md-4">
+          <label for="posto" class="form-label" data-bs-toggle="tooltip" title="Nome do posto onde foi abastecido (opcional).">
+            Posto de combustível
+          </label>
+          <input id="posto" name="posto" type="text" class="form-control" value="<%= data.posto || '' %>"
+                 placeholder="Ex.: Posto Central"
+                 data-bs-toggle="tooltip" data-bs-placement="top" title="Opcional — exemplo: Posto Central">
+        </div>
+
+        <div class="col-md-4">
+          <label for="tipo_combustivel" class="form-label" data-bs-toggle="tooltip" title="Tipo do combustível (Gasolina, Etanol, Diesel, GNV, etc.).">
+            Tipo de combustível
+          </label>
+          <input id="tipo_combustivel" name="tipo_combustivel" type="text" class="form-control" value="<%= data.tipo_combustivel || '' %>"
+                 placeholder="Ex.: Gasolina"
+                 data-bs-toggle="tooltip" data-bs-placement="top" title="Ex.: Gasolina, Etanol, Diesel">
+        </div>
+
+        <div class="col-md-2">
+          <label for="litros" class="form-label" data-bs-toggle="tooltip" title="Quantidade em litros. Use vírgula ou ponto como separador decimal (ex.: 45,50).">
+            Litros
+          </label>
+          <input id="litros" name="litros" type="number" step="0.01" min="0" required
+                 class="form-control <%= errorFields.includes('litros') ? 'is-invalid' : '' %>"
+                 value="<%= data.litros || '' %>"
+                 placeholder="Ex.: 45,50"
+                 data-bs-toggle="tooltip" data-bs-placement="top"
+                 title="Informe a quantidade abastecida (ex.: 45,50 litros).">
+          <div class="invalid-feedback">Informe quantidade em litros.</div>
+        </div>
+
+        <div class="col-md-2">
+          <label for="preco_litro" class="form-label" data-bs-toggle="tooltip" title="Preço por litro em Reais. Use vírgula decimal (ex.: 6,499).">
+            Preço / litro
+          </label>
+          <input id="preco_litro" name="preco_litro" type="number" step="0.0001" min="0" required
+                 class="form-control <%= errorFields.includes('preco_litro') ? 'is-invalid' : '' %>"
+                 value="<%= data.preco_litro || '' %>"
+                 placeholder="Ex.: 6,499"
+                 data-bs-toggle="tooltip" data-bs-placement="top"
+                 title="Informe o preço por litro (ex.: 6,499). O sistema aceitará vírgula ou ponto.">
+          <div class="invalid-feedback">Informe o preço por litro.</div>
+        </div>
+
+        <div class="col-md-3">
+          <label for="preco_total" class="form-label" data-bs-toggle="tooltip" title="Preço total pago. Se deixar vazio, será calculado automaticamente (litros × preço/litro).">
+            Preço total (opcional)
+          </label>
+          <input id="preco_total" name="preco_total" type="number" step="0.01" min="0" class="form-control" value="<%= data.preco_total || '' %>"
+                 placeholder="Ex.: 295,00"
+                 data-bs-toggle="tooltip" data-bs-placement="top" title="Opcional — se vazio será calculado automaticamente.">
+          <div class="form-text">Se vazio, será calculado (litros × preço/litro).</div>
+        </div>
+
+        <div class="col-md-3">
+          <label for="km_atual" class="form-label" data-bs-toggle="tooltip" title="Quilometragem atual do veículo, sem pontos ou separadores. Informe apenas números.">
+            Quilometragem atual
+          </label>
+          <input id="km_atual" name="km_atual" type="number" step="1" min="0" class="form-control" value="<%= data.km_atual || '' %>"
+                 placeholder="Ex.: 123456"
+                 data-bs-toggle="tooltip" data-bs-placement="top" title="Informe a quilometragem atual (somente números).">
+        </div>
+
+        <div class="col-md-6">
+          <label for="condutor" class="form-label" data-bs-toggle="tooltip" title="Nome do condutor que realizou o abastecimento (opcional).">
+            Condutor
+          </label>
+          <input id="condutor" name="condutor" type="text" class="form-control" value="<%= data.condutor || '' %>"
+                 placeholder="Ex.: João da Silva"
+                 data-bs-toggle="tooltip" data-bs-placement="top" title="Opcional — nome do condutor.">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="Registrar abastecimento com os dados informados">Registrar Abastecimento</button>
+        <a href="/abastecimentos" class="btn btn-outline-secondary ms-2" data-bs-toggle="tooltip" title="Voltar para a listagem de abastecimentos">Voltar</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Bootstrap bundle inclui Popper (necessário para tooltips) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Inicializar tooltips Bootstrap
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+
+      // auto preencher placa ao selecionar veículo
+      const sel = document.getElementById('veiculo_id');
+      const placaInput = document.getElementById('placa');
+      if (sel) {
+        sel.addEventListener('change', (e) => {
+          const opt = sel.options[sel.selectedIndex];
+          if (!opt || !opt.dataset) return;
+          if (opt.value && opt.dataset.placa) placaInput.value = opt.dataset.placa;
+        });
+      }
+
+      // validação bootstrap simples (mantida)
+      (function(){
+        'use strict';
+        const forms = document.querySelectorAll('form[novalidate]');
+        Array.from(forms).forEach(form => {
+          form.addEventListener('submit', event => {
+            if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
+            form.classList.add('was-validated');
+          }, false);
+        });
+      })();
+    });
+  </script>
+</body>
+</html>
+

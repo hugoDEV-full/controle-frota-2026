@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title><%= APP_TITLE %></title>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment-with-locales.min.js"
+            integrity="sha512-4F1cxYdMiAW98oomSLaygEwmCnIP38pb4Kx70yQYqRwLVCs3DbRumfBq82T08g/4LJ/smbFGFpmeFlQgoDccgg=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+            integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer" />
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+            integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
+            crossorigin="anonymous"></script>
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+            integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+            crossorigin="anonymous" />
+        <script
+            src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+            crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+        <script
+            src="https://cdn.jsdelivr.net/npm/jquery-validation@1.21.0/dist/jquery.validate.min.js"
+            integrity="sha256-umbTaFxP31Fv6O1itpLS/3+v5fOAWDLOUzlmvOGaKV4="
+            crossorigin="anonymous"></script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"
+            integrity="sha256-WCzAhd2P6gRJF9Hv3oOOd+hFJi/QJbv+Azn4CGB8gfY="
+            crossorigin="anonymous"></script>
+
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"
+            integrity="sha512-aNMyYYxdIxIaot0Y1/PLuEu3eipGCmsEUBrUq+7aVyPGMFH8z0eTP0tkqAvv34fzN6z+201d3T8HPb1svWSKHQ=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"
+            integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const storage = {
+                get: name => {
+                    try {
+                        // Try cookies first
+                        let value = Cookies.get(name);
+                        if (value !== undefined) return value;
+
+                        // Try localStorage with JSON parsing
+                        value = localStorage.getItem(name);
+                        if (value !== null) {
+                            try {
+                                return JSON.parse(value);
+                            } catch {
+                                return value;
+                            }
+                        }
+
+                        // Try sessionStorage as fallback
+                        value = sessionStorage.getItem(name);
+                        if (value !== null) {
+                            try {
+                                return JSON.parse(value);
+                            } catch {
+                                return value;
+                            }
+                        }
+
+                        return undefined;
+                    } catch (e) {
+                        console.error('Storage read error:', e);
+                        return undefined;
+                    }
+                },
+                set: (name, value) => {
+                    try {
+                        if (typeof value === 'string') {
+                            localStorage.setItem(name, value);
+                            sessionStorage.setItem(name, value);
+                        } else {
+                            const jsonValue = JSON.stringify(value);
+                            localStorage.setItem(name, jsonValue);
+                            sessionStorage.setItem(name, jsonValue);
+                        }
+                    } catch (e) {
+                        console.error('Storage write error:', e);
+                    }
+                },
+            };
+            function showToast(message, type = 'danger') {
+                console.log(message);
+                let toastId = 'toast-' + Date.now();
+                let toastHTML = `
+          <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert"
+               aria-live="assertive" aria-atomic="true">
+              <div class="d-flex">
+                  <div class="toast-body">
+                      ${message}
+                  </div>
+                  <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+              </div>
+          </div>
+        `;
+                let container = $('#toast-container');
+                if (!container.length) {
+                    container = $('<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3"></div>');
+                    $('body').append(container);
+                }
+                container.append(toastHTML);
+                const toastEl = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+                toast.show();
+            }
+            function warning(message) {
+                showToast(message, 'warning');
+            }
+            function error(message) {
+                showToast(message, 'danger');
+            }
+            function success(message) {
+                showToast(message, 'success');
+            }
+            function info(message) {
+                showToast(message, 'info');
+            }
+            function debug(message) {
+                showToast(message, 'dark');
+            }
+            function danger(message) {
+                showToast(message, 'danger');
+            }
+            const get = (name, default_value) => {
+                let value = localStorage.getItem(name);
+                if (value === null) {
+                    console.log(`set ${name} default_value ${value}`);
+                    return default_value;
+                }
+                console.log(`get from localStorage ${name}=${value}`);
+                return value;
+            };
+            const set = (name, value) => {
+                localStorage.setItem(name, value);
+                console.log(`set to localStorage ${name}=${value}`);
+            };
+            class Socket {
+                socket;
+                constructor() {
+                    this.socket = io();
+                    this.socket.on('connect', this.on_connect.bind(this));
+                    this.socket.on('disconnect', this.on_disconnect.bind(this));
+                    this.socket.on('reconnect_attempt', this.on_reconnect_attempt.bind(this));
+                    this.socket.on('reconnect', this.on_reconnect.bind(this));
+                    this.socket.on('disconnect', this.on_disconnect.bind(this));
+                    this.socket.on('reconnect_attempt', this.on_reconnect_attempt.bind(this));
+                    this.socket.on('reconnect', this.on_reconnect.bind(this));
+                    this.socket.on('debug', this.on_debug.bind(this));
+                }
+                on_connect() {
+                    console.log('connected');
+                    const initCallbackName = '<%- init %>';
+                    if (initCallbackName) console.log(`initCallback:`, initCallbackName);
+                    if (initCallbackName && typeof window[initCallbackName] === 'function') {
+                        $(document).ready(() => {
+                            window[initCallbackName]();
+                        });
+                    } else if (initCallbackName && typeof window[initCallbackName] !== 'function') {
+                        console.log(`initCallback: ${initCallbackName} is not a function`);
+                    }
+                }
+                on_disconnect() {
+                    console.log('disconnected');
+                }
+                on_reconnect_attempt() {
+                    console.log('reconnected');
+                }
+                on_reconnect() {
+                    console.log('reconnected');
+                }
+                on_debug(data) {
+                    console.log('debug', data);
+                }
+                send(route_id, data) {
+                    //console.log('send', route_id, data)
+                    this.socket.emit(route_id, data);
+                }
+                on(event, callback) {
+                    //console.log('on', event)
+                    this.socket.on(event, callback);
+                }
+            }
+            const bytesToSize = bytes => {
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                if (bytes === 0) return '0 B';
+                const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+            };
+            const send = (route_id, data) => fd.send(route_id, data);
+            let is_dark;
+            const is_tablet = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+            const is_mobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
+            const is_desktop = window.matchMedia && window.matchMedia('(min-width: 768px)').matches;
+            const set_theme = () => {
+                is_dark = get('is_dark', window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                console.log('is_dark', is_dark);
+                if (is_dark === 'true' || is_dark === true) {
+                    document.documentElement.setAttribute('data-bs-theme', 'dark');
+                    $('body').addClass('dark-bg-gradient').removeClass('light-bg-gradient');
+                    $('.navbar').addClass('navbar-dark ').removeClass('navbar-light bg-light');
+                    $('#dark-icon').hide();
+                    $('#light-icon').show();
+                } else {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    $('body').addClass('light-bg-gradient').removeClass('dark-bg-gradient');
+                    $('.navbar').addClass('navbar-light ').removeClass('navbar-dark bg-dark');
+                    $('#dark-icon').show();
+                    $('#light-icon').hide();
+                }
+                $('#theme-toggle').on('click', function () {
+                    const current = document.documentElement.getAttribute('data-bs-theme');
+                    const new_theme_is_light = current === 'dark' ? 'false' : 'true';
+                    console.log({ current, new_theme_is_light });
+                    set('is_dark', new_theme_is_light);
+                    location.reload();
+                });
+            };
+            let fd;
+            $(document).ready(() => {
+                set_theme();
+                //fd = new Socket();
+            });
+        </script>
+        <style>
+            [data-bs-theme='light'] .bg-gradient {
+                background: linear-gradient(135deg, rgba(230, 242, 255, 0.5) 0%, rgba(204, 229, 255, 0.5) 50%, rgba(179, 216, 255, 0.5) 100%);
+                color: var(--bs-body-color);
+            }
+            [data-bs-theme='dark'] .bg-gradient {
+                background: linear-gradient(135deg, rgba(51, 51, 51, 0.5) 0%, rgba(77, 77, 77, 0.5) 50%, rgba(102, 102, 102, 0.5) 100%);
+                color: var(--bs-body-color);
+            }
+            .dark-bg-gradient {
+                background: linear-gradient(135deg, rgba(51, 51, 51, 0.5) 0%, rgba(77, 77, 77, 0.5) 50%, rgba(102, 102, 102, 0.5) 100%);
+                backdrop-filter: blur(2px);
+            }
+            .light-bg-gradient {
+                background: linear-gradient(135deg, rgba(230, 242, 255, 0.5) 0%, rgba(204, 229, 255, 0.5) 50%, rgba(179, 216, 255, 0.5) 100%);
+                backdrop-filter: blur(2px);
+            }
+        </style>
+    </head>
+    <body class="">
+        <nav class="navbar shadow navbar-expand-lg py-3" id="navbar" style="min-height: 80px">
+            <a class="navbar-brand p-3 m-1 ms-3" href="/" id="navbar-brand">
+                <i class="<%= APP_ICON %>"></i>
+                <span class="fw-bold ps-2"><%= APP_TITLE %></span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar_nav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbar_nav">
+                <ul class="navbar-nav ms-auto">
+                    <% if (user) { %>
+                    <li class="nav-item">
+                        <button class="nav-link mx-2 btn btn-info" onclick="window.location.href='/api'" title="API">
+                            <i class="fas fa-code"></i>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link mx-2 btn btn-warning" onclick="window.location.href='/logout'" title="Logout">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link mx-2 btn btn-primary" onclick="window.location.href='/dispositivos'" title="Dispositivos">
+                            <i class="fas fa-users-gear"></i>
+                            Dispositivos
+                        </button>
+                    </li>
+                    <% } else { %>
+                    <!--
+                  <li class="nav-item">
+                    <button class="nav-link mx-2 btn-gradient shadow rounded hover-effect" onclick="window.location.href='/login'">
+                      <i class="bi bi-person-fill-lock"></i>
+                      Acesso
+                    </button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link mx-2 btn-gradient shadow rounded hover-effect" onclick="window.location.href='/register'">
+                      <i class="bi bi-person-plus-fill"></i>
+                      Cadastro
+                    </button>
+                  </li>
+                  -->
+                    <% } %>
+                    <li class="nav-item">
+                        <button id="theme-toggle" class="nav-link mx-2">
+                            <i class="bi bi-moon-stars-fill" id="dark-icon" style="display: none" title="Set Dark Mode"></i>
+                            <i class="bi bi-sun-fill" id="light-icon" style="display: none" title="Set Light Mode"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        <%- body %>
+    </body>
+</html>

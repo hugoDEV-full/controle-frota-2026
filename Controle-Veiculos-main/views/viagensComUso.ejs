@@ -1,0 +1,439 @@
+<!-- ====== View: viagensComUso.ejs ====== -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title><%= title %></title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    .leaflet-container {
+      height: 300px;
+      width: 100%;
+    }
+    .vehicle-marker-icon.leaflet-marker-icon {
+      transition: transform 0.5s linear;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container mt-4">
+    <h1 class="mb-4"><%= title %></h1>
+
+    <!-- Filtros inteligentes + paginação -->
+    <form id="filtro-form" class="row g-3 mb-4" method="get" action="/viagensComUso">
+      <div class="col-md-2">
+        <label for="veiculo" class="form-label">Veículo</label>
+        <select id="veiculo" name="veiculo" class="form-select">
+          <option value="">— Todos —</option>
+          <% veiculos.forEach(v => { %>
+            <option value="<%= v.veiculoId %>" <%= String(query.veiculo) === String(v.veiculoId) ? 'selected' : '' %>>
+              <%= v.placa %> — <%= v.modelo %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="motorista" class="form-label">Motorista</label>
+        <input type="text" id="motorista" name="motorista" class="form-control"
+               value="<%= query.motorista || '' %>" placeholder="Nome" />
+      </div>
+      <div class="col-md-2">
+        <label for="dataInicio" class="form-label">Data Início</label>
+        <input type="date" id="dataInicio" name="dataInicio" class="form-control"
+               value="<%= query.dataInicio || '' %>" />
+      </div>
+      <div class="col-md-2">
+        <label for="dataFim" class="form-label">Data Fim</label>
+        <input type="date" id="dataFim" name="dataFim" class="form-control"
+               value="<%= query.dataFim || '' %>" />
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="ateUmDia" name="ateUmDia"
+                 <%= query.ateUmDia ? 'checked' : '' %> />
+          <label class="form-check-label" for="ateUmDia">Viagens ≤ 1 dia</label>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label for="buscaTexto" class="form-label">Finalidade/Descr.</label>
+        <input type="text" id="buscaTexto" name="buscaTexto" class="form-control"
+               value="<%= query.buscaTexto || '' %>" placeholder="Texto livre" />
+      </div>
+      <div class="col-md-2">
+        <label for="pageSize" class="form-label">Itens por página</label>
+        <select id="pageSize" name="pageSize" class="form-select">
+          <% [1,5,10,20,25,50,100,1000].forEach(n => { %>
+            <option value="<%= n %>" <%= pageSize === n ? 'selected' : '' %>><%= n %></option>
+          <% }) %>
+        </select>
+      </div>
+      <!-- manter or reset da página -->
+      <input type="hidden" name="page" value="1" />
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i>Filtrar</button>
+      </div>
+    </form>
+
+    <div id="viagens-container">
+      <% if (!viagens || viagens.length === 0) { %>
+        <div class="alert alert-info">Nenhuma viagem encontrada.</div>
+      <% } else { %>
+        <% viagens.forEach(v => {
+          let cardClass = 'card mb-4 viagem-item';
+          if (v.percDesvio > 50) cardClass += ' bg-danger bg-opacity-10';
+        %>
+          <div class="<%= cardClass %>"
+               data-veiculo="<%= v.veiculoId %>"
+               data-motorista="<%= v.motorista.toLowerCase() %>"
+               data-inicio="<%= v.inicio %>"
+               data-fim="<%= v.fim %>"
+               data-descricao="<%= (v.finalidade + ' ' + (v.descricao||'')).toLowerCase() %>"
+               data-duracao-sec="<%= v.durationSec %>">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <div>
+                <h5 class="card-title mb-0">Uso #<%= v.usoId %> – <%= v.motorista %></h5>
+                <small class="text-muted"><%= v.placa %> — <%= v.modelo %></small><br />
+                <small class="text-muted">
+                  <%= new Date(v.inicio).toLocaleString('pt-BR') %> → 
+                  <%= new Date(v.fim).toLocaleString('pt-BR') %>
+                </small>
+                <span class="badge bg-primary"><%= v.kmGps %> km • <%= v.durationStr %></span>
+              </div>
+              
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <ul class="list-group mb-3">
+                    <li class="list-group-item">
+                      <strong>Finalidade:
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Objetivo principal informado para esta viagem.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <%= v.finalidade %>
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Descrição:
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Detalhes adicionais ou observações inseridas pelo motorista.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <% if (v.descricao && v.descricao.trim()) { %>
+                        <%= v.descricao %>
+                      <% } else { %>
+                        <span class="text-muted">— sem descrição —</span>
+                      <% } %>
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Leitura do hodômetro no início do uso:
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Leitura do hodômetro logo antes de iniciar a viagem.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <%= v.kmInicial %> km
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Leitura do hodômetro no final do uso:
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Leitura do hodômetro imediatamente após o término da viagem.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <%= v.kmFinal %> km
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Vel. Média:
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Velocidade média calculada pelo GPS durante toda a viagem.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <%= v.avgKmh %> km/h
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Distância total percorrida (GPS):
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Distância total percorrida conforme pontos registrados pelo dispositivo GPS.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <%= v.kmGps.toFixed(2) %> km (<%= (v.kmGps*1000).toFixed(0) %> m)
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Distância ideal (rota de carro):
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Distância calculada pela rota de carro entre início e fim (via OSRM).">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <% if (v.idealKm && v.idealKm>0) { %>
+                        <%= v.idealKm.toFixed(2) %> km
+                      <% } else { %>
+                        <span class="text-muted">— sem coordenadas —</span>
+                      <% } %>
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Desvio em relação à rota de carro:
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Quanto (%) o percurso real se afastou da rota ideal de carro. O CARTÃO FICARÁ VERMELHO CASO ULTRAPASSE MAIS 50% DE DESVIO.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <% if (v.idealKm && v.idealKm>0) { %>
+                        <% if (v.percDesvio===0) { %>
+                          <span class="text-success">0% (trajeto perfeito)</span>
+                        <% } else if (v.percDesvio>0) { %>
+                          <span class="text-warning">+<%= v.percDesvio.toFixed(2) %>%</span>
+                        <% } else { %>
+                          <span class="text-danger"><%= v.percDesvio.toFixed(2) %>%</span>
+                        <% } %>
+                      <% } else { %>
+                        <span class="text-muted">— N/A —</span>
+                      <% } %>
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Distância registrada pelo motorista:
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Distância que o motorista registrou manualmente no sistema.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <%= v.kmInformado.toFixed(2) %> km (<%= (v.kmInformado*1000).toFixed(0) %> m)
+                    </li>
+                    <li class="list-group-item">
+                      <strong>Diferença (GPS × informado):
+                        <span class="ms-1 text-muted" data-bs-toggle="tooltip"
+                              title="Diferença entre a distância calculada pelo GPS e a distância informada.">
+                          <i class="fas fa-question-circle"></i>
+                        </span>
+                      </strong><br />
+                      <% if (v.diferencaKm===0) { %>
+                        <span class="text-success">0 km (perfeito)</span>
+                      <% } else if (v.diferencaKm>0) { %>
+                        <span class="text-warning">+<%= v.diferencaKm.toFixed(2) %> km (+<%= (v.diferencaKm*1000).toFixed(0) %> m)</span>
+                      <% } else { %>
+                        <span class="text-danger"><%= v.diferencaKm.toFixed(2) %> km (<%= (v.diferencaKm*1000).toFixed(0) %> m)</span>
+                      <% } %>
+                    </li>
+                  </ul>
+                </div>
+                <div class="col-md-4 text-center">
+                  <div id="map-real-<%= v.usoId %>" class="leaflet-container border rounded"></div>
+                  <small class="d-block mt-1">Rota Real</small>
+                </div>
+                <div class="col-md-4 text-center">
+                  <div id="map-ideal-<%= v.usoId %>" class="leaflet-container border rounded"></div>
+                  <small class="d-block mt-1">Rota Ideal</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      <% } %>
+    </div>
+
+    <!-- PAGINAÇÃO -->
+<% if (totalPages > 1) { %>
+  <% 
+    function qs(overrides) {
+      const params = Object.assign({}, query, { pageSize, page }, overrides);
+      return new URLSearchParams(params).toString();
+    }
+
+    // Função para gerar array de itens de paginação com ellipsis
+    function paginationPages(current, total) {
+      const delta = 2;      // Quantos antes/depois da current mostrar
+      const range = [];
+      const rangeWithDots = [];
+      let l;
+
+      for (let i = 1; i <= total; i++) {
+        if (i === 1 || i === 2 || i === total-1 || i === total ||
+            (i >= current - delta && i <= current + delta)) {
+          range.push(i);
+        }
+      }
+
+      for (let i of range) {
+        if (l) {
+          if (i - l === 2) {
+            rangeWithDots.push(l + 1);
+          } else if (i - l !== 1) {
+            rangeWithDots.push('...');
+          }
+        }
+        rangeWithDots.push(i);
+        l = i;
+      }
+
+      return rangeWithDots;
+    }
+
+    const pages = paginationPages(page, totalPages);
+  %>
+
+  <!-- Paginação responsiva -->
+  <div class="d-flex justify-content-center overflow-auto my-3">
+    <ul class="pagination flex-nowrap mb-0 align-items-center">
+      <!-- Anterior -->
+      <li class="page-item <%= page === 1 ? 'disabled' : '' %>">
+        <a class="page-link" href="?<%= qs({ page: page - 1 }) %>">&laquo;</a>
+      </li>
+
+      <!-- Números com ellipsis -->
+      <% pages.forEach(p => { %>
+        <% if (p === '...') { %>
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        <% } else { %>
+          <li class="page-item <%= p === page ? 'active' : '' %>">
+            <a class="page-link" href="?<%= qs({ page: p }) %>"><%= p %></a>
+          </li>
+        <% } %>
+      <% }) %>
+
+      <!-- Próximo -->
+      <li class="page-item <%= page === totalPages ? 'disabled' : '' %>">
+        <a class="page-link" href="?<%= qs({ page: page + 1 }) %>">&raquo;</a>
+      </li>
+    </ul>
+  </div>
+<% } %>
+
+
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // tooltips
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+      });
+    });
+  </script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const viagens = <%- JSON.stringify(viagens) %>;
+
+    const startIcon = L.divIcon({
+      html: '<i class="fas fa-map-pin fa-lg" style="color: green;"></i>',
+      className: '', iconSize: [24, 24], iconAnchor: [12, 24]
+    });
+    const endIcon = L.divIcon({
+      html: '<i class="fas fa-map-pin fa-lg" style="color: red;"></i>',
+      className: '', iconSize: [24, 24], iconAnchor: [12, 24]
+    });
+
+    // Carrega todos os mapas
+    viagens.forEach(v => {
+      // Mapa real
+      if (v.points && v.points.length) {
+        const realCoords = v.points.map(p => [p.latitude, p.longitude]);
+        const mapReal = L.map('map-real-' + v.usoId).setView(realCoords[0], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(mapReal);
+
+        const realLine = L.polyline(realCoords, {
+          color: 'green', weight: 4, opacity: 0.8
+        }).addTo(mapReal);
+        L.marker(realCoords[0], { icon: startIcon }).bindPopup('Início').addTo(mapReal);
+        L.marker(realCoords[realCoords.length - 1], { icon: endIcon }).bindPopup('Fim').addTo(mapReal);
+
+        setTimeout(() => {
+          mapReal.invalidateSize();
+          mapReal.fitBounds(realLine.getBounds(), { padding: [20, 20] });
+        }, 0);
+      }
+
+      // Mapa ideal
+      if (v.start_lat != null && v.end_lat != null) {
+        const mapIdeal = L.map('map-ideal-' + v.usoId).setView([v.start_lat, v.start_lng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(mapIdeal);
+
+        const urlIdeal = `https://router.project-osrm.org/route/v1/driving/${v.start_lng},${v.start_lat};${v.end_lng},${v.end_lat}?overview=full&geometries=geojson`;
+
+        fetch(urlIdeal)
+          .then(res => res.json())
+          .then(osrm => {
+            if (osrm.routes && osrm.routes[0]) {
+              const coords = osrm.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+              const idealLine = L.polyline(coords, {
+                color: 'blue', weight: 3, dashArray: '8,6', opacity: 0.7
+              }).addTo(mapIdeal).bindPopup('Rota Ideal');
+
+              L.marker(coords[0], { icon: startIcon }).bindPopup('Início Ideal').addTo(mapIdeal);
+              L.marker(coords[coords.length - 1], { icon: endIcon }).bindPopup('Fim Ideal').addTo(mapIdeal);
+
+              setTimeout(() => {
+                mapIdeal.invalidateSize();
+                mapIdeal.fitBounds(idealLine.getBounds(), { padding: [20, 20] });
+              }, 0);
+            }
+          })
+          .catch(err => console.error('Erro OSRM ideal:', err));
+      }
+    });
+
+    // Filtros client-side
+    const campos = ['veiculo', 'motorista', 'dataInicio', 'dataFim', 'buscaTexto', 'ateUmDia'];
+    campos.forEach(id => document.getElementById(id).addEventListener('input', filtrar));
+
+    // Aplica filtro inicial com "Todos" como padrão
+    filtrar();
+
+    function filtrar() {
+      const fv = document.getElementById('veiculo').value;
+      const m = document.getElementById('motorista').value.toLowerCase();
+      const di = document.getElementById('dataInicio').value;
+      const df = document.getElementById('dataFim').value;
+      const txt = document.getElementById('buscaTexto').value.toLowerCase();
+      const chk = document.getElementById('ateUmDia').checked;
+
+      document.querySelectorAll('.viagem-item').forEach(c => {
+        const cv = c.dataset.veiculo;
+        const cm = c.dataset.motorista;
+        const ci = new Date(c.dataset.inicio);
+        const cf = new Date(c.dataset.fim);
+        const desc = c.dataset.descricao;
+        const ds = Number(c.dataset.duracaoSec);
+
+        const okV = !fv || cv === fv;
+        const okM = !m || cm.includes(m);
+        const okDI = !di || ci >= new Date(di + 'T00:00:00');
+        const okDF = !df || cf <= new Date(df + 'T23:59:59');
+        const okT = !txt || desc.includes(txt);
+        const ok1 = !chk || ds <= 86400;
+
+        c.style.display = (okV && okM && okDI && okDF && okT && ok1) ? '' : 'none';
+      });
+    }
+  });
+</script>
+
+
+
+</body>
+
+</html>
+

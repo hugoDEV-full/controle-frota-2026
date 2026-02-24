@@ -1,0 +1,289 @@
+<div class="container-fluid py-4">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h1 class="h3 text-center"><i class="fas fa-users-gear me-2"></i>Monitoramento de Equipes</h1>
+            <div>
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <select id="refresh-interval" class="form-select form-select-sm">
+                            <option value="10000" selected>10 segundos</option>
+                            <option value="30000">30 segundos</option>
+                            <option value="60000">1 minuto</option>
+                            <option value="300000">5 minutos</option>
+                        </select>
+                    </div>
+                    <div class="me-3">
+                        <select id="dev-mode" class="form-select form-select-sm">
+                            <option value="0" selected>Produção</option>
+                            <option value="1">Homologação</option>
+                        </select>
+                    </div>
+                    <div class="me-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="device-type" value="1" />
+                            <label class="form-check-label" for="device-type">Celular</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table id="equipes-table" class="table table-hover table-striped table-sm align-middle w-100">
+            <thead class="table-dark">
+                <tr>
+                    <th></th>
+                    <th><i class="fas fa-mobile-alt me-2"></i>Dispositivo</th>
+                    <th><i class="fas fa-users me-2"></i>Equipe</th>
+                    <th><i class="fas fa-align-left me-2"></i>TXT</th>
+                    <th><i class="fas fa-map-marker-alt me-2"></i>Último Envio</th>
+                    <th><i class="fas fa-map-marker-alt me-2"></i>Localização</th>
+                    <th><i class="fas fa-tachometer-alt me-2"></i>Velocidade</th>
+                    <th><i class="fas fa-hospital me-2"></i>Temperatura</th>
+                    <th><i class="fas fa-battery-full me-2"></i>Bateria</th>
+                    <th><i class="fas fa-paper-plane me-2"></i>Enviados</th>
+                    <th><i class="fas fa-calendar-plus me-2"></i>Criação Disp.</th>
+                    <th><i class="fas fa-chart-line me-2"></i>Média Min</th>
+                    <th><i class="fas fa-chart-line me-2"></i>Média Hora</th>
+                    <th><i class="fas fa-chart-line me-2"></i>Média Dia</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be loaded via AJAX -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let refreshIntervalId;
+    let refreshInterval;
+    let deviceTypes = [];
+
+    // Save settings to localStorage
+    function saveSettings() {
+        localStorage.setItem('equipes-refresh-interval', refreshInterval);
+        localStorage.setItem('equipes-dev-mode', $('#dev-mode').val());
+        localStorage.setItem('equipes-device-type', $('#device-type').is(':checked') ? '1' : '0');
+    }
+
+    // Load settings from localStorage
+    function loadSettings() {
+        // Load refresh interval
+        const savedInterval = localStorage.getItem('equipes-refresh-interval');
+        if (savedInterval) {
+            refreshInterval = parseInt(savedInterval);
+            $('#refresh-interval').val(savedInterval);
+        } else {
+            refreshInterval = parseInt($('#refresh-interval').val());
+        }
+
+        // Load dev mode
+        const savedDevMode = localStorage.getItem('equipes-dev-mode');
+        if (savedDevMode) {
+            $('#dev-mode').val(savedDevMode);
+        }
+
+        // Load device type
+        const savedDeviceType = localStorage.getItem('equipes-device-type');
+        if (savedDeviceType) {
+            $('#device-type').prop('checked', savedDeviceType === '1');
+        }
+    }
+
+    function loadEquipesData(type_id = '', dev = '') {
+        const celular = $('#device-type').is(':checked') ? 1 : 0;
+        const dev_mode = $('#dev-mode').val();
+
+        // Save current settings
+        saveSettings();
+
+        $.ajax({
+            url: '/dispositivos',
+            type: 'GET',
+            data: {
+                celular,
+                dev_mode,
+                ajax: '1',
+            },
+            dataType: 'json',
+            success: function (data) {
+                renderEquipesTable(data);
+                if (refreshIntervalId) clearTimeout(refreshIntervalId);
+                refreshIntervalId = setTimeout(loadEquipesData, refreshInterval);
+            },
+            error: function (xhr, status, error) {
+                console.error('Erro ao carregar dados: ', error);
+                if (refreshIntervalId) clearTimeout(refreshIntervalId);
+                refreshIntervalId = setTimeout(loadEquipesData, 10000);
+            },
+        });
+    }
+
+    function renderEquipesTable(equipes) {
+        const tbody = $('#equipes-table tbody');
+        tbody.empty();
+
+        equipes.forEach(function (equipe) {
+            const ultimo = moment.duration(equipe.SECONDS, 'seconds').locale('pt-br').humanize();
+            const directions_link = `https://www.google.com/maps?q=${equipe.LAT},${equipe.LON}`;
+            const directions_icon = '<i class="fas fa-map-pin me-1"></i>';
+            const temperatura = equipe.temperatura?.toFixed(1) || null;
+            const bateria = equipe.bateria?.toFixed(1) || null;
+            const devCreated = equipe.dev_created ? moment(equipe.dev_created).format('DD/MM/YY HH:mm') : '-';
+
+            const avgMinFormatted = !isNaN(parseFloat(equipe.avg_min)) ? parseFloat(equipe.avg_min).toFixed(2) : '-';
+            const avgHourFormatted = !isNaN(parseFloat(equipe.avg_hour)) ? parseFloat(equipe.avg_hour).toFixed(2) : '-';
+            const avgDayFormatted = !isNaN(parseFloat(equipe.avg_day)) ? parseFloat(equipe.avg_day).toFixed(2) : '-';
+
+            const row = `
+                <tr>
+                    <td>
+                        <a href="/device/${equipe.DEVICE_ID}" class="btn btn-sm shadow-sm">
+                            <i class="fas fa-eye text-primary me-1"></i>
+                        </a>
+                    </td>
+                    <td>
+                        <a href="/device/${equipe.DEVICE_ID}" class="btn btn-sm shadow-sm">
+                            ${equipe.device_name || equipe.DEVICE_ID}
+                        </a>
+                    </td>
+                    <td>
+                        <i class="fas fa-user me-1"></i>
+                        <strong>${equipe.EQUIPE || '-'}</strong>
+                    </td>
+                    <td>${equipe.TXT || '-'}</td>
+                    <td>${ultimo}</td>
+                    <td>
+                        ${
+                            equipe.LAT && equipe.LON
+                                ? `<a href="${directions_link}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                ${directions_icon}
+                                <code>${equipe.LAT.toFixed(6)}</code>,
+                                <code>${equipe.LON.toFixed(6)}</code>
+                            </a>`
+                                : '<span class="badge bg-secondary">Sem localização</span>'
+                        }
+                    </td>
+                    <td>
+                        ${
+                            equipe.SECONDS > 30
+                                ? `<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sem atualização (${moment
+                                      .duration(equipe.SECONDS, 'seconds')
+                                      .locale('pt-br')
+                                      .humanize()})</span>`
+                                : equipe.SECONDS > 900
+                                ? `<span class="badge bg-warning"><i class="bi bi-exclamation-circle me-1"></i>Atualização antiga (${moment
+                                      .duration(equipe.SECONDS, 'seconds')
+                                      .locale('pt-br')
+                                      .humanize()})</span>`
+                                : equipe.VEL_MS == 1 || !equipe.VEL_MS
+                                ? '<span class="badge bg-secondary">Parado</span>'
+                                : `<span class="badge ${equipe.VEL_MS * 3.6 > 80 ? 'bg-danger' : equipe.VEL_MS * 3.6 > 60 ? 'bg-warning' : 'bg-success'}">${(
+                                      equipe.VEL_MS * 3.6
+                                  ).toFixed(1)} km/h</span>`
+                        }
+                    </td>
+                    <td>
+                        <small>
+                            ${
+                                temperatura
+                                    ? `<span class="badge rounded-pill ${temperatura > 40 ? 'bg-danger' : temperatura > 30 ? 'bg-warning' : 'bg-success'} shadow-sm">
+                                    ${temperatura}°C
+                                    ${
+                                        temperatura > 40
+                                            ? '<i class="bi bi-thermometer-high ms-1"></i>'
+                                            : temperatura > 30
+                                            ? '<i class="bi bi-thermometer-half ms-1"></i>'
+                                            : '<i class="bi bi-thermometer-low ms-1"></i>'
+                                    }
+                                </span>`
+                                    : '-'
+                            }
+                        </small>
+                    </td>
+                    <td>
+                        <small>
+                            ${
+                                bateria
+                                    ? `<span class="badge rounded-pill ${bateria < 20 ? 'bg-danger' : bateria < 50 ? 'bg-warning' : 'bg-success'} shadow-sm">
+                                    ${bateria}%
+                                    ${
+                                        bateria < 20
+                                            ? '<i class="bi bi-battery-empty ms-1"></i>'
+                                            : bateria < 50
+                                            ? '<i class="bi bi-battery-half ms-1"></i>'
+                                            : '<i class="bi bi-battery-full ms-1"></i>'
+                                    }
+                                </span>`
+                                    : '-'
+                            }
+                        </small>
+                    </td>
+                    <td>${equipe.enviados || '-'}</td>
+                    <td>${devCreated}</td>
+                    <td>${avgMinFormatted}</td>
+                    <td>${avgHourFormatted}</td>
+                    <td>${avgDayFormatted}</td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+
+        adjustTableHeight();
+    }
+
+    function adjustTableHeight() {
+        const windowHeight = $(window).height();
+        const headerHeight = $('.row.mb-3').outerHeight();
+        const padding = 40; // Account for container padding
+        const tableHeight = windowHeight - headerHeight - padding;
+        $('.table-responsive').css('max-height', tableHeight + 'px');
+    }
+
+    function refreshIntervalChanged() {
+        refreshInterval = parseInt($(this).val());
+        saveSettings();
+
+        // Immediately refresh data with new interval
+        if (refreshIntervalId) {
+            clearTimeout(refreshIntervalId);
+        }
+        loadEquipesData();
+        console.log('Interval changed to:', refreshInterval);
+    }
+
+    function deviceTypeChanged() {
+        saveSettings();
+
+        // Immediately refresh data
+        if (refreshIntervalId) {
+            clearTimeout(refreshIntervalId);
+        }
+        loadEquipesData();
+    }
+
+    function devModeChanged() {
+        saveSettings();
+
+        // Immediately refresh data
+        if (refreshIntervalId) {
+            clearTimeout(refreshIntervalId);
+        }
+        loadEquipesData();
+    }
+
+    $(document).ready(function () {
+        // Load saved settings
+        loadSettings();
+
+        // Set up event listeners
+        $('#refresh-interval').on('change', refreshIntervalChanged);
+        $('#device-type').on('change', deviceTypeChanged);
+        $('#dev-mode').on('change', devModeChanged);
+
+        loadEquipesData();
+        $(window).resize(adjustTableHeight);
+    });
+</script>

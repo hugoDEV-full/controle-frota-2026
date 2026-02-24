@@ -1,0 +1,290 @@
+<% 
+// --- FALLBACKS ---
+const vehiclesList = typeof vehicles !== 'undefined' ? vehicles : [];
+const manutList = typeof manutencoes !== 'undefined' ? manutencoes : [];
+const arquivosMapSafe = typeof arquivosMap !== 'undefined' ? arquivosMap : {};
+const selVehicle = typeof selectedVehicle !== 'undefined' ? selectedVehicle : null;
+const csrfTokenSafe = typeof csrfToken !== 'undefined' ? csrfToken : '';
+
+// filtros
+const qSafe = typeof q !== 'undefined' ? q : '';
+const dateFromSafe = typeof date_from !== 'undefined' ? date_from : '';
+const dateToSafe = typeof date_to !== 'undefined' ? date_to : '';
+%>
+
+<% 
+// utilitário simples para formatar data YYYY-MM-DD -> DD/MM/YYYY para exibição
+function fmtDate(d) {
+  if (!d) return '-';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return d;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+%>
+
+<div class="container-fluid my-4">
+  <div class="row">
+    <!-- SIDEBAR: Veículos + filtros -->
+    <div class="col-md-4 col-lg-3 mb-3">
+      <div class="card">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Veículos & Filtros</h5>
+          <a href="/veiculos/novo" class="btn btn-sm btn-primary">Novo</a>
+        </div>
+
+        <div class="p-2">
+          <!-- Filtro: busca + intervalo datas + selecionar veículo -->
+          <form id="filterByVehicleForm" action="/manutencoes" method="get" class="m-0 p-0">
+            <input type="hidden" name="_csrf" value="<%= csrfTokenSafe %>">
+
+            <!-- Busca texto -->
+            <div class="mb-2">
+              <label for="q" class="form-label small mb-1">Buscar</label>
+              <div class="input-group">
+                <input type="search" id="q" name="q" class="form-control form-control-sm" placeholder="tipo, descrição, veículo, placa..." value="<%= qSafe %>">
+                <button class="btn btn-sm btn-outline-secondary" type="submit" title="Pesquisar">OK</button>
+              </div>
+            </div>
+
+            <!-- Intervalo de datas (data_agendada) -->
+            <div class="mb-2">
+              <label class="form-label small mb-1">Intervalo (Data agendada)</label>
+              <div class="d-flex gap-2">
+                <input type="date" name="date_from" class="form-control form-control-sm" value="<%= dateFromSafe %>">
+                <input type="date" name="date_to" class="form-control form-control-sm" value="<%= dateToSafe %>">
+              </div>
+              <small class="form-text text-muted">Filtra pela coluna <code>data_agendada</code>.</small>
+            </div>
+
+            <!-- Lista de veículos com radios -->
+            <div class="list-group list-group-flush" id="vehiclesList" style="max-height:28vh; overflow:auto;">
+              <% if (vehiclesList.length === 0) { %>
+                <div class="list-group-item text-muted">Nenhum veículo cadastrado</div>
+              <% } else { %>
+                <% vehiclesList.forEach(v => { 
+                     const isActive = (selVehicle && Number(selVehicle) === Number(v.id));
+                %>
+                  <label
+                    class="list-group-item d-flex justify-content-between align-items-start vehicle-item <%= isActive ? 'active' : '' %>"
+                    style="cursor:pointer;"
+                    tabindex="0"
+                    data-vehicle-id="<%= v.id %>">
+
+                    <div class="ms-2 me-auto">
+                      <div class="fw-bold"><%= v.nome || v.placa || ('Veículo ' + v.id) %></div>
+                      <small class="text-muted"><%= v.placa ? ('Placa: ' + v.placa) : '' %></small>
+                    </div>
+
+                    <div class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="radio"
+                        name="veiculo_id"
+                        value="<%= v.id %>"
+                        id="veh_<%= v.id %>"
+                        <%= isActive ? 'checked' : '' %>
+                        onchange="document.getElementById('filterByVehicleForm').submit()">
+                    </div>
+                  </label>
+                <% }) %>
+              <% } %>
+            </div>
+
+            <!-- ações -->
+            <div class="mt-2 d-flex gap-2">
+              <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
+              <a href="/manutencoes" class="btn btn-sm btn-outline-secondary">Limpar</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN: Manutenções -->
+    <div class="col-md-8 col-lg-9">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Manutenções <small class="text-muted"><%= selVehicle ? `(Veículo ${selVehicle})` : '' %></small></h3>
+        <div>
+          <% if (selVehicle) { %>
+            <a href="/veiculos/<%= selVehicle %>/manutencoes/novo" class="btn btn-success">Nova manutenção</a>
+          <% } else { %>
+            <a href="/veiculos" class="btn btn-outline-secondary">Ver veículos</a>
+          <% } %>
+        </div>
+      </div>
+
+      <% if (manutList.length === 0) { %>
+        <div class="alert alert-info">Nenhuma manutenção encontrada.</div>
+      <% } else { %>
+
+        <!-- estilos locais para zebra + hover e responsividade -->
+        <style>
+          .table-custom tbody tr:nth-child(odd) { background-color: #f8f9fa; }
+          .table-custom tbody tr:hover { background-color: #e9ecef; }
+          .table-custom td, .table-custom th { vertical-align: middle; }
+          .card-manut { margin-bottom: 0.75rem; border-radius: 0.5rem; }
+          .card-manut .card-body { padding: 0.6rem 0.9rem; }
+          .card-manut .meta { font-size: 0.9rem; color: #6c757d; }
+          @media (max-width: 575.98px) {
+            .card-manut .fw-bold { font-size: 1rem; }
+          }
+        </style>
+
+        <!-- Tabela para md+ (desktop/tablets maiores) -->
+        <div class="table-responsive d-none d-md-block">
+          <table class="table table-hover table-sm table-custom mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th class="text-nowrap">KM</th>
+                <th class="text-nowrap">Data Agendada</th>
+                <th>Status</th>
+                <th>Anexos</th>
+                <th class="text-end">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% manutList.forEach(m => {
+                   let nArquivos = 0;
+                   if (Array.isArray(arquivosMapSafe[m.id])) {
+                     nArquivos = arquivosMapSafe[m.id].length;
+                   } else {
+                     nArquivos = Number(arquivosMapSafe[m.id]) || 0;
+                   }
+              %>
+                <tr>
+                  <td><%= m.tipo || '-' %></td>
+                  <td style="max-width:360px; white-space:normal; word-break:break-word;">
+                    <small title="<%= m.descricao ? m.descricao.replace(/"/g, '&quot;') : '' %>">
+                      <%= m.descricao ? (m.descricao.length > 140 ? m.descricao.substring(0,140) + '...' : m.descricao) : '-' %>
+                    </small>
+                  </td>
+                  <td class="text-nowrap"><%= m.km_agendado || '-' %></td>
+                  <td class="text-nowrap"><%= fmtDate(m.data_agendada) %></td>
+                  <td>
+                    <% if (m.status === 'pendente') { %>
+                      <span class="badge bg-warning text-dark">Pendente</span>
+                    <% } else if (m.status === 'realizada') { %>
+                      <span class="badge bg-success">Realizada</span>
+                    <% } else { %>
+                      <span class="badge bg-secondary">Cancelada</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (nArquivos > 0) { %>
+                      <a href="/manutencoes/<%= m.id %>"><%= nArquivos %> arquivo(s)</a>
+                    <% } else { %>
+                      -
+                    <% } %>
+                  </td>
+                  <td class="text-end">
+                    <a href="/manutencoes/<%= m.id %>" class="btn btn-sm btn-outline-primary">Ver</a>
+
+                    <form action="/manutencoes/<%= m.id %>/delete" method="post" class="d-inline">
+                      <input type="hidden" name="_csrf" value="<%= csrfTokenSafe %>">
+                      <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Excluir manutenção?')">Excluir</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Layout alternativo para sm (celulares): cards empilhados -->
+        <div class="d-block d-md-none">
+          <% manutList.forEach(m => {
+               let nArquivos = 0;
+               if (Array.isArray(arquivosMapSafe[m.id])) {
+                 nArquivos = arquivosMapSafe[m.id].length;
+               } else {
+                 nArquivos = Number(arquivosMapSafe[m.id]) || 0;
+               }
+               const shortDesc = m.descricao ? (m.descricao.length > 120 ? m.descricao.substring(0,120) + '...' : m.descricao) : '-';
+          %>
+            <div class="card card-manut shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div class="fw-bold"><%= m.tipo || '-' %></div>
+                    <div class="meta"><%= shortDesc %></div>
+                  </div>
+
+                  <div class="text-end">
+                    <div>
+                      <% if (m.status === 'pendente') { %>
+                        <span class="badge bg-warning text-dark">Pendente</span>
+                      <% } else if (m.status === 'realizada') { %>
+                        <span class="badge bg-success">Realizada</span>
+                      <% } else { %>
+                        <span class="badge bg-secondary">Cancelada</span>
+                      <% } %>
+                    </div>
+
+                    <div class="mt-2">
+                      <a href="/manutencoes/<%= m.id %>" class="btn btn-sm btn-outline-primary">Ver</a>
+                      <form action="/manutencoes/<%= m.id %>/delete" method="post" class="d-inline">
+                        <input type="hidden" name="_csrf" value="<%= csrfTokenSafe %>">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Excluir manutenção?')">Excluir</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row mt-2 small text-muted">
+                  <div class="col-6">KM: <strong><%= m.km_agendado || '-' %></strong></div>
+                  <div class="col-6 text-end">Data: <strong><%= fmtDate(m.data_agendada) %></strong></div>
+                </div>
+
+                <div class="mt-1 small text-muted">
+                  Anexos: <strong><%= nArquivos %></strong>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const vehiclesContainer = document.getElementById('vehiclesList');
+    const filterForm = document.getElementById('filterByVehicleForm');
+    if (!vehiclesContainer || !filterForm) return;
+
+    // delegação de evento: clicar no item seleciona radio + submit
+    vehiclesContainer.addEventListener('click', function (e) {
+      const item = e.target.closest('.vehicle-item');
+      if (!item) return;
+
+      // se clicou diretamente no input, onchange já faz submit
+      if (e.target.tagName && e.target.tagName.toLowerCase() === 'input') return;
+
+      const radio = item.querySelector('input[type="radio"]');
+      if (radio) {
+        radio.checked = true;
+        filterForm.submit();
+      }
+    });
+
+    // acessibilidade: permitir Enter/Space em item focável
+    vehiclesContainer.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const focused = document.activeElement;
+        const item = focused && focused.classList && focused.classList.contains('vehicle-item') ? focused : null;
+        if (!item) return;
+        const radio = item.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          e.preventDefault();
+          filterForm.submit();
+        }
+      }
+    });
+  });
+</script>
+

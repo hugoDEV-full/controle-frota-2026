@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>
+    <%= title %>
+  </title>
+
+
+  <style>
+    /* Garante que o mapa sempre tenha altura definida */
+    #mapCentral {
+      height: 500px;
+      width: 100%;
+    }
+
+    /* Cursor de mão para itens de geofence */
+    .geo-item {
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid mt-3">
+    <h1 class="mb-4">
+      <%= title %>
+    </h1>
+
+    <div class="row">
+      <!-- Coluna lateral: veículos, histórico, geofences e botão -->
+      <div class="col-md-3">
+        <!-- Lista de Veículos/Dispositivos -->
+        <h5>Veículos / Dispositivos</h5>
+        <ul class="list-group mb-4">
+          <% veiculos.forEach((v)=> {
+            const ultima = ultimasPosicoes.find(
+            (u) => String(u.deviceId) === String(v.deviceId)
+            );
+            %>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="/admin/gps-controle?device=<%= v.deviceId %>" class="text-decoration-none">
+                <%= v.placa %> — <%= v.modelo %>
+              </a>
+              <% if (ultima) { %>
+                <small class="text-muted">
+                  <i class="fas fa-clock"></i>
+                  <%= new Date(ultima.timestamp).toLocaleTimeString('pt-BR') %>
+                </small>
+                <% } else { %>
+                  <small class="text-muted">— sem sinal —</small>
+                  <% } %>
+            </li>
+            <% }); %>
+        </ul>
+
+        <!-- Histórico de posições, se veículo selecionado -->
+        <% if (selectedDevice) { %>
+          <h6>Histórico (últimos 50 pontos)</h6>
+          <div style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
+            <ul class="list-group">
+              <% historico.forEach((p)=> { %>
+                <li class="list-group-item px-2 py-1">
+                  [<%= new Date(p.timestamp).toLocaleString('pt-BR') %>]
+                    <code>(<%= p.latitude.toFixed(5) %>,
+                    <%= p.longitude.toFixed(5) %>)</code>
+                </li>
+                <% }); %>
+            </ul>
+          </div>
+          <% } %>
+
+            <!-- Lista de Geofences existentes -->
+            <h5>Geofences</h5>
+            <ul class="list-group mb-2" id="listaGeofences">
+              <% geofences.forEach((g)=> { %>
+                <li class="list-group-item d-flex justify-content-between align-items-center"
+                  data-wkt="<%= g.wkt_polygon %>">
+                  <span class="geo-item">
+                    <strong>
+                      <%= g.nome %>
+                    </strong>
+                  </span>
+                  <button class="btn btn-sm btn-outline-danger" onclick="excluirGeofence(<%= g.id %>, '<%= g.nome %>')">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </li>
+                <% }); %>
+            </ul>
+            <!-- Botão de iniciar desenho de nova Geofence -->
+            <button id="btnIniciarDesenho" class="btn btn-sm btn-outline-primary mb-3">
+              + Criar Geofence
+            </button>
+      </div>
+
+      <!-- Coluna principal: mapa Leaflet -->
+      <div class="col-md-9">
+        <div id="mapCentral"></div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1) Inicializa o mapa centrado em Brasília (−15.7939, −47.8828)
+      const map = L.map('mapCentral').setView([-15.7939, -47.8828], 12);
+
+
+      // 2) Camada base OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap Contributors'
+      }).addTo(map);
+
+      // 3) Ícone de veículo usando FontAwesome
+      const vehicleIcon = L.divIcon({
+        html: '<i class="fas fa-car fa-lg" style="color: blue;"></i>',
+        className: '',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+
+        // 4) Marcar a última posição de cada veículo
+        <% ultimasPosicoes.forEach((u) => {
+        const veic = veiculos.find(
+          (v) => String(v.deviceId) === String(u.deviceId)
+        );
+           %>
+           <% if (veic) { %>
+          L.marker([<%= u.latitude %>, <%= u.longitude %>], {
+            icon: vehicleIcon
+          })
+            .addTo(map)
+            .bindPopup(`
+                 <strong><%= veic.placa %> — <%= veic.modelo %></strong><br/>
+                 <i class="fas fa-clock"></i>
+                 <%= new Date(u.timestamp).toLocaleString('pt-BR') %>
+               `);
+           <% } %>
+        <% }); %>
+
+        // 5) Desenhar histórico (polyline) se houver veículo selecionado
+        <% if (selectedDevice && historico.length > 1) { %>
+          const coordsHist = [
+            <% historico.forEach((p, idx) => { %>
+              [<%= p.latitude %>, <%= p.longitude %>] <%= idx < historico.length - 1 ? ',' : '' %>
+            <% }); %>
+          ];
+        const poly = L.polyline(coordsHist, {
+          color: 'green',
+          weight: 3,
+          opacity: 0.7
+        }).addTo(map);
+        map.fitBounds(poly.getBounds(), { padding: [20, 20] });
+        <% } %>
+
+        // 6) Função para converter WKT "POLYGON((lng lat, ...))" em [[lat,lng],...]
+        function parseWktPolygon(wkt) {
+          const inner = wkt
+            .replace('POLYGON((', '')
+            .replace('))', '')
+            .trim();
+          if (!inner) return [];
+          return inner.split(',').map((pair) => {
+            const [lng, lat] = pair.trim().split(' ').map(Number);
+            return [lat, lng];
+          });
+        }
+
+        // 7) Desenhar geofences existentes – cada polígono em try-catch
+        <% geofences.forEach((g) => { %>
+          try {
+            const coordsGeo = parseWktPolygon("<%= g.wkt_polygon %>");
+            if (Array.isArray(coordsGeo) && coordsGeo.length) {
+              L.polygon(coordsGeo, {
+                color: 'red',
+                weight: 2,
+                dashArray: '5,5'
+              })
+                .addTo(map)
+                .bindPopup(`<strong><%= g.nome %></strong>`);
+            } else {
+              console.warn('Geofence "<%= g.nome %>" retornou coordenadas vazias.');
+            }
+          } catch (err) {
+            console.error('Erro ao desenhar geofence "<%= g.nome %>":', err);
+          }
+        <% }); %>
+
+        // 8) Clicar em item de geofence para dar fitBounds
+        document.querySelectorAll('.geo-item').forEach((li) => {
+          li.addEventListener('click', () => {
+            const wkt = li.dataset.wkt;
+            let coords = [];
+            try {
+              coords = parseWktPolygon(wkt);
+            } catch (err) {
+              console.error('WKT inválido ao clicar em geofence:', err);
+              return;
+            }
+            if (coords.length) {
+              const camada = L.polygon(coords);
+              map.fitBounds(camada.getBounds(), { padding: [20, 20] });
+            }
+          });
+        });
+
+      // 9) Configurar Leaflet.draw para desenhar polígonos
+      const drawnItems = new L.FeatureGroup();
+      map.addLayer(drawnItems);
+
+      const drawControl = new L.Control.Draw({
+        draw: {
+          polygon: {
+            allowIntersection: false,
+            showArea: true,
+            drawError: {
+              color: '#e1e100',
+              message: '<strong>Erro:</strong> Polígono inválido.'
+            },
+            shapeOptions: {
+              color: '#bada55'
+            }
+          },
+          polyline: false,
+          circle: false,
+          rectangle: false,
+          marker: false,
+          circlemarker: false
+        },
+        edit: {
+          featureGroup: drawnItems,
+          edit: false,
+          remove: false
+        }
+      });
+
+      let drawControlAdded = false;
+      document
+        .getElementById('btnIniciarDesenho')
+        .addEventListener('click', () => {
+          if (!drawControlAdded) {
+            map.addControl(drawControl);
+            drawControlAdded = true;
+          }
+          new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable();
+        });
+
+      // 10) Evento quando o desenho for finalizado
+      map.on('draw:created', async (e) => {
+        const layer = e.layer;
+        drawnItems.addLayer(layer);
+
+        // Converte LatLngs em WKT “POLYGON((lng lat, ...))”
+        const latlngs = layer.getLatLngs()[0]; // anel externo
+        let wkt = 'POLYGON((';
+        wkt += latlngs.map((pt) => `${pt.lng} ${pt.lat}`).join(', ');
+        wkt += `, ${latlngs[0].lng} ${latlngs[0].lat}`; // fecha o anel
+        wkt += '))';
+
+        // Solicita nome ao usuário
+        const nome = prompt('Digite um nome para a nova Geofence:');
+        if (!nome) {
+          alert('Geofence descartada (sem nome).');
+          drawnItems.clearLayers();
+          return;
+        }
+
+        // Envia via POST para o backend
+        try {
+          const response = await fetch('/admin/geofences/criar', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'CSRF-Token': '<%= csrfToken %>'
+            },
+            body: JSON.stringify({ nome, wkt_polygon: wkt })
+          });
+          if (!response.ok) throw new Error('Falha ao salvar Geofence.');
+          alert('Geofence salva com sucesso.');
+          window.location.reload();
+        } catch (err) {
+          console.error(err);
+          alert('Erro ao salvar Geofence.');
+          drawnItems.clearLayers();
+        }
+      });
+
+      // 11) Força Leaflet a recalcular tamanhos (layout responsivo)
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
+    });
+  </script>
+
+
+  <script>
+    function excluirGeofence(id, nome) {
+      if (!confirm(`Tem certeza que deseja excluir a geofence "${nome}"?`)) return;
+
+      fetch(`/admin/geofences/excluir/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': '<%= csrfToken %>'
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            alert('Geofence excluída com sucesso.');
+            window.location.reload();
+          } else {
+            alert('Erro ao excluir geofence.');
+          }
+        })
+        .catch(err => {
+          console.error('Erro ao excluir geofence:', err);
+          alert('Erro na requisição.');
+        });
+    }
+
+    // Mantém o comportamento original de “fitBounds” ao clicar no nome da geofence
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.geo-item').forEach(li => {
+        li.addEventListener('click', () => {
+          const wkt = li.closest('li').dataset.wkt;
+          const coords = parseWktPolygon(wkt);
+          if (coords.length) {
+            const layer = L.polygon(coords);
+            map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+          }
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

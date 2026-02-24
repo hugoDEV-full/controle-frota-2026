@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h2>Editar Dispositivo</h2>
+
+    <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+    <% } %>
+
+    <form
+      action="/editar-dispositivo/<%= device.dev_id %>"
+      method="POST"
+      class="mt-4"
+    >
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="mb-3">
+        <label for="dev_name" class="form-label">Hostname (dev_name)</label>
+        <input
+          type="text"
+          class="form-control"
+          id="dev_name"
+          name="dev_name"
+          required
+          value="<%= device.dev_name %>"
+        >
+      </div>
+
+      <div class="mb-3">
+        <label for="dev_key" class="form-label">Hash (dev_key)</label>
+        <input
+          type="text"
+          class="form-control"
+          id="dev_key"
+          name="dev_key"
+          required
+          value="<%= device.dev_key %>"
+        >
+      </div>
+
+      <div class="mb-3">
+        <label for="dev_status" class="form-label">Status</label>
+        <select
+          class="form-select"
+          id="dev_status"
+          name="dev_status"
+        >
+          <option value="0" <%= device.dev_status===0?'selected':'' %>>
+            Pendente
+          </option>
+          <option value="1" <%= device.dev_status===1?'selected':'' %>>
+            Autorizado
+          </option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a href="/listar-dispositivos" class="btn btn-secondary ms-2">Cancelar</a>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<% motoristas.forEach(m => { %>
+    <div class="card mb-3" style="max-width: 540px;">
+      <div class="row g-0">
+        <div class="col-md-4">
+          <% if (m.foto_cnh) { %>
+            <!--  botão que dispara o modal -->
+            <button 
+              class="btn btn-link p-0 show-cnh-modal" 
+              data-id="<%= m.id %>"
+              style="border: none; background: none;"
+            >
+              <img
+                src="data:image/jpeg;base64,<%= Buffer.from(m.foto_cnh).toString('base64') %>"
+                class="img-fluid rounded-start"
+                alt="CNH de <%= m.nome %>"
+                style="max-width:100px; cursor: zoom-in;"
+              >
+            </button>
+          <% } else { %>
+            <div class="d-flex align-items-center justify-content-center bg-secondary text-white" style="height:100%;">
+              Sem foto
+            </div>
+          <% } %>
+        </div>
+        <div class="col-md-8">
+          <div class="card-body">
+            <h5 class="card-title"><%= m.nome %></h5>
+            <p class="card-text">
+              CPF: <%= m.cpf %><br>
+              CNH Nº: <%= m.cnh %><br>
+              Validade: <%= m.data_validade.toISOString().slice(0,10) %><br>
+              Categoria: <%= m.categoria %>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+<!-- Modal para mostrar CNH em tamanho real -->
+<div class="modal fade" id="modalCNH" tabindex="-1" aria-labelledby="modalCNHLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content bg-transparent border-0">
+        <div class="modal-body text-center p-0">
+          <img id="imgModalCNH" src="" class="img-fluid" alt="CNH ampliada" />
+        </div>
+        <button 
+          type="button" 
+          class="btn-close position-absolute top-0 end-0 m-3" 
+          data-bs-dismiss="modal" 
+          aria-label="Fechar"
+        ></button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modalEl = document.getElementById('modalCNH');
+      const imgEl   = document.getElementById('imgModalCNH');
+      const modal   = new bootstrap.Modal(modalEl);
+  
+      // ao clicar na miniatura, coloca a mesma src no modal e abre
+      document.querySelectorAll('.show-cnh-modal').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          try {
+            // busca o data-URI da rota API
+            const res = await fetch(`/api/motorista/${id}/cnh`);
+            const data = await res.json();
+            if (data.success) {
+              imgEl.src = data.fotoCNH;
+              modal.show();
+            } else {
+              alert(data.message);
+            }
+          } catch (err) {
+            console.error(err);
+            alert('Erro ao carregar imagem da CNH.');
+          }
+        });
+      });
+    });
+  </script>
+  

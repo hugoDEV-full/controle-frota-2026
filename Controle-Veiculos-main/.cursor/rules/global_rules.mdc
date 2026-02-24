@@ -1,0 +1,31 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+(a) this is an express+ejs+socket.io application.
+(b) on express routing, always follow this rules:
+    - always sanitize any user input received.
+    - for database, use mysql.call(procedure name, [argument, list])
+    - prefer $.get/$.post approach for template and server interaction (ie: ajax)
+- do not suggest any/add any comment to the code.
+- suggest code more compact as possible (use less lines).
+- do not use camelCase, always name objects as under_case format.
+- the following libs already pre-included in index.ejs (main template):
+  - moment.js/2.30.1
+  - font-awesome/6.4.2
+  - jquery@3.7.1
+  - @popperjs/core@2.11.8
+  - bootstrap@5.3.2
+  - bootstrap-icons@1.11.3
+  - jquery-validation@1.21.0
+  - js-cookie@3.0.5
+  - animejs/3.2.2
+  - google.com/recaptcha/enterprise.js
+  - Chart.js/4.4.1
+- use already include js libs when necessary.
+- ejs: when possible add linear-gradient/css to buttons/panels, respecting the color theme scheme (darker/lighter).
+- always use $ for DOM interaction.
+- always apply css respecting the bootstrap color scheme selected.
+- never name objects as thisFormat, use this_format for naming convetions.
+- never add comments to the code.

@@ -1,0 +1,36 @@
+# Ignorar a pasta node_modules e packagejson-lock
+node_modules/
+package-lock.json
+
+# pasta backup
+backup/
+uploads/
+#Comandos para criação de tabelas do banco
+
+comandos-criacao-tabelas.sql
+
+#  temporários
+*.log
+*.tmp
+
+#  sistema operacional
+.DS_Store
+Thumbs.db
+
+#  pacotes de cache e build
+dist/
+build/
+.cache/
+
+#  arquivos de  ambiente
+.env
+.env.local
+.env.production
+.env.development
+
+# IDEs e editores
+.vscode/
+.idea/
+*.iml
+
+certs/

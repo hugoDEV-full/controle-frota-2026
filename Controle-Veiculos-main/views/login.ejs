@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Login</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      /* impede qualquer scroll */
+    }
+
+    body {
+
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background: url('/images/frota3.png') no-repeat center center;
+      background-size: cover;
+      background-attachment: scroll;
+      /* ou remova esta linha se não quiser "fixo" */
+      background-color: #000;
+      /* cor de fundo de segurança */
+
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .card-login {
+      background: rgba(0, 0, 0, 0.6);
+      border: none;
+      border-radius: .75rem;
+      width: 100%;
+    }
+
+    .logo-inova {
+      max-width: 150px;
+      background: #fff;
+      padding: .5rem;
+      border-radius: .5rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container px-3">
+    <div class="row justify-content-center">
+      <div class="col-12 col-sm-9 col-md-7 col-lg-5 col-xl-4">
+        <div class="card-login p-4 shadow-lg">
+          <div class="text-center mb-4">
+            <img src="images/LOGO-INOVA.png" alt="Inova Comunicações Inteligentes" class="logo-inova img-fluid">
+          </div>
+
+
+          <form action="/login" method="POST" novalidate>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div class="mb-3">
+              <label for="email" class="form-label text-white">Email</label>
+              <input type="email" name="email" id="email" class="form-control" placeholder="login@emaildologin.com"
+                required>
+            </div>
+
+            <div class="mb-3">
+              <label for="password" class="form-label text-white">Senha</label>
+              <div class="input-group">
+                <input type="password" name="password" id="password" class="form-control" placeholder="••••••••"
+                  required>
+                <button class="btn btn-outline-light" type="button" id="togglePassword" aria-label="Mostrar senha">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mb-2">
+              <i class="fas fa-sign-in-alt me-1" aria-hidden="true"></i>
+              Entrar
+            </button>
+          </form>
+
+          <div class="text-center">
+            <a href="/forgot-password" class="text-white small">
+              <i class="fas fa-key me-1" aria-hidden="true"></i>
+              Esqueceu a senha?
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS  -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Toggle de visibilidade da senha -->
+  <script>
+    const toggleBtn = document.getElementById('togglePassword');
+    const pwdField = document.getElementById('password');
+    toggleBtn.addEventListener('click', () => {
+      const isPwd = pwdField.type === 'password';
+      pwdField.type = isPwd ? 'text' : 'password';
+      toggleBtn.firstElementChild.classList.toggle('bi-eye-slash', isPwd);
+      toggleBtn.firstElementChild.classList.toggle('bi-eye', !isPwd);
+    });
+  </script>
+</body>
+
+</html>

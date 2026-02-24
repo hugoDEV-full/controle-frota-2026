@@ -1,0 +1,1062 @@
+<% /* views/mapa-usos.ejs - Versão completa com: - paginação principal funcional - "Últimos usos" paginado por
+  /api/mapa-usos/ultimos - filtro por período (start/end) nos Últimos usos - loading overlay, tooltips,
+  play/pause/step/stop simulation - manter todas as funcionalidades anteriores (heatmap, fit bounds, mostrar/ocultar
+  trajetos, charts) */ %>
+
+  <div class="container-fluid py-3">
+    <div class="row">
+      <div class="col-lg-9 position-relative">
+        <!-- Loading overlay -->
+        <div id="loadingOverlay"
+          style="display:none; position:absolute; inset:0; z-index:100000; background:rgba(255,255,255,0.78); align-items:center; justify-content:center;">
+          <div class="text-center">
+            <div class="spinner-border" role="status" aria-hidden="true"></div>
+            <div class="mt-2 small text-muted">Carregando usos e trajetos...</div>
+          </div>
+        </div>
+
+        <div id="map" style="width:100%;height:75vh;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.12)"></div>
+
+        <div class="mt-2 d-flex gap-2 align-items-center">
+          <button id="fitBoundsBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip"
+            title="Ajusta o mapa para exibir todos os marcadores/rotas visíveis"><i
+              class="bi bi-arrows-fullscreen"></i>Ajustar ao mapa</button>
+          <button id="toggleHeatBtn" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
+            title="Ativa/desativa o heatmap das posições"><i class="bi bi-thermometer-sun"></i>Alternar Heatmap</button>
+          <button id="toggleAllTrajets" class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="tooltip"
+            title="Mostra/oculta todas as rotas da página atual no mapa"><i class="bi bi-map"></i>Mostrar todas
+            rotas</button>
+
+          <div class="ms-auto d-flex gap-2 align-items-center" style="width:420px;">
+            <input id="searchInput" class="form-control form-control-sm"
+              placeholder="Pesquisar motorista / placa / finalidade" data-bs-toggle="tooltip"
+              title="Digite nome do motorista, placa ou finalidade para filtrar (busca global)" />
+            <select id="perPageSelect" class="form-select form-select-sm" style="width:100px;" data-bs-toggle="tooltip"
+              title="Quantidade de itens por página">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Card de Simulação -->
+        <div id="simCard" class="card mt-2" style="display:none;">
+          <div class="card-body d-flex align-items-center">
+            <div>
+              <h6 id="simCardTitle" class="mb-1">Simulação</h6>
+              <div id="simCardTime" class="small text-muted">—</div>
+            </div>
+            <div class="ms-auto d-flex gap-2 align-items-center">
+              <button id="stepBackBtn" class="btn btn-sm btn-outline-secondary" title="Retroceder um passo"
+                data-bs-toggle="tooltip"><i class="bi bi-skip-backward"></i> </button>
+              <button id="playSimBtn" class="btn btn-sm btn-outline-success" title="Iniciar/retomar simulação"
+                data-bs-toggle="tooltip"> <i class="bi bi-play-fill"></i>Play</button>
+              <button id="pauseSimBtn" class="btn btn-sm btn-outline-warning" title="Pausar simulação"
+                data-bs-toggle="tooltip"> <i class="bi bi-pause-fill"></i> Pausa</button>
+              <button id="stepFwdBtn" class="btn btn-sm btn-outline-secondary" title="Avançar um passo"
+                data-bs-toggle="tooltip"><i class="bi bi-skip-forward"></i> </button>
+
+              <button id="stopSimBtn" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip"
+                title="Parar e limpar esta simulação"><i class="bi bi-stop-fill"></i>Parar simulação</button>
+              <button id="centerSimBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip"
+                title="Centralizar o mapa na posição atual da simulação"><i
+                  class="bi bi-crosshair"></i>Centralizar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-2 d-flex justify-content-between align-items-center">
+          <div>
+            <button id="prevPageBtn" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
+              title="Ir para página anterior">
+              <i class="fas fa-chevron-left me-1" aria-hidden="true"></i>
+
+            </button>
+
+            <button id="nextPageBtn" class="btn btn-sm btn-outline-secondary ms-1" data-bs-toggle="tooltip"
+              title="Ir para próxima página">
+
+              <i class="fas fa-chevron-right ms-1" aria-hidden="true"></i>
+            </button>
+
+          </div>
+          <div class="small text-muted">Página <span id="currentPage">1</span> • Total de usos: <span
+              id="totalCount">0</span></div>
+        </div>
+      </div>
+
+      <div class="col-lg-3">
+        <div class="card mb-2" data-bs-toggle="tooltip" title="Resumo rápido dos usos exibidos">
+          <div class="card-body">
+            <h5 class="card-title">Resumo</h5>
+            <p>Total de usos: <span id="totalUsos">0</span></p>
+            <p>Finalidade predominante: <span id="predominante">—</span></p>
+            <hr>
+            <h6>Top motoristas</h6>
+            <ul id="topDrivers" class="list-unstyled small mb-0"></ul>
+          </div>
+        </div>
+
+        <div class="card mb-2">
+          <div class="card-body">
+            <h6>Distribuição por finalidade</h6>
+            <canvas id="pieFinalidade" height="180" data-bs-toggle="tooltip"
+              title="Gráfico de pizza com as finalidades"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <!-- Últimos usos com paginação servidor-side + filtro por período -->
+            <div class="d-flex mb-2 align-items-center">
+              <h6 class="mb-0 me-auto">Últimos usos</h6>
+
+              <div class="input-group input-group-sm ms-2" style="width:420px;">
+                <input id="ultimosSearch" placeholder="Buscar nesta lista" class="form-control form-control-sm"
+                  aria-label="Buscar últimos usos" />
+                <input id="ultStartDate" type="date" class="form-control form-control-sm ms-1"
+                  title="Data inicial (início do período)" />
+                <input id="ultEndDate" type="date" class="form-control form-control-sm ms-1"
+                  title="Data final (fim do período)" />
+                <select id="ultimosPerPageSelect" class="form-select form-select-sm ms-1" style="width:80px;">
+                  <option value="5">5</option>
+                  <option value="10" selected>10</option>
+                  <option value="25">25</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="ultimosUsos" class="list-group small" style="max-height:36vh; overflow:auto;"></div>
+
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <div>
+                <button id="ultPrevBtn" class="btn btn-sm btn-outline-secondary"> <i
+                    class="bi bi-arrow-left"></i></button>
+                <button id="ultNextBtn" class="btn btn-sm btn-outline-secondary ms-1"><i
+                    class="bi bi-arrow-right"></i></button>
+              </div>
+              <div class="small text-muted">Página <span id="ultCurrentPage">1</span> de <span id="ultLastPage">1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- badge flutuante que mostra data/hora durante simulação -->
+  <style>
+    #simClock {
+      position: fixed;
+      right: 18px;
+      top: 92px;
+      z-index: 99999;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      display: none;
+      min-width: 220px;
+    }
+
+    #simClock b {
+      display: block;
+      font-size: 13px;
+    }
+  </style>
+  <div id="simClock"><b id="simTitle"></b><span id="simTime"></span></div>
+
+  <!-- libs -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // helpers
+      const esc = s => (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      function parseTsToMs(v) {
+        if (v === null || v === undefined) return null;
+        if (typeof v === 'number') {
+          if (v > 1e12) return v;
+          if (v > 1e9) return v * 1000;
+          return null;
+        }
+        const num = Number(v);
+        if (!Number.isNaN(num)) {
+          if (num > 1e12) return num;
+          if (num > 1e9) return num * 1000;
+        }
+        const parsed = Date.parse(v);
+        return isNaN(parsed) ? null : parsed;
+      }
+      //  (formato BR)
+      function formatDt(ms) {
+        if (!ms) return '—';
+        const d = new Date(Number(ms));
+        const pad = n => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      }
+
+
+      // Tooltip init helper (Bootstrap if available)
+      function enableTooltips(root = document) {
+        const els = Array.from(root.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        if (!els.length) return;
+        try {
+          if (window.bootstrap && bootstrap.Tooltip) {
+            els.forEach(el => {
+              if (!el._bs_tooltip) {
+                el._bs_tooltip = new bootstrap.Tooltip(el);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('tooltips init failed', e);
+        }
+      }
+
+      // Loading overlay helpers
+      function setLoading(on, reason) {
+        const el = document.getElementById('loadingOverlay');
+        if (!el) return;
+        if (on) {
+          el.style.display = 'flex';
+          setControlsDisabled(true);
+          if (reason) console.log('Loading:', reason);
+        } else {
+          el.style.display = 'none';
+          setControlsDisabled(false);
+        }
+      }
+      function setControlsDisabled(disabled) {
+        const ids = ['prevPageBtn', 'nextPageBtn', 'perPageSelect', 'searchInput', 'ultimosSearch', 'toggleHeatBtn', 'toggleAllTrajets', 'fitBoundsBtn', 'ultPrevBtn', 'ultNextBtn', 'ultimosPerPageSelect', 'ultStartDate', 'ultEndDate'];
+        ids.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.disabled = !!disabled;
+        });
+      }
+
+      // mapa
+      if (typeof L === 'undefined') { console.error('Leaflet não carregado'); return; }
+      const map = L.map('map', { zoomControl: true }).setView([-15.8, -47.9], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+
+      // marker cluster fallback
+      let markers;
+      try { markers = (L && typeof L.markerClusterGroup === 'function') ? L.markerClusterGroup() : L.layerGroup(); } catch (e) { markers = L.layerGroup(); }
+      map.addLayer(markers);
+
+      const trajetosLayer = L.layerGroup().addTo(map);
+      let heatLayer = null;
+
+      // ideal routes map (server-provided)
+      const idealMap = {};   // usoId -> polyline (rota ideal)
+      let allTrajetsShown = false;
+
+      // caches e mapas
+      const trajetosMap = {}; // usoId -> polyline (principal)
+      const markerMap = {};   // usoId -> marker
+      let usosAll = [];       // current page contents
+      let totalUsosGlobal = 0;
+
+      // pagination + search state (principal)
+      let currentPage = 1;
+      let perPage = Number(document.getElementById('perPageSelect').value) || 25;
+      let currentSearch = '';
+      const DEFAULT_PER_PAGE = 25;
+
+      // "Últimos usos" pagination state (servidor)
+      let ultPage = 1;
+      let ultPerPage = Number(document.getElementById('ultimosPerPageSelect').value) || 10;
+      let ultTotal = 0;
+      let ultSearch = '';
+
+      // debounce util
+      function debounce(fn, wait) {
+        let t;
+        return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); };
+      }
+
+      // normalize helpers
+      const get = (obj, keys) => { for (const k of keys) if (obj && (k in obj)) return obj[k]; return undefined; };
+      const getId = u => get(u, ['id', 'usoId', 'uso_id']) || null;
+      const getMotorista = u => get(u, ['motorista', 'driver', 'motorista_nome', 'user']) || '—';
+      const getVeiculo = u => get(u, ['veiculo_id', 'veiculoId', 'placa', 'veiculo']) || '—';
+      const getTrajeto = u => get(u, ['trajeto', 'points', 'pontos', 'pointsArray', 'points']) || [];
+
+      function clearMapLayers() {
+        try { if (markers && markers.clearLayers) markers.clearLayers(); } catch (e) { }
+        try { if (trajetosLayer && trajetosLayer.clearLayers) trajetosLayer.clearLayers(); } catch (e) { }
+        Object.keys(trajetosMap).forEach(k => delete trajetosMap[k]);
+        Object.keys(markerMap).forEach(k => delete markerMap[k]);
+        Object.keys(idealMap).forEach(k => delete idealMap[k]);
+      }
+
+      function colorForId(id) {
+        const n = Number(String(id).replace(/\D/g, '')) || (String(id).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 1000);
+        const h = (n * 47) % 360;
+        return `hsl(${h} 70% 45%)`;
+      }
+
+      function updatePaginationControls() {
+        const prev = document.getElementById('prevPageBtn');
+        const next = document.getElementById('nextPageBtn');
+        const curEl = document.getElementById('currentPage');
+        curEl.innerText = currentPage;
+        const total = Number(totalUsosGlobal) || 0;
+        const pp = Number(perPage) || DEFAULT_PER_PAGE;
+        const lastPage = total > 0 ? Math.max(1, Math.ceil(total / pp)) : 1;
+        if (prev) prev.disabled = currentPage <= 1;
+        if (next) next.disabled = currentPage >= lastPage;
+      }
+
+      function updateUltimosPaginationControls() {
+        const prev = document.getElementById('ultPrevBtn');
+        const next = document.getElementById('ultNextBtn');
+        const curEl = document.getElementById('ultCurrentPage');
+        const lastEl = document.getElementById('ultLastPage');
+        curEl.innerText = ultPage;
+        const lastPage = ultTotal > 0 ? Math.max(1, Math.ceil(ultTotal / ultPerPage)) : 1;
+        lastEl.innerText = lastPage;
+        if (prev) prev.disabled = ultPage <= 1;
+        if (next) next.disabled = ultPage >= lastPage;
+      }
+
+      // Build API URLs
+      function buildApiUrl(opts = {}) {
+        const p = new URLSearchParams();
+        p.set('page', String(opts.page ?? currentPage ?? 1));
+        p.set('perPage', String(opts.perPage ?? perPage ?? DEFAULT_PER_PAGE));
+        p.set('search', String(opts.search ?? currentSearch ?? ''));
+        return '/api/mapa-usos?' + p.toString();
+      }
+      function buildUltimosUrl({ page = 1, perPage = 10, search = '', start = '', end = '' } = {}) {
+        const p = new URLSearchParams();
+        p.set('page', String(page));
+        p.set('perPage', String(perPage));
+        if (search) p.set('search', String(search));
+        if (start) p.set('start', String(start));
+        if (end) p.set('end', String(end));
+        return '/api/mapa-usos/ultimos?' + p.toString();
+      }
+
+      // Carrega usos (principal)
+      async function loadUsos({ page = 1, perPageArg = DEFAULT_PER_PAGE, search = '' } = {}) {
+        setLoading(true, 'carregando usos');
+        currentPage = Number(page) || 1;
+        perPage = Number(perPageArg) || DEFAULT_PER_PAGE;
+        currentSearch = (search || '').trim();
+
+        // reset "mostrar todas rotas"
+        allTrajetsShown = false;
+        const toggleBtn = document.getElementById('toggleAllTrajets');
+        if (toggleBtn) toggleBtn.innerText = 'Mostrar todas rotas';
+
+        document.getElementById('currentPage').innerText = currentPage;
+        document.getElementById('totalCount').innerText = '...';
+
+        const url = buildApiUrl({ page: currentPage, perPage: perPage, search: currentSearch });
+        let data;
+        try {
+          const resp = await fetch(url, { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+          if (!resp.ok) {
+            const txt = await resp.text().catch(() => '<no-body>');
+            console.error('[loadUsos] HTTP error', resp.status, txt);
+            alert(`Erro ao carregar usos (HTTP ${resp.status}). Veja console.`);
+            setLoading(false);
+            return;
+          }
+          const contentType = (resp.headers.get('content-type') || '').toLowerCase();
+          if (!contentType.includes('application/json')) {
+            const txt = await resp.text().catch(() => '<no-body>');
+            console.error('[loadUsos] Resposta não JSON', contentType, txt);
+            alert('Resposta inesperada do servidor (não JSON). Veja console.');
+            setLoading(false);
+            return;
+          }
+          data = await resp.json();
+        } catch (err) {
+          console.error('[loadUsos] fetch/parse error', err);
+          alert('Erro ao buscar usos (ver console). Mensagem: ' + (err && err.message ? err.message : err));
+          setLoading(false);
+          return;
+        }
+
+        // Normaliza resposta
+        let usos = [];
+        if (Array.isArray(data)) {
+          usos = data;
+        } else {
+          usos = data.usos || data.items || data.rows || [];
+        }
+
+        totalUsosGlobal = Number(data.meta?.total ?? data.total ?? data.stats?.total ?? usos.length) || usos.length;
+
+        // Atualiza UI
+        document.getElementById('totalUsos').innerText = totalUsosGlobal;
+        document.getElementById('totalCount').innerText = totalUsosGlobal;
+
+        // stats
+        const byFinal = data.stats && data.stats.byFinalidade ? data.stats.byFinalidade : (() => {
+          const map = {};
+          usos.forEach(u => { const f = (u.finalidade || u.finalidade_name || '—').toString(); map[f] = (map[f] || 0) + 1; });
+          return map;
+        })();
+        const predEntry = Object.entries(byFinal).sort((a, b) => b[1] - a[1])[0];
+        document.getElementById('predominante').innerText = predEntry ? `${predEntry[0]} (${predEntry[1]})` : '—';
+
+        renderChart(byFinal);
+
+        const topDrivers = data.stats && data.stats.topDrivers ? data.stats.topDrivers : (function () {
+          const cnt = {};
+          usos.forEach(u => { const m = (getMotorista(u) || 'Desconhecido'); cnt[m] = (cnt[m] || 0) + 1; });
+          return Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([driver, c]) => ({ driver, cnt: c }));
+        })();
+        const topDriversEl = document.getElementById('topDrivers');
+        topDriversEl.innerHTML = '';
+        (topDrivers || []).forEach(t => {
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>${esc(t.driver)}</strong> — ${esc(t.cnt)}`;
+          li.title = `${t.driver}: ${t.cnt} uso(s)`;
+          li.setAttribute('data-bs-toggle', 'tooltip');
+          topDriversEl.appendChild(li);
+        });
+
+        // Limpa mapa e re-renderiza
+        clearMapLayers();
+        usosAll = usos.slice();
+
+        // renderiza lista "Últimos usos" local (compatibilidade; server-side mostra via loadUltimos)
+        renderUltimosUsosClientFiltered();
+
+        // monta markers/trajetos (mesma lógica robusta)
+        const heatPoints = [];
+        usosAll.forEach(u => {
+          const uid = getId(u) || (u.id || u.usoId) || Math.random().toString(36).slice(2, 8);
+          const traj = Array.isArray(getTrajeto(u)) ? getTrajeto(u) : [];
+          const points = traj.map(p => {
+            const lat = Number(p.lat ?? p.latitude ?? p[0]);
+            const lng = Number(p.lng ?? p.longitude ?? p[1]);
+            const tsRaw = p.ts ?? p.timestamp ?? p.time;
+            const ts = parseTsToMs(tsRaw);
+            return { lat, lng, ts };
+          }).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+
+          const startLat = Number(u.start_lat ?? u.startLat);
+          const startLng = Number(u.start_lng ?? u.startLng);
+          const endLat = Number(u.end_lat ?? u.endLat);
+          const endLng = Number(u.end_lng ?? u.endLng);
+
+          let markerLatLng = null;
+          if (points.length) markerLatLng = [points[points.length - 1].lat, points[points.length - 1].lng];
+          else if (Number.isFinite(endLat) && Number.isFinite(endLng)) markerLatLng = [endLat, endLng];
+          else if (Number.isFinite(startLat) && Number.isFinite(startLng)) markerLatLng = [startLat, startLng];
+
+          const color = colorForId(uid);
+
+          if (markerLatLng) {
+            const marker = L.marker(markerLatLng, { title: `Uso #${uid}` });
+            markerMap[uid] = marker;
+            marker.bindTooltip(`Uso #${uid} — ${getMotorista(u)} — ${u.finalidade || '—'}`);
+
+            let popupHtml = `<div style="min-width:260px">
+            <b>Uso #${esc(uid)}</b><br/>
+            <b>Veículo:</b> ${esc(getVeiculo(u) || u.placa || '—')}<br/>
+            <b>Motorista:</b> ${esc(getMotorista(u))}<br/>
+            <b>Finalidade:</b> ${esc(u.finalidade || '—')}<br/>
+            <small>${esc(u.inicio || u.criado_em || '')}</small>
+            <hr style="margin:6px 0;">
+            <div id="det-uso-${esc(uid)}" style="font-size:12px">`;
+            if (points.length) {
+              let dist = 0;
+              for (let i = 1; i < points.length; i++) {
+                const a = points[i - 1], b = points[i];
+                const R = 6371000; const toRad = d => d * Math.PI / 180;
+                const dLat = toRad(b.lat - a.lat), dLon = toRad(b.lng - a.lng);
+                const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+                const sinDlat = Math.sin(dLat / 2), sinDlon = Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(sinDlat * sinDlat + Math.cos(lat1) * Math.cos(lat2) * sinDlon * sinDlon), Math.sqrt(1 - (sinDlat * sinDlat + Math.cos(lat1) * Math.cos(lat2) * sinDlon * sinDlon)));
+                dist += R * c;
+              }
+              popupHtml += `<div><b>Pontos GPS:</b> ${points.length}</div><div><b>Distância ≈</b> ${(dist / 1000).toFixed(2)} km</div>`;
+            } else if (Number.isFinite(startLat) && Number.isFinite(startLng) && Number.isFinite(endLat) && Number.isFinite(endLng)) {
+              const d = (function () { const a = { lat: startLat, lng: startLng }, b = { lat: endLat, lng: endLng }; const R = 6371000; const toRad = d => d * Math.PI / 180; const dLat = toRad(b.lat - a.lat); const dLon = toRad(b.lng - a.lng); const lat1 = toRad(a.lat), lat2 = toRad(b.lat); const sinDlat = Math.sin(dLat / 2), sinDlon = Math.sin(dLon / 2); const c = 2 * Math.atan2(Math.sqrt(sinDlat * sinDlat + Math.cos(lat1) * Math.cos(lat2) * sinDlon * sinDlon), Math.sqrt(1 - (sinDlat * sinDlat + Math.cos(lat1) * Math.cos(lat2) * sinDlon * sinDlon))); return R * c; })();
+              popupHtml += `<div><b>Pontos GPS:</b> 0 (fallback)</div><div><b>Distância straight:</b> ${(d / 1000).toFixed(2)} km</div>`;
+            } else {
+              popupHtml += `<div><b>Pontos GPS:</b> 0</div>`;
+            }
+            popupHtml += `</div>
+          <div class="mt-2 d-flex gap-2">
+            <a href="#" class="btn btn-sm btn-outline-primary show-traj" data-uso="${esc(uid)}" data-bs-toggle="tooltip" title="Mostrar/ocultar o trajeto no mapa">${points.length ? 'Mostrar trajeto' : 'Centralizar'}</a>
+            <a href="/editar-uso/${esc(uid)}" class="btn btn-sm btn-outline-secondary ms-auto" data-bs-toggle="tooltip" title="Abrir ficha de uso">Abrir uso</a>
+          </div></div>`;
+
+            marker.bindPopup(popupHtml);
+
+            try { if (markers && typeof markers.addLayer === 'function') markers.addLayer(marker); else marker.addTo(map); } catch (e) { marker.addTo(map); }
+          }
+
+          // polylines (trajeto principal)
+          if (points.length >= 2) {
+            const latlngs = points.map(p => [p.lat, p.lng]);
+            const poly = L.polyline(latlngs, { color, weight: 4, opacity: 0.85 });
+            poly._usoId = uid;
+            const distText = (typeof u.distance_km !== 'undefined' && u.distance_km !== null) ? `Distância ≈ ${Number(u.distance_km).toFixed(2)} km` : `${latlngs.length} pontos`;
+            poly.bindTooltip(distText);
+            trajetosMap[uid] = poly;
+            try { trajetosLayer.addLayer(poly); trajetosLayer.removeLayer(poly); } catch (e) { }
+            points.forEach(p => heatPoints?.push?.([p.lat, p.lng, 0.5]));
+          } else if (Number.isFinite(startLat) && Number.isFinite(startLng) && Number.isFinite(endLat) && Number.isFinite(endLng)) {
+            const p = L.polyline([[startLat, startLng], [endLat, endLng]], { color, weight: 3, opacity: 0.6, dashArray: '6 6' });
+            p.bindTooltip('Trajeto (fallback) — distância straight mostrada no popup');
+            trajetosMap[uid] = p;
+            try { trajetosLayer.addLayer(p); trajetosLayer.removeLayer(p); } catch (e) { }
+          }
+
+          // ideal route from server (create but keep off map)
+          if (u.ideal_route && Array.isArray(u.ideal_route.coords) && u.ideal_route.coords.length) {
+            try {
+              const coords = u.ideal_route.coords.map(c => [Number(c.lat), Number(c.lng)]);
+              const polyI = L.polyline(coords, { color: '#e76f51', weight: 3, opacity: 0.8, dashArray: '8 6' });
+              polyI._usoId = uid;
+              polyI.bindTooltip('Rota ideal (servidor)');
+              idealMap[uid] = polyI;
+            } catch (e) { console.warn('ideal poly create failed', e); }
+          }
+        }); // end each usosAll
+
+        // heat layer (recria)
+        try { if (heatLayer) map.removeLayer(heatLayer); } catch (e) { }
+        try { const hp = (typeof heatPoints !== 'undefined' && heatPoints.length) ? heatPoints : []; heatLayer = L.heatLayer(hp, { radius: 25, blur: 15, maxZoom: 17 }); } catch (e) { heatLayer = null; }
+
+        // atualiza UI de paginação
+        document.getElementById('currentPage').innerText = currentPage;
+        document.getElementById('totalCount').innerText = totalUsosGlobal;
+        updatePaginationControls();
+
+        // inicializa tooltips criados dinamicamente
+        enableTooltips(document);
+
+        // fim do carregamento
+        setLoading(false);
+      } // end loadUsos
+
+      // --- renderização do card "Últimos usos" (server-side paginado) ---
+      async function loadUltimos({ page = 1, perPage = 10, search = '', start = '', end = '' } = {}) {
+        const listEl = document.getElementById('ultimosUsos');
+        listEl.innerHTML = `<div class="text-center py-2"><div class="spinner-border spinner-border-sm" role="status"></div> carregando...</div>`;
+
+        // se não passam start/end, pega do DOM
+        if (!start) start = (document.getElementById('ultStartDate') && document.getElementById('ultStartDate').value) || '';
+        if (!end) end = (document.getElementById('ultEndDate') && document.getElementById('ultEndDate').value) || '';
+
+        try {
+          const url = buildUltimosUrl({ page, perPage, search, start, end });
+          const resp = await fetch(url, { cache: 'no-store', credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+          if (!resp.ok) { const txt = await resp.text().catch(() => '<no-body>'); console.error('ultimos HTTP', resp.status, txt); listEl.innerHTML = `<div class="text-danger small">Erro ao carregar.</div>`; return; }
+          const data = await resp.json();
+          const usos = data.usos || [];
+          ultTotal = Number(data.meta?.total ?? 0) || 0;
+          ultPage = Number(data.meta?.page || page || 1);
+          ultPerPage = Number(data.meta?.perPage || perPage || 10);
+
+          listEl.innerHTML = '';
+          if (!usos.length) {
+            listEl.innerHTML = `<div class="text-muted small p-2">Nenhum uso encontrado.</div>`;
+          } else {
+            usos.forEach(u => {
+              const uid = u.id || Math.random().toString(36).slice(2, 8);
+              const a = document.createElement('a');
+              a.className = 'list-group-item list-group-item-action d-flex align-items-start';
+              a.href = `/editar-uso/${uid}`;
+              a.innerHTML = `<div>
+                          <div><strong>${esc(u.motorista || '—')}</strong> <small class="text-muted">(${esc(u.placa || '—')})</small></div>
+                          <div class="text-muted small">${esc(u.criado_em || u.inicio || '')}</div>
+                          <div class="small">${esc(u.finalidade || u.descricao || '')}</div>
+                          <button class="btn btn-sm btn-outline-success simular" data-uso="${esc(uid)}" data-bs-toggle="tooltip" title="Simular este uso">
+  
+  Simular
+</button>
+                         </div>
+                         <div class="ms-auto">
+                           
+
+                         </div>`;
+              listEl.appendChild(a);
+            });
+          }
+
+          updateUltimosPaginationControls();
+          enableTooltips(listEl);
+        } catch (err) {
+          console.error('loadUltimos error', err);
+          document.getElementById('ultimosUsos').innerHTML = `<div class="text-danger small p-2">Erro ao carregar últimos usos.</div>`;
+        }
+      }
+
+      // keep a client-side filtered list (compatibility with previous behavior)
+      function renderUltimosUsosClientFiltered() {
+        const q = (document.getElementById('ultimosSearch').value || '').toLowerCase().trim();
+        const ultimosDiv = document.getElementById('ultimosUsos');
+        // if server-side "ultimos" is active (ultTotal > 0), don't override
+        if (ultTotal) return;
+        ultimosDiv.innerHTML = '';
+        const list = usosAll.filter(u => {
+          if (!q) return true;
+          const fields = [(getMotorista(u) || ''), (u.placa || u.veiculo || ''), (u.finalidade || ''), (u.descricao || '')].join(' ').toLowerCase();
+          return fields.indexOf(q) !== -1;
+        });
+        list.forEach(u => {
+          const uid = getId(u) || (u.id || u.usoId) || Math.random().toString(36).slice(2, 8);
+          const a = document.createElement('a');
+          a.className = 'list-group-item list-group-item-action';
+          a.href = `/editar-uso/${uid}`;
+          a.innerHTML = `<b>${esc(getMotorista(u))}</b>
+                     <div class="text-muted small">${esc(u.inicio || u.criado_em || '—')}</div>
+                     <div class="small">${esc(u.descricao || u.finalidade || '')}</div>
+                     <div class="mt-1">
+  <button class="btn btn-sm btn-outline-success simular w-100 w-sm-auto" data-uso="${uid}">
+    <i class="fas fa-play me-1" aria-hidden="true"></i>
+    Simular
+  </button>
+</div>
+`;
+          ultimosDiv.appendChild(a);
+        });
+        enableTooltips(ultimosDiv);
+      }
+
+      // initial load
+      loadUsos({ page: 1, perPage: perPage, search: '' });
+      loadUltimos({ page: ultPage, perPage: ultPerPage, search: ultSearch });
+
+      // main pagination controls
+      document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) loadUsos({ page: currentPage - 1, perPage, search: currentSearch });
+      });
+      document.getElementById('nextPageBtn').addEventListener('click', () => {
+        const pp = Number(perPage) || DEFAULT_PER_PAGE;
+        const total = Number(totalUsosGlobal) || 0;
+        const lastPage = total > 0 ? Math.max(1, Math.ceil(total / pp)) : 1;
+        if (currentPage < lastPage) loadUsos({ page: currentPage + 1, perPage: pp, search: currentSearch });
+      });
+      document.getElementById('perPageSelect').addEventListener('change', (e) => {
+        const v = Number(e.target.value) || DEFAULT_PER_PAGE;
+        perPage = v;
+        loadUsos({ page: 1, perPage: v, search: currentSearch });
+      });
+
+      // search global
+      const debouncedSearch = debounce((q) => {
+        loadUsos({ page: 1, perPage, search: q });
+      }, 450);
+      const searchInputEl = document.getElementById('searchInput');
+      searchInputEl.addEventListener('input', (e) => { debouncedSearch(e.target.value.trim()); });
+      searchInputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const q = (e.target.value || '').trim();
+          loadUsos({ page: 1, perPage, search: q });
+        }
+      });
+
+      // ULTIMOS: controles de paginação e busca + date filters
+      document.getElementById('ultPrevBtn').addEventListener('click', () => {
+        if (ultPage > 1) { ultPage = Math.max(1, ultPage - 1); loadUltimos({ page: ultPage, perPage: ultPerPage, search: ultSearch }); }
+      });
+      document.getElementById('ultNextBtn').addEventListener('click', () => {
+        const lastPage = ultTotal > 0 ? Math.max(1, Math.ceil(ultTotal / ultPerPage)) : 1;
+        if (ultPage < lastPage) { ultPage = Math.min(lastPage, ultPage + 1); loadUltimos({ page: ultPage, perPage: ultPerPage, search: ultSearch }); }
+      });
+      document.getElementById('ultimosPerPageSelect').addEventListener('change', (e) => {
+        const v = Number(e.target.value) || 10;
+        ultPerPage = v;
+        ultPage = 1;
+        loadUltimos({ page: ultPage, perPage: ultPerPage, search: ultSearch });
+      });
+
+      const debouncedUltSearch = debounce((q) => {
+        ultSearch = q;
+        ultPage = 1;
+        loadUltimos({ page: ultPage, perPage: ultPerPage, search: ultSearch });
+      }, 400);
+      document.getElementById('ultimosSearch').addEventListener('input', (e) => { debouncedUltSearch((e.target.value || '').trim()); });
+
+      // date inputs listeners
+      const ultStartEl = document.getElementById('ultStartDate');
+      const ultEndEl = document.getElementById('ultEndDate');
+      const debouncedUltDateChange = debounce(() => {
+        ultSearch = (document.getElementById('ultimosSearch').value || '').trim();
+        ultPage = 1;
+        const s = (ultStartEl && ultStartEl.value) || '';
+        const e = (ultEndEl && ultEndEl.value) || '';
+        loadUltimos({ page: ultPage, perPage: ultPerPage, search: ultSearch, start: s, end: e });
+      }, 450);
+      if (ultStartEl) ultStartEl.addEventListener('change', debouncedUltDateChange);
+      if (ultEndEl) ultEndEl.addEventListener('change', debouncedUltDateChange);
+
+      // delegação: show trajeto / simular
+      document.body.addEventListener('click', (ev) => {
+        const t = ev.target;
+        if (!t) return;
+        // mostrar trajeto
+        if (t.classList && t.classList.contains('show-traj')) {
+          ev.preventDefault();
+          const usoId = t.getAttribute('data-uso');
+          const poly = trajetosMap[usoId];
+          const mk = markerMap[usoId];
+          if (!poly) { if (mk && mk.getLatLng) map.setView(mk.getLatLng(), 15); return; }
+          if (trajetosLayer.hasLayer(poly)) {
+            trajetosLayer.removeLayer(poly);
+            t.innerText = 'Mostrar trajeto';
+          } else {
+            trajetosLayer.addLayer(poly);
+            try { const bounds = poly.getBounds(); if (bounds && bounds.isValid && bounds.isValid()) map.fitBounds(bounds.pad(0.2)); } catch (e) { }
+            t.innerText = 'Ocultar trajeto';
+          }
+        }
+
+        // simular
+        if (t.classList && t.classList.contains('simular')) {
+          ev.preventDefault();
+          const usoId = t.getAttribute('data-uso');
+          startSimulationForUso(usoId);
+        }
+      });
+
+      // Mostrar todas rotas (toggle)
+      document.getElementById('toggleAllTrajets').addEventListener('click', () => {
+        const btn = document.getElementById('toggleAllTrajets');
+        if (!allTrajetsShown) {
+          Object.keys(trajetosMap).forEach(k => {
+            try { const p = trajetosMap[k]; if (p && !trajetosLayer.hasLayer(p)) trajetosLayer.addLayer(p); } catch (e) { }
+          });
+          Object.keys(idealMap).forEach(k => {
+            try { const p = idealMap[k]; if (p && !trajetosLayer.hasLayer(p)) trajetosLayer.addLayer(p); } catch (e) { }
+          });
+          btn.innerText = 'Ocultar todas rotas';
+          allTrajetsShown = true;
+        } else {
+          Object.keys(trajetosMap).forEach(k => {
+            try { const p = trajetosMap[k]; if (p && trajetosLayer.hasLayer(p)) trajetosLayer.removeLayer(p); } catch (e) { }
+          });
+          Object.keys(idealMap).forEach(k => {
+            try { const p = idealMap[k]; if (p && trajetosLayer.hasLayer(p)) trajetosLayer.removeLayer(p); } catch (e) { }
+          });
+          btn.innerText = 'Mostrar todas rotas';
+          allTrajetsShown = false;
+        }
+      });
+
+      // fit bounds
+      document.getElementById('fitBoundsBtn').addEventListener('click', () => {
+        const visibleLayers = [];
+        try { if (markers && markers.getLayers) markers.getLayers().forEach(m => visibleLayers.push(m)); } catch (e) { }
+        try { if (trajetosLayer && trajetosLayer.getLayers) trajetosLayer.getLayers().forEach(l => visibleLayers.push(l)); } catch (e) { }
+        if (!visibleLayers.length) return;
+        const fg = L.featureGroup(visibleLayers);
+        try { map.fitBounds(fg.getBounds().pad(0.2)); } catch (e) { }
+      });
+
+      // toggle heatmap
+      let heatOn = false;
+      document.getElementById('toggleHeatBtn').addEventListener('click', () => {
+        if (!heatLayer) return;
+        if (!heatOn) { heatLayer.addTo(map); heatOn = true; } else { map.removeLayer(heatLayer); heatOn = false; }
+      });
+
+      // ---------------- Simulation (play/pause/step) ----------------
+      const runningSimulations = {};
+
+      function clearSimulation(usoId) {
+        const s = runningSimulations[usoId];
+        if (!s) return;
+        try { if (s.timerId) clearTimeout(s.timerId); } catch (e) { }
+        try { if (s.marker && s.marker.remove) s.marker.remove(); } catch (e) { }
+        try { if (s.polyIdeal && trajetosLayer.hasLayer(s.polyIdeal)) trajetosLayer.removeLayer(s.polyIdeal); } catch (e) { }
+        try { if (s.polyReal && trajetosLayer.hasLayer(s.polyReal)) trajetosLayer.removeLayer(s.polyReal); } catch (e) { }
+        delete runningSimulations[usoId];
+        document.getElementById('simClock').style.display = 'none';
+        if (!Object.keys(runningSimulations).length) {
+          const simCard = document.getElementById('simCard');
+          if (simCard) {
+            simCard.style.display = 'none';
+            delete simCard.dataset.uso;
+          }
+        }
+      }
+
+      function updateSimControls(usoId) {
+        const sim = runningSimulations[usoId];
+        const simCard = document.getElementById('simCard');
+        if (!simCard) return;
+        simCard.dataset.uso = usoId;
+        simCard.style.display = 'block';
+        document.getElementById('playSimBtn').disabled = sim && sim.playing;
+        document.getElementById('pauseSimBtn').disabled = !(sim && sim.playing);
+        document.getElementById('stepBackBtn').disabled = !(sim && sim.frames && sim.currentIndex > 0);
+        document.getElementById('stepFwdBtn').disabled = !(sim && sim.frames && sim.currentIndex < sim.frames.length - 1);
+      }
+
+      function playFrom(usoId, idx) {
+        const sim = runningSimulations[usoId];
+        if (!sim) return;
+        if (idx < 0) idx = 0;
+        if (idx >= sim.frames.length) { setTimeout(() => clearSimulation(usoId), 1200); return; }
+        sim.currentIndex = idx;
+        const frame = sim.frames[idx];
+        try { if (sim.marker && sim.marker.setLatLng) sim.marker.setLatLng([frame.lat, frame.lng]); } catch (e) { }
+        const simTimeEl = document.getElementById('simTime');
+        const simCardTime = document.getElementById('simCardTime');
+        if (frame.ts) {
+          simTimeEl.innerText = formatDt(frame.ts);
+          if (simCardTime) simCardTime.innerText = formatDt(frame.ts);
+        } else {
+          simTimeEl.innerText = `Passo ${idx + 1} / ${sim.frames.length}`;
+          if (simCardTime) simCardTime.innerText = `Passo ${idx + 1} / ${sim.frames.length}`;
+        }
+        updateSimControls(usoId);
+
+        const delay = frame.delay || 200;
+        if (idx >= sim.frames.length - 1) {
+          sim.timerId = setTimeout(() => clearSimulation(usoId), 1200);
+          sim.playing = false;
+          updateSimControls(usoId);
+          return;
+        }
+        sim.timerId = setTimeout(() => {
+          if (!sim.playing) return;
+          playFrom(usoId, idx + 1);
+        }, delay);
+      }
+
+      function stepSim(usoId, delta) {
+        const sim = runningSimulations[usoId];
+        if (!sim) return;
+        if (sim.timerId) { clearTimeout(sim.timerId); sim.timerId = null; }
+        let idx = Number(sim.currentIndex || 0) + delta;
+        if (idx < 0) idx = 0;
+        if (idx >= sim.frames.length) idx = sim.frames.length - 1;
+        sim.playing = false;
+        playFrom(usoId, idx);
+        if (sim.timerId) { clearTimeout(sim.timerId); sim.timerId = null; }
+        updateSimControls(usoId);
+      }
+
+      async function startSimulationForUso(usoIdRaw) {
+        const usoId = usoIdRaw;
+        if (!usoId) return;
+
+        if (runningSimulations[usoId]) clearSimulation(usoId);
+
+        // encontra uso na página atual (se não achar, tenta a rota get /api/mapa-usos/:id)
+        let uso = usosAll.find(x => String(getId(x)) === String(usoId) || String(x.id) === String(usoId) || String(x.usoId) === String(usoId));
+        if (!uso) {
+          try {
+            const r = await fetch(`/api/mapa-usos/${encodeURIComponent(usoId)}`);
+            if (r.ok) uso = await r.json();
+          } catch (e) { /*ignore*/ }
+        }
+        if (!uso) return alert('Uso não encontrado para simulação');
+
+        // extrai pontos
+        const traj = Array.isArray(getTrajeto(uso)) ? getTrajeto(uso) : [];
+        const pts = traj.map(p => {
+          const lat = Number(p.lat ?? p.latitude ?? p[0]);
+          const lng = Number(p.lng ?? p.longitude ?? p[1]);
+          const ts = parseTsToMs(p.ts ?? p.timestamp ?? p.time);
+          return { lat, lng, ts };
+        }).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+
+        let hasRealTs = pts.some(p => p.ts != null);
+        if (hasRealTs) pts.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+
+        // cria polyReal se tiver pontos
+        let polyReal = null;
+        if (pts.length >= 2) {
+          polyReal = L.polyline(pts.map(p => [p.lat, p.lng]), { color: '#2a9d8f', weight: 4, opacity: 0.9 });
+          trajetosLayer.addLayer(polyReal);
+        }
+
+        // polyIdeal: de uso.ideal_route ou OSRM fallback
+        let polyIdeal = null;
+        if (uso.ideal_route && Array.isArray(uso.ideal_route.coords) && uso.ideal_route.coords.length) {
+          try {
+            const coords = uso.ideal_route.coords.map(c => [Number(c.lat), Number(c.lng)]);
+            polyIdeal = L.polyline(coords, { color: '#e76f51', weight: 3, opacity: 0.8, dashArray: '8 6' });
+            trajetosLayer.addLayer(polyIdeal);
+          } catch (e) { console.warn('ideal from uso failed', e); }
+        } else {
+          const sLat = Number(uso.start_lat ?? uso.startLat);
+          const sLng = Number(uso.start_lng ?? uso.startLng);
+          const eLat = Number(uso.end_lat ?? uso.endLat);
+          const eLng = Number(uso.end_lng ?? uso.endLng);
+          if (Number.isFinite(sLat) && Number.isFinite(sLng) && Number.isFinite(eLat) && Number.isFinite(eLng)) {
+            try {
+              const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${sLng},${sLat};${eLng},${eLat}?overview=full&geometries=geojson`;
+              const r = await fetch(osrmUrl);
+              if (r.ok) {
+                const j = await r.json();
+                if (j.routes && j.routes[0] && j.routes[0].geometry && j.routes[0].geometry.coordinates) {
+                  const coords = j.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                  polyIdeal = L.polyline(coords, { color: '#e76f51', weight: 3, opacity: 0.8, dashArray: '8 6' });
+                  trajetosLayer.addLayer(polyIdeal);
+                }
+              }
+            } catch (e) { console.warn('OSRM fetch failed', e); }
+          }
+        }
+
+        // ponto inicial
+        const startLatLng = pts.length ? [pts[0].lat, pts[0].lng] : (Number.isFinite(uso.start_lat) && Number.isFinite(uso.start_lng) ? [Number(uso.start_lat), Number(uso.start_lng)] : null);
+        if (!startLatLng) { alert('Sem pontos disponíveis para simulação'); if (polyReal) trajetosLayer.removeLayer(polyReal); if (polyIdeal) trajetosLayer.removeLayer(polyIdeal); return; }
+
+        const animMarker = L.circleMarker(startLatLng, { radius: 7, color: '#264653', fillColor: '#264653', fillOpacity: 1 }).addTo(map);
+
+        // badge UI
+        const simClockEl = document.getElementById('simClock');
+        const simTitleEl = document.getElementById('simTitle');
+        const simTimeEl = document.getElementById('simTime');
+        simTitleEl.innerText = `Simulação Uso #${usoId}`;
+        simTimeEl.innerText = '';
+        simClockEl.style.display = 'block';
+
+        // sim card
+        const simCard = document.getElementById('simCard');
+        const simCardTitle = document.getElementById('simCardTitle');
+        const simCardTime = document.getElementById('simCardTime');
+        if (simCard && simCardTitle && simCardTime) {
+          simCardTitle.innerText = `Simulação Uso #${usoId}`;
+          simCardTime.innerText = '';
+          simCard.style.display = 'block';
+          simCard.dataset.uso = usoId;
+        }
+
+        // interpolation fallback if no points
+        let usePts = pts.slice();
+        if (!usePts.length && Number.isFinite(uso.start_lat) && Number.isFinite(uso.start_lng) && Number.isFinite(uso.end_lat) && Number.isFinite(uso.end_lng)) {
+          const sLat = Number(uso.start_lat), sLng = Number(uso.start_lng), eLat = Number(uso.end_lat), eLng = Number(uso.end_lng);
+          const steps = 120;
+          for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            usePts.push({ lat: sLat + (eLat - sLat) * t, lng: sLng + (eLng - sLng) * t, ts: null });
+          }
+        }
+
+        if (!usePts.length) { alert('Sem dados suficientes para simular o uso.'); animMarker.remove(); if (polyReal) trajetosLayer.removeLayer(polyReal); if (polyIdeal) trajetosLayer.removeLayer(polyIdeal); simClockEl.style.display = 'none'; simCard.style.display = 'none'; return; }
+
+        hasRealTs = usePts.some(p => p.ts != null);
+
+        const frames = [];
+        if (usePts.length >= 2 && hasRealTs) {
+          const firstTs = usePts[0].ts;
+          const lastTs = usePts[usePts.length - 1].ts || firstTs;
+          const realDuration = Math.max(1, lastTs - firstTs);
+          const targetTotalMs = 20000;
+          const scale = realDuration / targetTotalMs;
+          for (let i = 0; i < usePts.length; i++) {
+            const p = usePts[i];
+            const prevTs = i === 0 ? p.ts : usePts[i - 1].ts;
+            const delta = i === 0 ? 0 : Math.max(50, Math.round((p.ts - prevTs) / Math.max(1, scale)));
+            frames.push({ lat: p.lat, lng: p.lng, ts: p.ts, delay: delta });
+          }
+        } else {
+          const intervalMs = 200;
+          for (let i = 0; i < usePts.length; i++) {
+            const p = usePts[i];
+            frames.push({ lat: p.lat, lng: p.lng, ts: p.ts, delay: intervalMs });
+          }
+        }
+
+        runningSimulations[usoId] = {
+          timerId: null,
+          frames,
+          currentIndex: 0,
+          playing: false,
+          marker: animMarker,
+          polyReal,
+          polyIdeal
+        };
+
+        runningSimulations[usoId].playing = true;
+        updateSimControls(usoId);
+        playFrom(usoId, 0);
+
+        try { if (polyReal) map.fitBounds(polyReal.getBounds().pad(0.12)); else if (polyIdeal) map.fitBounds(polyIdeal.getBounds().pad(0.12)); else map.setView(startLatLng, 14); } catch (e) { }
+      } // end startSimulationForUso
+
+      // handlers do card: stop/center/play/pause/step
+      document.getElementById('stopSimBtn').addEventListener('click', () => {
+        const simCard = document.getElementById('simCard');
+        const usoId = simCard && simCard.dataset && simCard.dataset.uso;
+        if (usoId) clearSimulation(usoId);
+      });
+      document.getElementById('centerSimBtn').addEventListener('click', () => {
+        const simCard = document.getElementById('simCard');
+        const usoId = simCard && simCard.dataset && simCard.dataset.uso;
+        const sim = usoId ? runningSimulations[usoId] : null;
+        if (sim && sim.marker && sim.marker.getLatLng) map.setView(sim.marker.getLatLng(), 14);
+      });
+      document.getElementById('playSimBtn').addEventListener('click', () => {
+        const simCard = document.getElementById('simCard');
+        const usoId = simCard && simCard.dataset && simCard.dataset.uso;
+        const sim = usoId ? runningSimulations[usoId] : null;
+        if (!sim) return;
+        if (sim.playing) return;
+        sim.playing = true;
+        updateSimControls(usoId);
+        const idx = Number(sim.currentIndex || 0);
+        playFrom(usoId, idx);
+      });
+      document.getElementById('pauseSimBtn').addEventListener('click', () => {
+        const simCard = document.getElementById('simCard');
+        const usoId = simCard && simCard.dataset && simCard.dataset.uso;
+        const sim = usoId ? runningSimulations[usoId] : null;
+        if (!sim) return;
+        if (sim.timerId) { clearTimeout(sim.timerId); sim.timerId = null; }
+        sim.playing = false;
+        updateSimControls(usoId);
+      });
+      document.getElementById('stepBackBtn').addEventListener('click', () => {
+        const simCard = document.getElementById('simCard');
+        const usoId = simCard && simCard.dataset && simCard.dataset.uso;
+        if (!usoId) return;
+        stepSim(usoId, -1);
+      });
+      document.getElementById('stepFwdBtn').addEventListener('click', () => {
+        const simCard = document.getElementById('simCard');
+        const usoId = simCard && simCard.dataset && simCard.dataset.uso;
+        if (!usoId) return;
+        stepSim(usoId, +1);
+      });
+
+      // Chart de finalidades
+      function renderChart(byFinal) {
+        try {
+          const ctx = document.getElementById('pieFinalidade').getContext('2d');
+          const labels = Object.keys(byFinal || {});
+          const values = labels.map(k => byFinal[k]);
+          const colors = labels.map((_, i) => `hsl(${(i * 47) % 360} 70% 50%)`);
+          if (window._pieChartInstance) try { window._pieChartInstance.destroy(); } catch (e) { }
+          window._pieChartInstance = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ data: values, backgroundColor: colors }] }, options: { plugins: { legend: { position: 'bottom' } } } });
+          enableTooltips(document.getElementById('pieFinalidade'));
+        } catch (e) { console.warn('Erro Chart:', e); }
+      }
+
+      // Inicializa tooltips estáticos
+      enableTooltips(document);
+
+      console.log('Mapa pronto — seção "Últimos usos" paginada via /api/mapa-usos/ultimos. Filtros de data ativos.');
+    });
+  </script>

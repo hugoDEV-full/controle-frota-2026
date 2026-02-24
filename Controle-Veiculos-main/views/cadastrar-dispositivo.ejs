@@ -1,0 +1,42 @@
+<title>
+  <%= title %>
+</title>
+
+
+
+<div class="container py-5">
+  <h2>Cadastrar Dispositivo</h2>
+
+  <% if (error) { %>
+    <div class="alert alert-danger">
+      <%= error %>
+    </div>
+    <% } %>
+
+      <form action="/cadastrar-dispositivo" method="POST" class="mt-4">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="mb-3">
+          <label for="dev_name" class="form-label">Hostname (dev_name)</label>
+          <input type="text" class="form-control" id="dev_name" name="dev_name" required
+            value="<%= formData.dev_name || '' %>">
+        </div>
+
+        <div class="mb-3">
+          <label for="dev_key" class="form-label">Hash (dev_key)</label>
+          <input type="text" class="form-control" id="dev_key" name="dev_key" required>
+
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1" aria-hidden="true"></i>
+          Cadastrar
+        </button>
+
+        <a href="/listar-dispositivos" class="btn btn-secondary ms-2">
+          <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>
+          Voltar
+        </a>
+
+      </form>
+</div>

@@ -1,0 +1,461 @@
+<!-- views/relatorio-veiculos.ejs -->
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- DataTables CSS (bundle com Bootstrap) -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-1.14.5/b-2.3.4/datatables.min.css">
+
+  <style>
+    .card-analytic { border-radius: 12px; box-shadow: 0 6px 18px rgba(20,20,40,0.06); }
+    .thumbnail { width:64px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee; }
+    .chart-wrap { min-height:220px; }
+    .small-muted { font-size:0.85rem; color:#6c757d; }
+    .table-responsive { max-height:600px; overflow:auto; }
+    #alertArea { position: sticky; top: 8px; z-index: 20; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container-fluid py-4">
+    <div id="alertArea"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="mb-0">Painel de Frota</h2>
+      <div><a href="/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Voltar</a></div>
+    </div>
+
+    <!-- filtros rápidos -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-2">
+        <div class="card card-analytic p-3">
+          <div class="small-muted">Total de veículos</div>
+          <h3 id="totalVehicles">—</h3>
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <div class="card card-analytic p-3">
+          <div class="small-muted">KM médio</div>
+          <h3 id="avgKm">—</h3>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card p-2">
+          <div class="d-flex gap-2 align-items-center">
+            <label class="mb-0 small-muted">Próximos vencimentos (dias)</label>
+            <input id="upcomingDays" type="number" class="form-control form-control-sm w-25" value="90" min="7" max="365">
+            <button id="btnRefresh" class="btn btn-sm btn-primary ms-2">  <i class="fas fa-sync-alt me-1" aria-hidden="true"></i>Atualizar</button>
+            <button id="btnExportCsv" class="btn btn-sm btn-outline-secondary ms-2">  <i class="fas fa-file-csv me-1" aria-hidden="true"></i>Exportar CSV tabela</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3 text-end">
+        <div class="small-muted">Threshold manutenção (km desde última troca de óleo)</div>
+        <div class="d-flex justify-content-end gap-2">
+          <input id="maintenanceKm" type="number" class="form-control form-control-sm w-50" value="10000" min="1000">
+        </div>
+      </div>
+    </div>
+
+    <!-- charts -->
+    <div class="row g-3 mb-4">
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-3">
+          <h6>Distribuição por combustível</h6>
+          <div class="chart-wrap"><canvas id="chartFuel"></canvas></div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-3">
+          <h6>Veículos com documentos vencendo</h6>
+          <div id="expirationsList" class="small mt-2"></div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <h6>Manutenção pendente (óleo com km excedido)</h6>
+          <div id="maintenanceList" class="small mt-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- tabela -->
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Lista de Veículos</h5>
+        <div class="small-muted">Clique na placa para abrir ficha</div>
+      </div>
+
+      <div class="table-responsive">
+        <table id="tableVehicles" class="table table-striped table-hover" style="width:100%">
+          <thead>
+            <tr>
+              <th>Foto</th>
+              <th>Placa</th>
+              <th>Nome</th>
+              <th>Marca</th>
+              <th>Modelo</th>
+              <th>Tipologia</th>
+              <th>KM</th>
+              <th>Últ. óleo</th>
+              <th>Combustível</th>
+              <th>IPVA</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- libs (jQuery MUST be loaded before DataTables) -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+    integrity="sha256-/xUj+3OJ+Y3Qk1+6s2b7s0yM/3b3yA9Kp3l2x0x3g2s=" crossorigin="anonymous"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- DataTables bundle (requires jQuery) -->
+  <script src="https://cdn.datatables.net/v/bs5/dt-1.14.5/b-2.3.4/datatables.min.js"></script>
+
+  <script>
+    // Config
+    const apiUrl = '/api/relatorio-veiculos';
+    const FIPE_BASE = 'https://parallelum.com.br/fipe/api/v1/carros';
+    let dtInstance = null;
+    let fuelChart = null;
+
+    // Cache simples no navegador (sessão)
+    const _fipeCache = {
+      marcas: null,   // { codigo: nome }
+      modelos: {}     // { marcaCodigo: { modeloCodigo: nome, ... } }
+    };
+
+    // guarda último list retornado (usado para export fallback)
+    let lastFetchedList = [];
+
+    // util: mostra mensagem visível (alert bootstrap)
+    function showAlert(message, type = 'danger', timeoutMs = 8000) {
+      const area = document.getElementById('alertArea');
+      const id = 'alert-'+Date.now();
+      area.innerHTML = `
+        <div id="${id}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+          ${message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>`;
+      if (timeoutMs) setTimeout(()=> {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      }, timeoutMs);
+    }
+
+    // escape simples
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // Resolve nomes FIPE para marcas/modelos quando os campos forem códigos numéricos.
+    async function resolveBrandModelNames(rows) {
+      const marcaCodesNeeded = new Set();
+
+      rows.forEach(r => {
+        const m = r.marca;
+        if (m != null && String(m).trim() !== '' && /^\d+$/.test(String(m).trim())) {
+          marcaCodesNeeded.add(String(m).trim());
+        }
+      });
+
+      if (marcaCodesNeeded.size === 0) return rows; // nada pra fazer
+
+      // 1) marcas — carrega se necessário
+      try {
+        if (!_fipeCache.marcas) {
+          const resp = await fetch(`${FIPE_BASE}/marcas`);
+          if (resp.ok) {
+            const marcas = await resp.json(); // [{codigo,nome}, ...]
+            _fipeCache.marcas = {};
+            marcas.forEach(m => { _fipeCache.marcas[String(m.codigo)] = m.nome; });
+          } else {
+            console.warn('FIPE /marcas retornou', resp.status);
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao buscar marcas FIPE:', e);
+      }
+
+      // 2) modelos por marca — só para marcas presentes (busca se necessário)
+      await Promise.all(Array.from(marcaCodesNeeded).map(async marcaCode => {
+        if (_fipeCache.modelos[marcaCode]) return;
+        try {
+          const resp = await fetch(`${FIPE_BASE}/marcas/${marcaCode}/modelos`);
+          if (!resp.ok) {
+            console.warn('FIPE modelos resposta não OK para marca', marcaCode, resp.status);
+            return;
+          }
+          const data = await resp.json(); // { modelos: [...], anos: [...] }
+          const modelosList = (data && data.modelos) ? data.modelos : (Array.isArray(data) ? data : []);
+          _fipeCache.modelos[marcaCode] = {};
+          modelosList.forEach(mo => {
+            _fipeCache.modelos[marcaCode][String(mo.codigo)] = mo.nome;
+          });
+        } catch (e) {
+          console.warn('Erro ao buscar modelos FIPE para marca', marcaCode, e);
+        }
+      }));
+
+      // 3) aplicar mapeamento (não muta original)
+      return rows.map(row => {
+        const out = Object.assign({}, row);
+        const mRaw = String(out.marca || '').trim();
+        if (mRaw && /^\d+$/.test(mRaw) && _fipeCache.marcas && _fipeCache.marcas[mRaw]) {
+          out.marca = _fipeCache.marcas[mRaw];
+        }
+        const modRaw = String(out.modelo || '').trim();
+        if (modRaw && /^\d+$/.test(modRaw)) {
+          const modelsForMarca = _fipeCache.modelos[mRaw];
+          if (modelsForMarca && modelsForMarca[modRaw]) {
+            out.modelo = modelsForMarca[modRaw];
+          }
+        }
+        return out;
+      });
+    }
+
+    // fetchData principal
+    async function fetchData() {
+      try {
+        const upcomingDays = parseInt(document.getElementById('upcomingDays').value || '90', 10);
+        const maintenanceKm = parseInt(document.getElementById('maintenanceKm').value || '10000', 10);
+
+        const resp = await fetch(`${apiUrl}?upcomingDays=${encodeURIComponent(upcomingDays)}&maintenanceKm=${encodeURIComponent(maintenanceKm)}`, { credentials: 'same-origin' });
+        console.log('[fetchData] status', resp.status, resp.statusText);
+
+        let data = null;
+        try {
+          data = await resp.json();
+        } catch (jsonErr) {
+          const txt = await resp.text();
+          console.error('Falha ao parsear JSON da API. Response text:', txt);
+          showAlert('Erro ao interpretar resposta do servidor. Veja console para detalhes.', 'danger', 12000);
+          return;
+        }
+
+        if (!data || data.ok !== true) {
+          console.error('API retornou erro:', data);
+          const errMsg = (data && data.error) ? `Erro: ${data.error}` : 'Resposta inválida da API';
+          showAlert(`Falha ao carregar relatório — ${errMsg}`, 'danger', 10000);
+          return;
+        }
+
+        // SALVA lista para export/fallback
+        lastFetchedList = data.list || [];
+
+        // preencher cards
+        const totals = data.totals || {};
+        document.getElementById('totalVehicles').textContent = (totals.total != null) ? totals.total : '0';
+        document.getElementById('avgKm').textContent = Math.round(totals.avg_km || 0);
+
+        // gráfico combustível
+        const fuelLabels = (data.byFuel || []).map(r => r.fuel);
+        const fuelCounts = (data.byFuel || []).map(r => r.cnt);
+        renderFuelChart(fuelLabels, fuelCounts);
+
+        // vencimentos e manutenção
+        renderExpirations(data.upcoming || []);
+        renderMaintenance(data.maintenanceDue || []);
+
+        // tabela: agora populateTable é async porque resolve FIPE
+        await populateTable(lastFetchedList);
+      } catch (err) {
+        console.error('Erro no fetchData():', err);
+        showAlert('Erro ao carregar dados — veja console do navegador para detalhes.', 'danger', 9000);
+      }
+    }
+
+    function renderFuelChart(labels, dataArr) {
+      try {
+        const ctx = document.getElementById('chartFuel').getContext('2d');
+        if (fuelChart) fuelChart.destroy();
+        fuelChart = new Chart(ctx, {
+          type: 'pie',
+          data: { labels, datasets: [{ data: dataArr }] },
+          options: { plugins: { legend: { position: 'bottom' } }, maintainAspectRatio: false }
+        });
+      } catch (e) {
+        console.error('Erro gráfico fuel:', e);
+      }
+    }
+
+    function renderExpirations(upcoming) {
+      const expirEl = document.getElementById('expirationsList');
+      expirEl.innerHTML = '';
+      if (!Array.isArray(upcoming) || upcoming.length === 0) {
+        expirEl.innerHTML = '<div class="text-muted">Nenhum vencimento nos próximos dias selecionados.</div>';
+        return;
+      }
+      upcoming.slice(0, 20).forEach(row => {
+        const parts = [];
+        ['licenciamento','seguro_dpvat','crlv','venc_extintor','venc_triangulo','venc_colete'].forEach(k=>{
+          if (row[k]) parts.push(`<small class="text-nowrap">${k.replace('_',' ')}: ${String(row[k]).slice(0,10)}</small>`);
+        });
+        expirEl.innerHTML += `<div class="mb-2"><strong>${escapeHtml(row.placa)}</strong> — ${escapeHtml(row.nome || '')}<div class="small text-muted">${parts.join(' • ')}</div></div>`;
+      });
+    }
+
+    function renderMaintenance(list) {
+      const maintEl = document.getElementById('maintenanceList');
+      maintEl.innerHTML = '';
+      if (!Array.isArray(list) || list.length === 0) {
+        maintEl.innerHTML = '<div class="text-muted">Sem veículos com manutenção preventiva pendente (segundo threshold).</div>';
+        return;
+      }
+      list.slice(0,8).forEach(v=>{
+        maintEl.innerHTML += `<div class="mb-1"><strong>${escapeHtml(v.placa)}</strong> — ${escapeHtml(v.nome || '')} <span class="small text-muted">(${v.km_since_oil || 0} km)</span></div>`;
+      });
+    }
+
+    // populateTable agora é async para aguardar resolução FIPE
+    async function populateTable(rows) {
+      rows = Array.isArray(rows) ? rows : [];
+
+      // tenta resolver marca/modelo se necessário
+      try {
+        rows = await resolveBrandModelNames(rows);
+      } catch (e) {
+        console.warn('Falha ao resolver marca/modelo via FIPE (usando dados brutos):', e);
+      }
+
+      const dataForTable = rows.map(r => ({
+        foto: `<img src="/veiculos/${r.id}/foto_frente" onerror="this.src='/images/placeholder_car_gray.svg'" class="thumbnail" />`,
+        placa: `<a href="/editar-veiculo/${r.id}">${escapeHtml(r.placa || '')}</a>`,
+        nome: escapeHtml(r.nome || ''),
+        marca: escapeHtml(r.marca || ''),
+        modelo: escapeHtml(r.modelo || ''),
+        tipologia: escapeHtml(r.tipologia || ''),
+        km: (r.km != null) ? r.km : '',
+        ultimaTrocaOleo: r.ultimaTrocaOleo || '',
+        tipo_combustivel: escapeHtml(r.tipo_combustivel || ''),
+        status_ipva: escapeHtml(r.status_ipva || '')
+      }));
+
+      // fallback sem DataTables
+      if (typeof $ === 'undefined' || !$.fn || !$.fn.dataTable) {
+        console.warn('jQuery/DataTables não encontrado — renderizando fallback simples.');
+        const tbody = document.querySelector('#tableVehicles tbody');
+        tbody.innerHTML = dataForTable.map(r => `<tr>
+          <td>${r.foto}</td>
+          <td>${r.placa}</td>
+          <td>${r.nome}</td>
+          <td>${r.marca}</td>
+          <td>${r.modelo}</td>
+          <td>${r.tipologia}</td>
+          <td>${r.km}</td>
+          <td>${r.ultimaTrocaOleo}</td>
+          <td>${r.tipo_combustivel}</td>
+          <td>${r.status_ipva}</td>
+        </tr>`).join('');
+        return;
+      }
+
+      // DataTables: atualiza ou inicializa
+      if (dtInstance) {
+        dtInstance.clear();
+        dtInstance.rows.add(dataForTable);
+        dtInstance.draw(false);
+        return;
+      }
+
+      dtInstance = $('#tableVehicles').DataTable({
+        data: dataForTable,
+        columns: [
+          { data: 'foto', orderable: false },
+          { data: 'placa' },
+          { data: 'nome' },
+          { data: 'marca' },
+          { data: 'modelo' },
+          { data: 'tipologia' },
+          { data: 'km' },
+          { data: 'ultimaTrocaOleo' },
+          { data: 'tipo_combustivel' },
+          { data: 'status_ipva' }
+        ],
+        dom: 'Bfrtip',
+        buttons: ['copy', 'csv', 'excel', 'print'],
+        responsive: true,
+        pageLength: 25,
+        columnDefs: [{ targets: 0, searchable: false, width: '75px' }]
+      });
+    }
+
+    // export CSV fallback: gera CSV do lastFetchedList
+    function exportCsvFromList(list, filename = 'relatorio_veiculos.csv') {
+      if (!Array.isArray(list) || list.length === 0) {
+        showAlert('Nenhum dado disponível para exportar.', 'warning', 4000);
+        return;
+      }
+
+      const headers = ['id','placa','nome','marca','modelo','tipologia','km','ultimaTrocaOleo','tipo_combustivel','status_ipva'];
+      const csvRows = [];
+      csvRows.push(headers.join(','));
+
+      list.forEach(item => {
+        const row = headers.map(h => {
+          let v = item[h];
+          if (v === null || v === undefined) return '';
+          v = String(v).replace(/\r?\n|\r/g, ' ').replace(/"/g, '""');
+          if (v.indexOf(',') >= 0 || v.indexOf('"') >= 0) return `"${v}"`;
+          return v;
+        });
+        csvRows.push(row.join(','));
+      });
+
+      const csvString = csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      try { URL.revokeObjectURL(url); } catch (e) {}
+      a.remove();
+    }
+
+    // botão export: tenta DataTables, senão fallback
+    document.getElementById('btnExportCsv').addEventListener('click', () => {
+      try {
+        if (typeof dtInstance !== 'undefined' && dtInstance && typeof dtInstance.button === 'function') {
+          // tenta acionar botão CSV do DataTables
+          try {
+            dtInstance.button('.buttons-csv').trigger();
+            return;
+          } catch (e) {
+            console.warn('DataTables existia mas falha ao acionar botão CSV:', e);
+            // fallback segue
+          }
+        }
+      } catch (e) {
+        console.warn('Erro verificando dtInstance:', e);
+      }
+      // fallback: exporta usando lastFetchedList
+      exportCsvFromList(lastFetchedList);
+    });
+
+    // eventos
+    document.getElementById('btnRefresh').addEventListener('click', fetchData);
+
+    // inicial
+    fetchData();
+  </script>
+</body>
+</html>

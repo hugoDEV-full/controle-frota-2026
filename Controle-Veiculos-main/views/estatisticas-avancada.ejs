@@ -1,0 +1,447 @@
+
+<%
+function fmtNum(n, d = 0) {
+  if (n === null || typeof n === 'undefined' || n === '') return '—';
+  const num = Number(n);
+  if (Number.isNaN(num)) return '—';
+  return num.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function fmtCurrency(n) {
+  if (n === null || typeof n === 'undefined' || n === '') return 'R$ 0,00';
+  const num = Number(n);
+  if (Number.isNaN(num)) return '—';
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+function fmtDateServer(dt) {
+  if (!dt) return '—';
+  try {
+    const d = new Date(dt);
+    if (Number.isNaN(d.getTime())) return String(dt);
+    return d.toLocaleString('pt-BR');
+  } catch (e) { return String(dt); }
+}
+%>
+
+<div class="container my-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h3">Estatísticas Avançadas</h1>
+
+    <form id="filtersForm" class="row g-2 align-items-center" role="search" aria-label="Filtros de estatísticas">
+      <div class="col-auto">
+        <input type="date" id="start_date" name="start_date" class="form-control form-control-sm"
+               value="<%= filters && filters.start_date ? filters.start_date : '' %>"
+               data-bs-toggle="tooltip" data-bs-title="Data inicial (inclusiva)">
+      </div>
+      <div class="col-auto">
+        <input type="date" id="end_date" name="end_date" class="form-control form-control-sm"
+               value="<%= filters && filters.end_date ? filters.end_date : '' %>"
+               data-bs-toggle="tooltip" data-bs-title="Data final (inclusiva)">
+      </div>
+      <div class="col-auto">
+        <select id="tableSelect" name="tabela" class="form-select form-select-sm" data-bs-toggle="tooltip" data-bs-title="Filtrar por tabela">
+          <option value="">Todas as métricas</option>
+          <option value="motoristas">Motoristas</option>
+          <option value="veiculos">Veículos</option>
+          <option value="uso_veiculos">Usos</option>
+          <option value="multas">Multas</option>
+          <option value="abastecimentos">Abastecimentos</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button id="applyFilters" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" data-bs-title="Aplicar filtros e recarregar tabelas/gráficos">Aplicar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Cards resumo -->
+  <div class="row g-3 mb-4" role="region" aria-label="KPIs principais">
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm" data-bs-toggle="tooltip" data-bs-title="Número total de veículos cadastrados">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Veículos <i class="bi bi-info-circle"></i></h6>
+          <h3 class="card-title mb-0"><%= fmtNum(counts && counts.veiculos ? counts.veiculos : 0,0) %></h3>
+          <small class="text-muted">Tamanho: <%= tableSizes && tableSizes.veiculos ? (Math.round(tableSizes.veiculos/1024) + ' KB') : '—' %></small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm" data-bs-toggle="tooltip" data-bs-title="Motoristas cadastrados">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Motoristas <i class="bi bi-info-circle"></i></h6>
+          <h3 class="card-title mb-0"><%= fmtNum(counts && counts.motoristas ? counts.motoristas : 0,0) %></h3>
+          <small class="text-muted">Último cadastro: <%= fmtDateServer(lastActivity && lastActivity.motoristas ? lastActivity.motoristas : null) %></small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm" data-bs-toggle="tooltip" data-bs-title="Entradas na tabela uso_veiculos">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Uso Veículos <i class="bi bi-info-circle"></i></h6>
+          <h3 class="card-title mb-0"><%= fmtNum(counts && counts.uso_veiculos ? counts.uso_veiculos : 0,0) %></h3>
+          <small class="text-muted">KM total: <%= fmtNum(usoTotals && usoTotals.km_total ? usoTotals.km_total : 0,0) %></small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm" data-bs-toggle="tooltip" data-bs-title="Total de multas registradas no sistema">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Multas <i class="bi bi-info-circle"></i></h6>
+          <h3 class="card-title mb-0"><%= fmtNum(counts && counts.multas ? counts.multas : 0,0) %></h3>
+          <small class="text-muted">Último registro: <%= fmtDateServer(lastActivity && lastActivity.multas ? lastActivity.multas : null) %></small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs avançados -->
+  <div class="row mb-4" role="region" aria-label="KPIs avançados">
+    <div class="col-md-12">
+      <div class="card p-3">
+        <div class="row gx-2 gy-2">
+          <div class="col-md-3" data-bs-toggle="tooltip" data-bs-title="Número total de viagens no período filtrado">
+            <small class="text-muted">Viagens (período)</small>
+            <div class="h5"><%= extraStats && extraStats.usoResumo ? fmtNum(extraStats.usoResumo.viagens_total,0) : '0' %></div>
+          </div>
+          <div class="col-md-3" data-bs-toggle="tooltip" data-bs-title="Quilometragem total acumulada no período">
+            <small class="text-muted">KM total</small>
+            <div class="h5"><%= extraStats && extraStats.usoResumo ? fmtNum(extraStats.usoResumo.km_total,0) + ' km' : '0 km' %></div>
+          </div>
+          <div class="col-md-3" data-bs-toggle="tooltip" data-bs-title="Velocidade média estimada da frota (km/h)">
+            <small class="text-muted">Velocidade média</small>
+            <div class="h5"><%= extraStats && extraStats.usoResumo ? (Number(extraStats.usoResumo.velocidade_media_frota||0).toFixed(1).replace('.',',') + ' km/h') : '—' %></div>
+          </div>
+          <div class="col-md-3" data-bs-toggle="tooltip" data-bs-title="Litros consumidos por 100 km (se houver dados de abastecimento)">
+            <small class="text-muted">Litros / 100 km</small>
+            <div class="h5"><%= extraStats && extraStats.litros_por_100km ? (Number(extraStats.litros_por_100km).toFixed(2).replace('.',',') + ' L/100km') : '—' %></div>
+          </div>
+
+          <div class="col-md-3 mt-2" data-bs-toggle="tooltip" data-bs-title="Custo médio de combustível por km">
+            <small class="text-muted">Custo / km</small>
+            <div class="h6"><%= extraStats && extraStats.custo_por_km ? (extraStats.custo_por_km.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})) : '—' %></div>
+          </div>
+          <div class="col-md-3 mt-2" data-bs-toggle="tooltip" data-bs-title="Percentual de viagens com imagens/anexos (boa prática de inspeção)">
+            <small class="text-muted">% viagens com imagens</small>
+            <div class="h6"><%= extraStats && extraStats.pct_viagens_com_imagens ? (Number(extraStats.pct_viagens_com_imagens).toFixed(1).replace('.',',') + '%') : '0,0%' %></div>
+          </div>
+          <div class="col-md-3 mt-2" data-bs-toggle="tooltip" data-bs-title="Mediana da distância das viagens (medida robusta de 'tamanho' das viagens)">
+            <small class="text-muted">Mediana distância</small>
+            <div class="h6"><%= extraStats && extraStats.median_distance ? (fmtNum(extraStats.median_distance,0) + ' km') : '—' %></div>
+          </div>
+          <div class="col-md-3 mt-2" data-bs-toggle="tooltip" data-bs-title="Mediana da duração das viagens (minutos)">
+            <small class="text-muted">Mediana duração</small>
+            <div class="h6"><%= extraStats && extraStats.median_duration_sec ? ( (extraStats.median_duration_sec/60).toFixed(1).replace('.',',') + ' min' ) : '—' %></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top lists e alertas -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Top 10 veículos por KM <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-title="Veículos que mais rodaram no período filtrado"></i></div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Veículo</th><th>Viagens</th><th>KM</th></tr></thead>
+            <tbody>
+              <% if (extraStats && extraStats.topVeiculosKm && extraStats.topVeiculosKm.length) { %>
+                <% extraStats.topVeiculosKm.forEach(v => { %>
+                  <tr>
+                    <td><%= v.veiculo_id %></td>
+                    <td><%= fmtNum(v.viagens,0) %></td>
+                    <td><%= fmtNum(v.km,0) %> km</td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="3" class="text-muted">Sem dados</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Top 10 motoristas por KM <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-title="Motoristas que mais rodaram no período filtrado"></i></div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Motorista</th><th>Viagens</th><th>KM</th></tr></thead>
+            <tbody>
+              <% if (extraStats && extraStats.topMotoristasKm && extraStats.topMotoristasKm.length) { %>
+                <% extraStats.topMotoristasKm.forEach(m => { %>
+                  <tr>
+                    <td><%= m.motorista %></td>
+                    <td><%= fmtNum(m.viagens,0) %></td>
+                    <td><%= fmtNum(m.km,0) %> km</td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="3" class="text-muted">Sem dados</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Troca de óleo e idle -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Veículos próximos/ultrapassando troca de óleo (threshold: 10.000 km)</div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>ID</th><th>Nome</th><th>Placa</th><th>KM desde óleo</th></tr></thead>
+            <tbody>
+              <% if (extraStats && extraStats.veicTroca && extraStats.veicTroca.length) { %>
+                <% extraStats.veicTroca.forEach(v => { %>
+                  <tr>
+                    <td><%= v.id %></td>
+                    <td><%= v.nome %></td>
+                    <td><%= v.placa %></td>
+                    <td><%= fmtNum(v.km_desde_oleo,0) %> km</td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="4" class="text-muted">Nenhum veículo além do threshold</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">Tempo ocioso entre viagens (top veículos)</div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Veículo ID</th><th>Idle total (h)</th><th>Idle médio (h)</th></tr></thead>
+            <tbody>
+              <% if (extraStats && extraStats.idleByVehicle && extraStats.idleByVehicle.length) { %>
+                <% extraStats.idleByVehicle.forEach(i => { %>
+                  <tr>
+                    <td><%= i.veiculo_id %></td>
+                    <td>
+                      <% if (i.idle_total_segundos) { %>
+                        <%= (i.idle_total_segundos/3600).toFixed(1).replace('.',',') %>
+                      <% } else if (i.dias_uso) { %>
+                        <%= i.dias_uso %> dias (fallback)
+                      <% } else { %>
+                        —
+                      <% } %>
+                    </td>
+                    <td>
+                      <% if (i.idle_medio_segundos) { %>
+                        <%= (i.idle_medio_segundos/3600).toFixed(1).replace('.',',') %>
+                      <% } else { %> —
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="3" class="text-muted">Sem dados</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h6>Viagens por hora do dia <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-title="Quantidade de partidas por hora (0-23)"></i></h6>
+        <canvas id="chartHora" height="150" aria-label="Gráfico barras viagens por hora"></canvas>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h6>Viagens por dia da semana <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-title="Comparação por dia da semana (Dom..Sáb)"></i></h6>
+        <canvas id="chartSemana" height="150" aria-label="Gráfico linhas viagens por dia da semana"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auditoria (amostra) -->
+  <div class="card mt-4">
+    <div class="card-header">Auditoria (amostra recente)</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>ID</th><th>Usuário</th><th>Rota</th><th>Método</th><th>Data</th></tr></thead>
+          <tbody>
+            <% if (auditoriaSample && auditoriaSample.length) { %>
+              <% auditoriaSample.forEach(a => { %>
+                <tr>
+                  <td><%= fmtNum(a.id,0) %></td>
+                  <td><%= a.usuario %></td>
+                  <td><%= a.rota %></td>
+                  <td><%= a.metodo %></td>
+                  <td><%= fmtDateServer(a.criado_em) %></td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr><td colspan="5" class="text-muted">Sem dados</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Dependências CDN -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+  // formatação pt-BR (client)
+  function formatDateBR(val) {
+    if (!val) return '—';
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) return d.toLocaleString('pt-BR');
+    return String(val);
+  }
+  function formatNumberBR(n, decimals = 0) {
+    const num = n === null || n === undefined || n === '' ? 0 : Number(n);
+    if (Number.isNaN(num)) return '—';
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(num);
+  }
+  function formatCurrencyBR(n) {
+    const num = n === null || n === undefined || n === '' ? 0 : Number(n);
+    if (Number.isNaN(num)) return '—';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  });
+
+  // DataTables (como antes) - construções idênticas
+  function buildDt(selector, tableName, columns) {
+    const cols = columns.map(c => {
+      const col = { data: c.data };
+      if (c.render) col.render = c.render;
+      return col;
+    });
+    return $(selector).DataTable({
+      serverSide: true,
+      processing: true,
+      ajax: {
+        url: '/estatisticas-avancada/data/' + tableName,
+        data: function(d) {
+          d.start_date = $('#start_date').val();
+          d.end_date = $('#end_date').val();
+        }
+      },
+      lengthMenu: [10,25,50,100],
+      columns: cols,
+      dom: 'Bfrtip',
+      buttons: ['copy','csv','excel','print','colvis'],
+      responsive: true,
+      language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json" }
+    });
+  }
+
+  $(function(){
+    // inicializa tabelas
+    buildDt('#dtMotoristas','motoristas',[
+      {data:'id'}, {data:'nome'}, {data:'email'}, {data:'cpf'}, {data:'data_cadastro', render: val => formatDateBR(val)}
+    ]);
+    buildDt('#dtVeiculos','veiculos',[
+      {data:'id'}, {data:'nome'}, {data:'placa'}, {data:'km', render: val => formatNumberBR(val,0)}, {data:'marca'}
+    ]);
+    buildDt('#dtUso','uso_veiculos',[
+      {data:'id'}, {data:'veiculo_id'}, {data:'motorista'}, {data:'km_inicial', render: v => formatNumberBR(v,0)}, {data:'km_final', render: v => formatNumberBR(v,0)}, {data:'finalidade'},{data:'data_hora_inicial', render: v => formatDateBR(v)}
+    ]);
+    buildDt('#dtMultas','multas',[
+      {data:'id'}, {data:'veiculo_id'}, {data:'placa'}, {data:'motorista'}, {data:'valor_com_desconto', render: v => formatCurrencyBR(v)}, {data:'data', render: v => formatDateBR(v)}
+    ]);
+    buildDt('#dtAbaste','abastecimentos',[
+      {data:'id'}, {data:'veiculo_id'}, {data:'placa'}, {data:'data_hora', render: v => formatDateBR(v)}, {data:'litros', render: v => formatNumberBR(v,2)}, {data:'preco_total', render: v => formatCurrencyBR(v)}
+    ]);
+
+    // aplicar filtros
+    $('#applyFilters').on('click', function(e){
+      e.preventDefault();
+      [$('#dtMotoristas').DataTable(), $('#dtVeiculos').DataTable(), $('#dtUso').DataTable(), $('#dtMultas').DataTable(), $('#dtAbaste').DataTable()].forEach(dt => {
+        try { dt.ajax.reload(); } catch(e) {}
+      });
+      loadCharts(); // recarrega charts via AJAX
+    });
+
+    // carregar charts inicialmente
+    loadCharts();
+  });
+
+  // Função que chama o endpoint /estatisticas-avancada/charts e desenha os gráficos
+  function loadCharts() {
+    const params = { start_date: $('#start_date').val(), end_date: $('#end_date').val() };
+    $.ajax({
+      url: '/estatisticas-avancada/charts',
+      data: params,
+      method: 'GET',
+      dataType: 'json'
+    }).done(function(resp){
+      if (!resp || !resp.ok) {
+        console.error('Erro ao obter dados dos charts', resp);
+        return;
+      }
+      // tripsHora: array {hora, qt}
+      const tripsHora = resp.tripsHora || [];
+      const tripsWeekday = resp.tripsWeekday || [];
+      const topVeiculos = resp.topVeiculosKm || [];
+      const topMotoristas = resp.topMotoristasKm || [];
+
+      // Chart Hora (0..23)
+      const labelsHora = Array.from({length:24}, (_,i) => i.toString().padStart(2,'0') + 'h');
+      const dataHora = labelsHora.map((lab, idx) => {
+        const r = tripsHora.find(x => Number(x.hora) === idx);
+        return r ? Number(r.qt) : 0;
+      });
+      const ctxHora = document.getElementById('chartHora').getContext('2d');
+      if (window._chartHora) window._chartHora.destroy();
+      window._chartHora = new Chart(ctxHora, {
+        type: 'bar',
+        data: { labels: labelsHora, datasets: [{ label: 'Viagens', data: dataHora }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      // Chart semana (Dom..Sáb)
+      const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      const dataSemana = dias.map((d, idx) => {
+        const r = tripsWeekday.find(x => Number(x.dia_semana) === (idx+1));
+        return r ? Number(r.qt) : 0;
+      });
+      const ctxSem = document.getElementById('chartSemana').getContext('2d');
+      if (window._chartSem) window._chartSem.destroy();
+      window._chartSem = new Chart(ctxSem, {
+        type: 'line',
+        data: { labels: dias, datasets: [{ label: 'Viagens', data: dataSemana, tension: 0.3 }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+    }).fail(function(err){
+      console.error('Falha ao carregar charts', err);
+    });
+  }
+</script>

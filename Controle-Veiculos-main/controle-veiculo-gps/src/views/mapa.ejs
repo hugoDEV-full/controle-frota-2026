@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>mapa</title>
+        <script src="/maps/common/js/jquery-3.1.0.min.js"></script>
+        <script src="/maps/common/js/jquery.easing.1.3.js"></script>
+        <link type="text/css" rel="stylesheet" href="/maps/common/css/map_common.css" />
+        <link type="text/css" rel="stylesheet" href="/maps/css/medicos.css" />
+        <script type="text/javascript">
+            let routes_loaded = false;
+            const gs = (name, default_value) => {
+                let value = localStorage.getItem(name);
+                if (value === undefined) {
+                    value = default_value;
+                    localStorage.setItem(name, value);
+                    console.log(`${name} initialized to ${value}`);
+                }
+                return value;
+            };
+            const is_dark = gs('is_dark', window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            const is_tablet = gs('is_tablet', window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+            const is_mobile = gs('is_mobile', window.matchMedia && window.matchMedia('(max-width: 480px)').matches);
+            const is_desktop = gs('is_desktop', window.matchMedia && window.matchMedia('(min-width: 768px)').matches);
+            if (is_dark) document.documentElement.setAttribute('data-bs-theme', 'dark');
+            else document.documentElement.setAttribute('data-bs-theme', 'light');
+            const SIGNALS = {
+                EQUIPE_SELECIONADA: 0,
+                POSICAO_CHAMADO: 1,
+                ENDERECO_NAO_ENCONTRADO: 2,
+                ROTA_CALCULADA: 3,
+            };
+            let chamado_circle;
+            let map_style = [
+                { stylers: [{ saturation: -100 }] },
+                { featureType: 'administrative', elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { weight: 4 }] },
+                { featureType: 'administrative', elementType: 'labels.text.fill', stylers: [{ color: '#333333' }] },
+                { featureType: 'water', elementType: 'geometry.fill', stylers: [{ color: '#0099dd' }] },
+                { elementType: 'labels', stylers: [{ visibility: 'on' }] },
+                { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#ced9be' }] },
+                { featureType: 'poi.park', elementType: 'geometry.fill', stylers: [{ color: '#6cca6e' }] },
+                { featureType: 'road.highway', elementType: 'labels', stylers: [{ visibility: 'on' }] },
+                { featureType: 'road.arterial', elementType: 'labels.text', stylers: [{ visibility: 'on' }] },
+                { featureType: 'road.local', elementType: 'labels.text', stylers: [{ visibility: 'on' }] },
+                {},
+            ];
+            function show(category) {
+                for (let i in gmarkers) {
+                    if (gmarkers[i].mycategory == category) {
+                        gmarkers[i].setMap(map);
+                    }
+                }
+                document.getElementById(category + '_box').checked = true;
+            }
+            function hide(category) {
+                for (let i in gmarkers) {
+                    if (gmarkers[i].mycategory == category) {
+                        gmarkers[i].setMap(null);
+                    }
+                }
+                document.getElementById(category + '_box').checked = false;
+            }
+            function boxclick(box, category) {
+                if (box.checked) {
+                    show(category);
+                } else {
+                    hide(category);
+                }
+            }
+            function seconds_formated(seconds) {
+                return moment(seconds * 1000).format('HH:mm:ss');
+            }
+
+            function get_dynamic_map_points() {
+                const homologacao = parseInt('<%-chamado_homologacao%>');
+                const x_auth = '<%-x_auth%>';
+                const x_uid = '<%-x_uid%>';
+                const x_hash_type = '<%-x_hash_type%>';
+                const url = '/gps/medicos?homologacao=' + homologacao + '&x-auth=' + x_auth + '&x-uid=' + x_uid + '&x-hash-type=' + x_hash_type;
+                $.get(url, function (res) {
+                    for (let i in res) {
+                        const r = res[i];
+                        const TEAM_ID = r['TEAM_ID'];
+                        const lat = r['LAT'];
+                        const lon = r['LON'];
+                        const position = new google.maps.LatLng(lat, lon);
+                        const id = r['TYPE'] == 0 ? 'car_new' : 'telephone_new';
+                        const BG_COLOR = r['BG_COLOR'].replace('#', '');
+                        const icon = '/mapa/img/' + id + '/' + BG_COLOR;
+                        if (gmarkers[TEAM_ID]) {
+                            gmarkers[TEAM_ID].setPosition(position);
+                            gmarkers[TEAM_ID].setIcon(icon);
+                            gmarkers[TEAM_ID].NSE = r['NSE'];
+                        } else {
+                            gmarkers[TEAM_ID] = new SlidingMarker({
+                                position,
+                                draggable: false,
+                                map: map,
+                                title: r['TXT'],
+                                duration: 1000,
+                                easing: 'linear',
+                                icon,
+                                r,
+                            });
+                            google.maps.event.addListener(gmarkers[TEAM_ID], 'click', e => handle_click(e, r));
+                        }
+                    }
+                    if (!routes_loaded) {
+                        routes_loaded = true;
+                        setInterval(get_dynamic_map_points, 1000);
+                        create_adress_search_form();
+                    }
+                });
+            }
+
+            function create_adress_search_form() {
+                let form = document.createElement('form');
+                form.className = 'address-form';
+                form.action = document.location.origin + document.location.pathname;
+                form.method = 'get';
+                form.setAttribute('onsubmit', 'return checkform();');
+                let txt = document.createElement('input');
+                txt.type = 'text';
+                txt.name = 'endereco';
+                txt.id = 'address';
+                txt.className = 'txt';
+                txt.value = '<%-src_addr%>';
+                let btn = document.createElement('a');
+                btn.href = 'javascript:void(0)';
+                btn.setAttribute('onclick', 'document.forms[0].submit()');
+                btn.className = 'submit';
+                let icon = document.createElement('i');
+                icon.className = 'fa-solid fa-magnifying-glass';
+                btn.appendChild(icon);
+                form.appendChild(txt);
+                form.appendChild(btn);
+                map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(form);
+                procurar_endereco();
+            }
+            function procurar_endereco() {
+                const dst_lat = parseFloat('<%-dst_lat%>');
+                const dst_lon = parseFloat('<%-dst_lon%>');
+                if (dst_lat != 0 && dst_lon != 0) {
+                    console.log('setando por coordenadas', dst_lat, dst_lon);
+                    criar_marker_ocorrencia(dst_lat, dst_lon);
+                } else {
+                    console.log('geocoder.geocode', '<%-src_addr%>');
+                    geocoder.geocode({ address: '<%-src_addr%>' }, function (results, status) {
+                        if (status == google.maps.GeocoderStatus.OK) {
+                            criar_marker_ocorrencia(results[0].geometry.location.lat(), results[0].geometry.location.lng());
+                        } else {
+                            callback(SIGNALS.ENDERECO_NAO_ENCONTRADO, { txt: 'O endereço informado não foi localizado.', code: status });
+                        }
+                    });
+                }
+            }
+            function criar_marker_ocorrencia(latitude, longitude) {
+                let pos = new google.maps.LatLng(latitude, longitude);
+                let circleOptions = {
+                    strokeColor: is_dark === 'true' ? '#FF6666' : '#FF0000',
+                    strokeOpacity: 0.5,
+                    strokeWeight: 2,
+                    fillColor: is_dark === 'true' ? '#FF6666' : '#FF0000',
+                    fillOpacity: 0.2,
+                    map: map,
+                    center: pos,
+                    radius: 2000,
+                };
+                chamado_circle = new google.maps.Circle(circleOptions);
+                gmarkers['chamado'] = new google.maps.Marker({
+                    position: pos,
+                    map: map,
+                    title: 'Possível local do atendimento. Arraste e solte para ajustar a localização.',
+                    icon: '/mapa/img/telephone_new/E00000',
+                    optimized: false,
+                    draggable: true,
+                    raiseOnDrag: true,
+                });
+                map.setCenter(pos);
+                map.setZoom(14);
+                google.maps.event.addListener(gmarkers['chamado'], 'dragend', function (e) {
+                    callback(SIGNALS.POSICAO_CHAMADO, { lat: e.latLng.lat(), lon: e.latLng.lng() });
+                    chamado_circle.setCenter(e.latLng);
+                });
+                callback(SIGNALS.POSICAO_CHAMADO, { lat: latitude, lon: longitude });
+            }
+
+            function handle_click(e, r) {
+                const equipe_id = r.TEAM_ID;
+                const equipe_nome = r.TXT;
+                const equipe_tipo = 0;
+                const nova_situacao_equipe = r.NOVA_SITUACAO_EQUIPE;
+                callback(SIGNALS.EQUIPE_SELECIONADA, { equipe_id, equipe_nome, equipe_tipo, nova_situacao_equipe });
+            }
+            function initialize() {
+                try {
+                    gmarkers = new Array();
+                    chamado_circle;
+                    geocoder = new google.maps.Geocoder();
+                    let dst_lat = '<%-dst_lat%>' != 0 ? '<%-dst_lat%>' : '<%-default_lat%>';
+                    let dst_lon = '<%-dst_lon%>' != 0 ? '<%-dst_lon%>' : '<%-default_lon%>';
+                    let mapOptions = {
+                        panControl: false,
+                        zoomControl: false,
+                        mapTypeControl: true,
+                        scaleControl: false,
+                        streetViewControl: false,
+                        overviewMapControl: false,
+                        fullscreenControl: false,
+                        zoom: 11,
+                        center: new google.maps.LatLng(dst_lat, dst_lon),
+                        styles: map_style,
+                    };
+                    map = new google.maps.Map(document.getElementById('map_canvas'), mapOptions);
+                    map.visualRefresh = true;
+                    console.log('map OK');
+                    get_dynamic_map_points();
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+            const JS = {
+                load: function (src, callback) {
+                    try {
+                        let script = document.createElement('script'),
+                            loaded;
+                        script.setAttribute('src', src);
+                        script.setAttribute('type', 'text/javascript');
+                        if (callback) {
+                            script.onreadystatechange = script.onload = function () {
+                                if (!loaded) {
+                                    console.log(src + ' OK');
+                                    callback();
+                                }
+                                loaded = true;
+                            };
+                        }
+                        document.getElementsByTagName('head')[0].appendChild(script);
+                    } catch (err) {
+                        console.log(err);
+                    }
+                },
+            };
+
+            function maps_api_callback() {
+                JS.load('/maps/common/js/SlidingMarker.min.js', function () {
+                    JS.load('/maps/common/js/markerAnimate.js', function () {
+                        try {
+                            initialize();
+                        } catch (err) {
+                            console.log(err);
+                        }
+                    });
+                });
+            }
+        </script>
+    </head>
+    <body class="">
+        <div id="map_canvas"><b>Carregando...</b></div>
+    </body>
+    <script>
+        const map_url = 'https://maps.googleapis.com/maps/api/js?libraries=marker,geometry&key=<%-MAP_KEY%>&callback=maps_api_callback';
+        let web_channel = null;
+        let selecao_equipe_mapa = null;
+        function init_from_app() {
+            try {
+                web_channel = new QWebChannel(qt.webChannelTransport, function (channel) {
+                    selecao_equipe_mapa = channel.objects.selecao_equipe_mapa;
+                });
+                JS.load(map_url);
+            } catch (err) {
+                error(err.message);
+                console.log(err);
+            }
+        }
+        $(document).ready(function () {
+            if ('<%-is_test%>') {
+                console.log('test');
+                JS.load(map_url);
+            } else {
+                console.log('init_from_app');
+            }
+        });
+        function callback(signal, args) {
+            const arr = { signal, args };
+            console.log('<%-is_test%>' == true, arr);
+            if ('<%-is_test%>' == true) {
+                console.log('test');
+                return;
+            }
+            try {
+                selecao_equipe_mapa.handle_click(arr);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    </script>
+</html>

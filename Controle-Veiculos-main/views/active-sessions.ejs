@@ -1,0 +1,29 @@
+
+<div class="container py-5">
+  <h2 class="mb-4">Sessões Ativas</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Usuário</th>
+        <th>Tempo Elapsed</th>
+        <th>Tempo Restante</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (sessions.length === 0) { %>
+        <tr>
+          <td colspan="3" class="text-center">Nenhuma sessão ativa encontrada</td>
+        </tr>
+      <% } else { %>
+        <% sessions.forEach(sess => { %>
+          <tr>
+            <td><%= sess.email %></td>
+            <td><%= sess.elapsed %></td>
+            <td><%= sess.remaining %></td>
+          </tr>
+        <% }) %>
+      <% } %>
+    </tbody>
+  </table>
+  <a href="/dashboard" class="btn btn-secondary mt-3">Voltar</a>
+</div>

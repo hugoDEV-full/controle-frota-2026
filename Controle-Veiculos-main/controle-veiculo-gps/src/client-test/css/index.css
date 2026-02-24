@@ -1,0 +1,31 @@
+* { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+html, body{ height: 100%; overflow: hidden; }
+body { font: 16px Helvetica, Arial; background-color: #2b2b2b; color: #efefef; }
+
+#messages-wrapper {
+    height: -webkit-calc(100% - 40px);
+    overflow-y: scroll;
+}
+#messages {
+    height: 100%;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+#messages li { padding: 10px 10px; font-family: "Courier New"; overflow-wrap: break-word; }
+#messages li.none::before { content: '- '; font-weight: bold; }
+#messages li.sended { border-top: 1px dashed rgba(255, 255, 255, 0.2); }
+#messages li.sended::before { content: '-> '; color: #009ac7; font-weight: bold; }
+#messages li.received::before { content: '<- '; color: #bf9107; font-weight: bold; }
+#messages li:nth-child(odd) { background: #323232; }
+
+#btn-clear-logs { position: absolute; top: 5px; right: 23px; background-color: rgba(255, 150, 0, 0.4); border: 0 none; cursor: pointer; color: white; width: auto; height: auto; padding: 5px 7px; font-size: 11px; }
+#btn-automatic-auths { position: absolute; top: 5px; right: 100px; background-color: rgba(0, 255, 255, 0.4); border: 0 none; cursor: pointer; color: white; width: auto; height: auto; padding: 5px 7px; font-size: 11px; }
+
+form { padding: 1px 0 1px 0; width: 100%; height: 40px; background: #fff; }
+form.enabled button { background: #629755; }
+form.disabled button { background: #999; color: #ccc; }
+form input, form select, form button { border: 0 none; height: 100%; }
+form select#k { width: 15.5%; margin-right: .25%; float: left; }
+form input#v { width: 75%; margin-right: .25%; float: left; font: 13px 'Courier New'; padding: 0 5px; }
+form button { float: right; width: 9%; color: white; cursor: pointer; }

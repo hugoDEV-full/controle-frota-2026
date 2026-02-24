@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+    controleveiculos:
+        build: .
+        container_name: controleveiculos
+        ports:
+            - '3070:3000' # HTTPS em 3070
+        volumes:
+            - .:/app:rw
+            - node_modules:/app/node_modules
+            - ./certs:/certs:ro # Monta certificados SSL
+        env_file:
+            - .env
+        environment:
+            NODE_ENV: production
+            HTTPS_ENABLED: true
+            SSL_KEY_PATH: /certs/privkey.pem
+            SSL_CERT_PATH: /certs/fullchain.pem
+        restart: unless-stopped
+        tty: true
+        stdin_open: true
+        deploy:
+            resources:
+                limits:
+                    cpus: '1.00'
+                    memory: 1G
+                reservations:
+                    cpus: '0.50'
+                    memory: 512M
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
+        networks:
+            - controleveiculos_network
+    controle-veiculo-gps:
+        environment:
+            DEV: 1
+            OS: '${OS:-Linux}'
+            DEBUG_COLORS: 'true'
+            TERM: 'xterm-256color'
+            COLORTERM: 'truecolor'
+            CHOKIDAR_USEPOLLING: '1'
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_DATABASE: ${DB_NAME}
+            MYSQL_USER: ${DB_USER}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            TZ: America/Sao_Paulo
+        container_name: controle-veiculo-gps
+        image: 'controle-veiculo-gps:latest'
+        restart: unless-stopped
+        build:
+            args:
+                UID: 1003
+                TZ: America/Sao_Paulo
+            context: ./controle-veiculo-gps
+            dockerfile: Dockerfile
+        ports:
+            - '4999:4999/tcp'
+        volumes:
+            - ./.env:/.env
+            - ./controle-veiculo-gps/src:/src
+            - /src/node_modules
+        networks:
+            - controleveiculos_network
+    mysql_controleveiculos:
+        image: mysql:8.0
+        container_name: mysql_controleveiculos
+        ports:
+            - '3367:3306'
+        env_file:
+            - .env
+        environment:
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_DATABASE: ${DB_NAME}
+            MYSQL_USER: ${DB_USER}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            TZ: America/Sao_Paulo
+        volumes:
+            - mysql_data:/var/lib/mysql # Persistência de dados do MySQL
+        restart: unless-stopped
+        networks:
+            - controleveiculos_network
+
+networks:
+    controleveiculos_network:
+        driver: bridge
+
+volumes:
+    node_modules: # Persistência de módulos Node
+    mysql_data: # Persistência de dados do MySQL

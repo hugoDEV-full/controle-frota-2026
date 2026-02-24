@@ -1,0 +1,310 @@
+a:link, a:visited{
+	color: #0099dd;
+	text-decoration: none;
+	margin: 0px 0px 30px 0px;
+}
+a:hover, a:active{
+	color: #000;	
+}
+
+.dark-theme a:link, .dark-theme a:visited {
+    color: #39b9ff;
+}
+
+.dark-theme a:hover, .dark-theme a:active {
+    color: #fff;
+}
+
+/* Formulario de pesquisa de endereço */
+.address-form{
+	padding: 5px;
+	margin: 0px;
+	background-color: white;
+	color: black;
+	border-radius: 3px 3px 0px 0px;
+	border: 1px solid silver;
+}
+.address-form .txt, .address-form .submit{
+	border: 1px solid silver;
+}
+
+/* Dark theme overrides for address form */
+.address-form.dark-theme {
+    background-color: #333;
+    color: #f0f0f0;
+    border: 1px solid #555;
+}
+
+.address-form.dark-theme .txt {
+    background-color: #444;
+    color: #f0f0f0;
+    border: 1px solid #666;
+}
+
+input[type="text"]{
+	padding: 5px 2px;
+	height: 20px;
+	font-size: 12px;
+	color: #444;
+	border-right: 0px solid none !important;
+	outline: none;
+}
+
+.dark-theme input[type="text"] {
+    color: #f0f0f0;
+    background-color: #444;
+}
+
+.address-form .submit{
+	height: 20px;
+	background-color: #4173c9;
+	background-image: -moz-linear-gradient(top,#5e8ee4,#4173c9);
+	background-image: -webkit-linear-gradient(top,#5e8ee4,#4173c9);
+	background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0,#5e8ee4),color-stop(1,#4173c9));
+	background-image: linear-gradient(top,#5e8ee4,#4173c9);
+	border: 0;
+	-moz-border-radius: 0px 2px 2px 0px;
+	-webkit-border-radius: 0px 2px 2px 0px;
+	border-radius: 0px 2px 2px 0px;
+	border-left: 0px solid none !important;
+	color: #fff;
+	cursor: pointer;
+	display: inline-block;
+	font-family: arial,sans-serif;
+	font-size: 13px;
+	font-weight: bold;
+	padding: 6px 7px;
+	text-align: center;
+	text-shadow: 0 -1px 0 rgba(0,0,0,.08);
+}
+
+.address-form.dark-theme .submit {
+    background-color: #2c5aa9;
+    background-image: -moz-linear-gradient(top,#3d6dc4,#2c5aa9);
+    background-image: -webkit-linear-gradient(top,#3d6dc4,#2c5aa9);
+    background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0,#3d6dc4),color-stop(1,#2c5aa9));
+    background-image: linear-gradient(top,#3d6dc4,#2c5aa9);
+}
+
+.address-form .submit span{
+	background: url(/maps/common/images/zoom.png) center center no-repeat;
+	display:block;
+	text-indent:-9999px;
+	width: 46px;
+	height: 20px;
+}
+
+/*************
+ * FOLLOWING *
+ *************/
+.following-ui{
+	padding: 3px;
+	margin: 0px 5px 5px 0px;
+	width: auto;
+	height: auto;
+	background: #dd0000;
+	color: white;
+	border: 1px solid #a30000;
+	border-radius: 2px;
+}
+
+.following-ui.dark-theme {
+    background: #a30000;
+    border: 1px solid #800000;
+}
+
+.following-ui #btn_stop_following{
+	width: 24px;
+	height: 24px;
+	padding: 2px;
+	margin: 0px 5px 0px 0px;
+	border: 1px solid white;
+	border-radius: 2px;
+	background: #FFFFFF url(/maps/common/images/cross.png) center center no-repeat;
+}
+
+.following-ui.dark-theme #btn_stop_following {
+    background-color: #333;
+    border: 1px solid #ccc;
+}
+
+.following-ui #following_span{
+	display: inline-block;
+	height: 20px;
+	vertical-align: middle;
+}
+
+
+/**********************
+ * PROCURA DE MARKERS *
+ **********************/
+.marker-search-form {
+	width: 200px;
+	overflow: auto;
+	padding: 0px 3px;
+	margin: 0px 5px 5px 0px;
+	background: #FFFFFF;
+	border: 1px solid silver;
+	border-radius: 2px;
+}
+
+.marker-search-form.dark-theme {
+    background: #333;
+    border: 1px solid #555;
+    color: #f0f0f0;
+}
+
+/* Add styles for the div_search container */
+#div_search {
+    background: #FFFFFF;
+    border-bottom: 1px solid #eee;
+    padding: 3px 0;
+}
+
+#div_search.dark-theme {
+    background: #333;
+    border-bottom: 1px solid #555;
+}
+
+.marker-search-form #ul_lista_markers{
+	overflow-y: auto;
+	margin: 0px;
+}
+
+.marker-search-form.dark-theme #ul_lista_markers {
+    background: #333;
+    color: #f0f0f0;
+}
+
+.marker-search-form #txt_search{
+	width: 80%;
+	padding: 2px;
+	background: #FFFFFF;
+	border: 0px none;
+	outline: none;
+}
+
+.marker-search-form.dark-theme #txt_search {
+    background: #444 !important;
+    color: #f0f0f0 !important;
+}
+
+.marker-search-form #btn_list{
+	outline: none;
+	float: right;
+	width: 24px;
+	height: 24px;
+	padding: 2px;
+	border: 0px none;
+	background: #FFFFFF url(/maps/common/images/icon_menu.png) center center no-repeat;
+}
+
+.marker-search-form.dark-theme #btn_list {
+    background-color: #444 !important;
+    filter: invert(0.8); /* Invert the icon colors to work better on dark backgrounds */
+}
+
+.marker-search-form ul{
+	list-style-type: none;
+	padding: 5px;
+}
+
+.marker-search-form ul li{
+	margin: 0px;
+	padding: 0px;
+}
+
+.marker-search-form.dark-theme ul li a {
+    color: #39b9ff;
+}
+
+.marker-search-form.dark-theme ul li a:hover {
+    color: #fff;
+}
+
+/* Map controls */
+.map-control {
+    background-color: white;
+    border: 1px solid silver;
+    border-radius: 2px;
+    padding: 5px;
+    margin: 5px;
+}
+
+.map-control.dark-theme {
+    background-color: #333;
+    color: #f0f0f0;
+    border: 1px solid #555;
+}
+
+.map-control.dark-theme input[type="checkbox"] + label {
+    color: #f0f0f0;
+}
+
+/* Focus states for better accessibility */
+input:focus, button:focus, a:focus {
+    outline: 2px solid #0099dd;
+}
+
+.dark-theme input:focus, 
+.dark-theme button:focus, 
+.dark-theme a:focus {
+    outline: 2px solid #39b9ff;
+}
+
+/* Make the map elements responsive for smaller screens */
+@media (max-width: 768px) {
+    .marker-search-form {
+        width: 150px;
+    }
+    
+    .address-form {
+        max-width: 80%;
+    }
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    margin: 10px;
+}
+
+.theme-toggle button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    background-color: #ffffff;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle button:before {
+    content: '☀️';
+    font-size: 18px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.dark-theme .theme-toggle button {
+    background-color: #333;
+    border-color: #555;
+}
+
+.dark-theme .theme-toggle button:before {
+    content: '🌙';
+}
+
+/* Ensure map control positioning works well */
+@media (max-width: 768px) {
+    .theme-toggle {
+        margin: 5px;
+    }
+    
+    .theme-toggle button {
+        width: 28px;
+        height: 28px;
+    }
+}

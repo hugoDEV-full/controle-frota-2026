@@ -1,0 +1,447 @@
+<div class="container-fluid py-4">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div></div>
+            <h1 class="h3 text-center"><i class="fas fa-mobile-alt me-2"></i>Dados do Dispositivo</h1>
+            <div>
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <input type="date" id="date-selector" class="form-control form-control-sm" />
+                    </div>
+                    <div class="me-3">
+                        <select id="refresh-interval" class="form-select form-select-sm">
+                            <option value="30000">30 segundos</option>
+                            <option value="60000">1 minuto</option>
+                            <option value="300000">5 minutos</option>
+                        </select>
+                    </div>
+                    <a href="/" class="btn btn-outline-primary btn-sm"><i class="fas fa-home me-1"></i>Voltar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-temperature-high me-2"></i>Temperatura</h5>
+                </div>
+                <div class="card-body" style="height: 600px">
+                    <canvas id="temperature-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-battery-half me-2"></i>Bateria</h5>
+                </div>
+                <div class="card-body" style="height: 600px">
+                    <canvas id="battery-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="">
+        <table id="device-data-table" class="table table-hover table-striped table-sm align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th><i class="fas fa-clock me-1"></i>Hora</th>
+                    <th><i class="fas fa-list-ol me-1"></i>Total de Registros</th>
+                    <th><i class="fas fa-temperature-low me-1"></i>Temp. Mínima</th>
+                    <th><i class="fas fa-temperature-high me-1"></i>Temp. Máxima</th>
+                    <th><i class="fas fa-temperature-half me-1"></i>Temp. Média</th>
+                    <th><i class="fas fa-battery-full me-1"></i>Bateria Máxima</th>
+                    <th><i class="fas fa-battery-half me-1"></i>Bateria Média</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be loaded via AJAX -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let refreshIntervalId;
+    let refreshInterval;
+    let deviceId;
+    let charts = {};
+
+    function loadDeviceData() {
+        const date = $('#date-selector').val() || new Date().toISOString().split('T')[0];
+
+        $.ajax({
+            url: `/device/${deviceId}?date=${date}`,
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                renderDeviceData(data);
+                updateCharts(data);
+                if (refreshIntervalId) clearTimeout(refreshIntervalId);
+                refreshIntervalId = setTimeout(loadDeviceData, refreshInterval);
+            },
+            error: function (xhr, status, error) {
+                console.error('Erro ao carregar dados: ', error);
+                if (refreshIntervalId) clearTimeout(refreshIntervalId);
+                refreshIntervalId = setTimeout(loadDeviceData, 10000);
+            },
+        });
+    }
+
+    function renderDeviceData(data) {
+        const avg = data.avg;
+        const tbody = $('#device-data-table tbody');
+        tbody.empty();
+        avg.forEach(function (hourData) {
+            // Define temperature thresholds
+            const highTempThreshold = 30.0;
+            const lowTempThreshold = 10.0;
+
+            // Define battery thresholds
+            const lowBatteryThreshold = 20.0;
+            const mediumBatteryThreshold = 50.0;
+
+            // Temperature class functions
+            const getTempClass = temp => {
+                if (temp >= highTempThreshold) return 'text-danger fw-bold';
+                if (temp <= lowTempThreshold) return 'text-info fw-bold';
+                return 'text-success';
+            };
+
+            // Battery class function
+            const getBatteryClass = battery => {
+                if (battery <= lowBatteryThreshold) return 'text-danger fw-bold';
+                if (battery <= mediumBatteryThreshold) return 'text-warning';
+                return 'text-success';
+            };
+
+            const row = `
+                <tr>
+                    <td><span class="badge bg-secondary">${hourData.HORA}:00</span></td>
+                    <td><span class="badge bg-primary">${hourData.TOTAL}</span></td>
+                    <td><span class="${getTempClass(hourData.min_temperatura)}">${hourData.min_temperatura.toFixed(1)}°C</span></td>
+                    <td><span class="${getTempClass(hourData.max_temperatura)}">${hourData.max_temperatura.toFixed(1)}°C</span></td>
+                    <td><span class="${getTempClass(hourData.avg_temperatura)}">${hourData.avg_temperatura.toFixed(1)}°C</span></td>
+                    <td><span class="${getBatteryClass(hourData.max_bateria)}">${hourData.max_bateria}%</span></td>
+                    <td><span class="${getBatteryClass(hourData.avg_bateria)}">${hourData.avg_bateria.toFixed(1)}%</span></td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+
+        adjustTableHeight();
+    }
+
+    function updateCharts(data) {
+        const all = data.all;
+
+        // Group data by hour
+        const hourlyData = {};
+        all.forEach(item => {
+            const hour = parseInt(item.HORA);
+            if (!hourlyData[hour]) {
+                hourlyData[hour] = {
+                    temperatures: [],
+                    batteries: [],
+                    statuses: [],
+                    timestamps: [],
+                };
+            }
+            hourlyData[hour].temperatures.push(item.temperatura);
+            hourlyData[hour].batteries.push(item.bateria);
+            hourlyData[hour].statuses.push(item.nome);
+            hourlyData[hour].timestamps.push(`${item.HORA}:${item.MINUTO || '00'}`);
+        });
+
+        // Calculate hourly averages for the main chart
+        const hourLabels = Object.keys(hourlyData)
+            .sort((a, b) => a - b)
+            .map(hour => `${hour}:00`);
+        const hourlyTemps = hourLabels.map(label => {
+            const hour = parseInt(label);
+            const temps = hourlyData[hour].temperatures;
+            return temps.reduce((sum, temp) => sum + temp, 0) / temps.length;
+        });
+        const hourlyBatteries = hourLabels.map(label => {
+            const hour = parseInt(label);
+            const batteries = hourlyData[hour].batteries;
+            return batteries.reduce((sum, bat) => sum + bat, 0) / batteries.length;
+        });
+
+        // Temperature Chart
+        if (!charts.temperatureChart) {
+            const temperatureCtx = document.getElementById('temperature-chart').getContext('2d');
+            charts.temperatureChart = new Chart(temperatureCtx, {
+                type: 'line',
+                data: {
+                    labels: hourLabels,
+                    datasets: [
+                        {
+                            label: 'Temperatura Média (°C)',
+                            data: hourlyTemps,
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Temperatura (°C)',
+                            },
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Hora',
+                            },
+                        },
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: function (context) {
+                                    return `${context[0].label} (Clique para detalhes)`;
+                                },
+                            },
+                        },
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const hour = parseInt(hourLabels[index]);
+                            showDetailedChart('temperature', hour, hourlyData[hour]);
+                        }
+                    },
+                },
+            });
+        } else {
+            charts.temperatureChart.data.labels = hourLabels;
+            charts.temperatureChart.data.datasets[0].data = hourlyTemps;
+            charts.temperatureChart.update();
+        }
+
+        // Battery Chart
+        if (!charts.batteryChart) {
+            const batteryCtx = document.getElementById('battery-chart').getContext('2d');
+            charts.batteryChart = new Chart(batteryCtx, {
+                type: 'line',
+                data: {
+                    labels: hourLabels,
+                    datasets: [
+                        {
+                            label: 'Bateria Média (%)',
+                            data: hourlyBatteries,
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Nível de Bateria (%)',
+                            },
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Hora',
+                            },
+                        },
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: function (context) {
+                                    return `${context[0].label} (Clique para detalhes)`;
+                                },
+                            },
+                        },
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const hour = parseInt(hourLabels[index]);
+                            showDetailedChart('battery', hour, hourlyData[hour]);
+                        }
+                    },
+                },
+            });
+        } else {
+            charts.batteryChart.data.labels = hourLabels;
+            charts.batteryChart.data.datasets[0].data = hourlyBatteries;
+            charts.batteryChart.update();
+        }
+    }
+
+    // Function to show detailed chart for a specific hour
+    function showDetailedChart(type, hour, hourData) {
+        const modalId = `${type}DetailModal`;
+
+        // Create modal if it doesn't exist
+        if (!$(`#${modalId}`).length) {
+            const modalHtml = `
+                <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+                        <div class="modal-content">
+                            <div class="modal-header bg-${type === 'temperature' ? 'primary' : 'success'} text-white">
+                                <h5 class="modal-title" id="${modalId}Label">
+                                    <i class="fas fa-${type === 'temperature' ? 'temperature-high' : 'battery-half'} me-2"></i>Detalhes por Hora
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card mb-3">
+                                            <div class="card-body" style="height: 70vh;">
+                                                <canvas id="${type}DetailChart"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between">
+                                            <button class="btn btn-sm btn-outline-secondary" id="expandChart">
+                                                <i class="fas fa-expand me-1"></i>Expandir
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-primary" data-bs-dismiss="modal">
+                                                <i class="fas fa-times me-1"></i>Fechar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $('body').append(modalHtml);
+        }
+
+        // Update modal title
+        $(`#${modalId}Label`).text(`Detalhes das ${hour}:00h`);
+
+        // Show the modal
+        const modal = new bootstrap.Modal($(`#${modalId}`));
+        modal.show();
+
+        // Create or update the detailed chart
+        const detailCtx = document.getElementById(`${type}DetailChart`).getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (charts[`${type}DetailChart`]) {
+            charts[`${type}DetailChart`].destroy();
+        }
+
+        const data = type === 'temperature' ? hourData.temperatures : hourData.batteries;
+        const color = type === 'temperature' ? 'rgba(0, 123, 255, 1)' : 'rgba(40, 167, 69, 1)';
+        const bgColor = type === 'temperature' ? 'rgba(0, 123, 255, 0.1)' : 'rgba(40, 167, 69, 0.1)';
+        const label = type === 'temperature' ? 'Temperatura (°C)' : 'Bateria (%)';
+
+        charts[`${type}DetailChart`] = new Chart(detailCtx, {
+            type: 'line',
+            data: {
+                labels: hourData.timestamps,
+                datasets: [
+                    {
+                        label: label,
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: bgColor,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: label,
+                        },
+                        ...(type === 'battery' ? { max: 100 } : {}),
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Horário',
+                        },
+                    },
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function (context) {
+                                const index = context.dataIndex;
+                                return `Status: ${hourData.statuses[index]}`;
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    function adjustTableHeight() {
+        const windowHeight = $(window).height();
+        const headerHeight = $('.row.mb-3').outerHeight();
+        const chartsHeight = $('.row.mb-4').outerHeight();
+        const padding = 40; // Account for container padding
+        const tableHeight = windowHeight - headerHeight - chartsHeight - padding;
+        $('.table-responsive').css('max-height', tableHeight + 'px');
+    }
+
+    $(document).ready(function () {
+        // Set default date to today
+        $('#date-selector').val(new Date().toISOString().split('T')[0]);
+
+        // Get device ID from URL
+        const pathParts = window.location.pathname.split('/');
+        deviceId = pathParts[pathParts.length - 1];
+
+        refreshInterval = parseInt($('#refresh-interval').val());
+
+        $('#refresh-interval').on('change', function () {
+            refreshInterval = parseInt($(this).val());
+            if (refreshIntervalId) {
+                clearTimeout(refreshIntervalId);
+                refreshIntervalId = setTimeout(loadDeviceData, refreshInterval);
+                console.log('Interval changed to:', refreshInterval);
+            }
+        });
+
+        $('#date-selector').on('change', function () {
+            loadDeviceData();
+        });
+
+        loadDeviceData();
+
+        $(window).resize(adjustTableHeight);
+    });
+</script>

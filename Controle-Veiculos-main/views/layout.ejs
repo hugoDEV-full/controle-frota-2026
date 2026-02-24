@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
+
+
+  <title>
+    <%= typeof title !=='undefined' ? title : 'Controle de Frota' %>
+  </title>
+
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/styles.css">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Leaflet.draw CSS via cdnjs -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+
+  <!-- Leaflet jS 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>-->
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- CSS do plugin Fullscreen -->
+  <link rel="stylesheet"
+    href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css" />
+  <style>
+    /* Layout básico */
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .container-wrapper {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ==========================
+       SIDEBAR (MENU) MELHORADO
+       - transições mais suaves
+       - expansão por hover quando colapsado
+       - animação de texto (fade/slide)
+       - mantém todas as funcionalidades existentes
+       ===========================*/
+
+    .sidebar {
+      background-color: #f8f9fa;
+      border-right: 1px solid #dee2e6;
+      overflow: hidden;
+
+      /* largura padrão e animação suave */
+      width: 250px;
+      min-width: 80px;
+      /* evita colapso extremo */
+
+      /* usar transition em propriedades que não forçam layout drasticamente */
+      transition: width 360ms cubic-bezier(.16, .84, .24, 1), box-shadow 300ms cubic-bezier(.2, .9, .2, 1), background-color 220ms cubic-bezier(.2, .9, .2, 1);
+      will-change: width;
+    }
+
+    /* estado colapsado: largura menor e somente ícones visíveis */
+    .sidebar.collapsed {
+      width: 80px;
+      box-shadow: none;
+    }
+
+    /* quando colapsado mas em hover, expandir temporariamente (melhor experiência UX) */
+    .sidebar.collapsed:hover {
+      width: 250px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+      transition: width 360ms cubic-bezier(.16, .84, .24, 1), box-shadow 300ms cubic-bezier(.2, .9, .2, 1);
+    }
+
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sidebar li {
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    /* estrutura do link: ícone + texto dentro de um flex para animar com facilidade */
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+      color: #4c4d4e;
+      text-decoration: none;
+
+      /* suaves transições em background, color e padding */
+      transition: background-color 180ms ease, color 160ms ease, padding 180ms ease;
+      white-space: nowrap;
+      /* evita quebra de texto */
+      overflow: hidden;
+    }
+
+    /* hover mais pronunciado e suave */
+    .sidebar a:hover,
+    .sidebar a.active {
+      background-color: #0d6efd;
+      color: #fff;
+    }
+
+    /* ícone: centralizado quando menu colapsado */
+    .sidebar i {
+      font-size: 1.25rem;
+      margin: 0;
+      min-width: 30px;
+      text-align: center;
+      flex-shrink: 0;
+      transition: transform 200ms ease;
+    }
+
+    /* texto do menu: animar com opacidade e translação em X para suavizar o aparecimento */
+    .menu-text {
+      display: inline-block;
+      transform-origin: left center;
+      transition: opacity 320ms cubic-bezier(.2, .9, .2, 1), transform 320ms cubic-bezier(.16, .84, .24, 1), max-width 260ms ease;
+      opacity: 1;
+      transform: translateX(0);
+      max-width: 1000px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* quando o sidebar está colapsado esconder o texto de forma animada (não usar display:none) */
+    .sidebar.collapsed a .menu-text {
+      opacity: 0;
+      transform: translateX(-8px);
+      max-width: 0;
+      pointer-events: none;
+      /* evita foco nas partes invisíveis */
+    }
+
+    /* ao passar o mouse sobre o sidebar colapsado, mostrar o texto com animação (consistente com .collapsed:hover width) */
+    .sidebar.collapsed:hover a .menu-text {
+      opacity: 1;
+      transform: translateX(0);
+      max-width: 1000px;
+      pointer-events: auto;
+    }
+
+    /* ajuste visual para centralizar ícones quando o menu está colapsado */
+    .sidebar.collapsed a {
+      justify-content: flex-start;
+    }
+
+    /* quando expandido, alinhar ícone+texto à esquerda como antes */
+    .sidebar:not(.collapsed) a {
+      justify-content: flex-start;
+    }
+
+    /* foco acessível e borda suave */
+    .sidebar a:focus {
+      outline: none;
+      box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    /* Conteúdo principal */
+    main {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    /* Navbar */
+    .navbar {
+      flex-shrink: 0;
+    }
+
+    /* Rodapé */
+    footer {
+      background-color: #f8f9fa;
+      padding: 1rem 0;
+      text-align: center;
+      border-top: 1px solid #dee2e6;
+      flex-shrink: 0;
+    }
+
+    #scrollBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      text-align: center;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Toggle button icon rotation (suave) */
+    #toggleSidebar i {
+      transition: transform 220ms ease;
+    }
+
+    /* quando o sidebar NÃO tiver a classe collapsed, rotaciona levemente o ícone para indicar estado */
+    #sidebar:not(.collapsed)+main~#toggleSidebar i {
+      transform: rotate(0deg);
+    }
+  </style>
+</head>
+<!-- oncontextmenu="return false;" para esconder o clique direito -->
+
+<body oncontextmenu="return false;">
+  <!-- Loader  -->
+  <div id="loading" style="
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:#fff;
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:2000;
+  ">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark bg-dark navbar-expand">
+    <div class="container-fluid">
+      <!-- Botão de toggle para a sidebar (esquerda) -->
+      <button id="toggleSidebar" class="btn btn-dark me-2" type="button" aria-expanded="false"
+        aria-label="Alternar menu lateral">
+        <i class="bi bi-list" style="font-size: 1.5rem;"></i>
+      </button>
+
+      <!-- Marca / título (opcional) -->
+      <a class="navbar-brand mb-0 h1" href="/"> <!-- coloque texto ou imagem se quiser -->
+        <span class="visually-hidden">Início</span>
+      </a>
+
+      <!-- Form de busca (fica após a marca) -->
+      <form action="/search" method="GET" class="d-flex ms-3 me-auto" role="search">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input class="form-control me-2" type="search" placeholder="Buscar..." aria-label="Buscar" name="q"
+          value="<%= typeof q !== 'undefined' ? q : '' %>">
+        <button class="btn btn-outline-success" type="submit" aria-label="Pesquisar">
+          <i class="bi bi-search me-1 fs-6" aria-hidden="true"></i>
+        </button>
+      </form>
+
+      <!-- Itens do lado direito -->
+      <ul class="navbar-nav d-flex flex-row align-items-center gap-2">
+        <!-- Notificações (apenas para admins) -->
+        <% if (user && user.role==='admin' ) { %>
+          <li class="nav-item">
+            <a class="nav-link position-relative" href="/notificacoes" id="notifLink" role="button"
+              aria-label="Notificações">
+              <i class="bi bi-bell" style="font-size:1.15rem;" aria-hidden="true"></i>
+              <span id="notifBadge"
+                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                style="display:none; font-size:0.65rem; min-width:18px; height:18px; line-height:18px;">
+                0
+              </span>
+            </a>
+          </li>
+
+          <% } %>
+
+            <!-- Botão logout -->
+            <li class="nav-item">
+              <a href="/logout" class="nav-link btn btn-sm btn-outline-light d-flex align-items-center"
+                aria-label="Sair">
+                <!-- troque pelo ícone que preferir (FontAwesome ou Bootstrap Icons) -->
+                <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline">Sair</span>
+              </a>
+            </li>
+      </ul>
+    </div>
+  </nav>
+
+
+  <!-- Container com Sidebar e Conteúdo -->
+  <div class="container-wrapper">
+    <!-- Sidebar fixa -->
+    <aside id="sidebar" class="sidebar collapsed">
+      <ul class="nav flex-column">
+
+        <!-- Itens comuns para todos -->
+        <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard">
+          <a class="nav-link <%= (activePage === 'dashboard' ? 'active' : '') %>" href="/">
+            <i class="bi bi-speedometer2"></i>
+            <span class="menu-text">Dashboard</span>
+          </a>
+        </li>
+
+        <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="Relatório de Uso — lista usos; editar para finalizar (km final, foto do odômetro)">
+          <a class="nav-link <%= (activePage === 'relatorio_uso' ? 'active' : '') %>" href="/relatorio-uso">
+            <i class="bi bi-bar-chart-line"></i>
+            <span class="menu-text">Rel. de Uso</span>
+          </a>
+        </li>
+
+        <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="Registrar motorista — preencha nome, e‑mail, dados da CNH (validade) e envie foto; clique em Salvar">
+          <a class="nav-link <%= (activePage === 'registro-motorista' ? 'active' : '') %>" href="/registro-motorista">
+            <i class="bi bi-person-plus"></i>
+            <span class="menu-text">Reg. Motorista</span>
+          </a>
+        </li>
+
+        <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="Tutorial — instruções rápidas de uso do sistema" }]}>
+          <a class="nav-link <%= activePage === 'tutorial' ? 'active' : '' %>" href="/tutorial">
+            <i class="bi bi-book"></i>
+            <span class="menu-text">Tutorial</span>
+          </a>
+        </li>
+
+
+
+
+        <% if (user.role==='admin' ) { %>
+
+
+          <!-- Seção de administrador -->
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right" title="Cadastrar novo dispositivo">
+            <a class="nav-link <%= (activePage === 'cadastrar-dispositivo' ? 'active' : '') %>"
+              href="/cadastrar-dispositivo">
+              <i class="bi bi-hdd-network"></i>
+              <span class="menu-text">Cadastrar Dispositivo</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right" title="Listar dispositivos">
+            <a class="nav-link <%= (activePage === 'listar-dispositivos' ? 'active' : '') %>"
+              href="/listar-dispositivos">
+              <i class="bi bi-list-ul"></i>
+              <span class="menu-text">Listar Dispositivos</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Relatório de Veículos — visão geral de frota, km e status de manutenção">
+            <a class="nav-link <%= (activePage === 'relatorio-veiculos' ? 'active' : '') %>" href="/relatorio-veiculos"
+              aria-label="Relatório de Veículos">
+              <i class="bi bi-car-front"></i>
+              <span class="menu-text">Relatório Veículos</span>
+            </a>
+          </li>
+
+
+
+
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Viagens — mostra cada uso com mapa; filtre por veículo, motorista e data">
+            <a id="link-viagens" class="nav-link <%= activePage==='viagensComUso'?'active':'' %>" href="/viagensComUso">
+              <i class="bi bi-truck"></i>
+              <span class="menu-text">Viagens</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Mapa de usos — simula trajetos por pontos GPS, playback por veículo/tempo" role="menuitem">
+            <a class="nav-link <%= activePage === 'mapa-usos' ? 'active' : '' %>" href="/mapa-usos"
+              aria-label="Mapa de usos" aria-current="<%= activePage === 'mapa-usos' ? 'page' : 'false' %>">
+              <i class="bi bi-map"></i>
+              <span class="menu-text">Mapa — Usos</span>
+            </a>
+          </li>
+
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Editar motorista — alterar dados, CNH e fotos; salvar alterações">
+            <a class="nav-link <%= (activePage === 'motoristas' ? 'active' : '') %>" href="/motoristas">
+              <i class="bi bi-person-badge"></i>
+              <span class="menu-text">Editar Motorista</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Multas — lista com placa, data/hora, motivo e anexos">
+            <a class="nav-link <%= (activePage === 'relatorio-multas' ? 'active' : '') %>" href="/relatorio-multas">
+              <i class="bi bi-file-earmark-text"></i>
+              <span class="menu-text">Rel. Multas</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Reembolsos — novo reembolso: escolha motorista, valor, anexe comprovante e salve">
+            <a class="nav-link <%= (activePage === 'reembolsos' ? 'active' : '') %>" href="/reembolsos">
+              <i class="bi bi-cash-stack"></i>
+              <span class="menu-text">Reembolsos</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Abastecimentos — ver histórico, filtrar e exportar">
+            <a class="nav-link <%= (activePage === 'abastecimentos' ? 'active' : '') %>" href="/abastecimentos">
+              <i class="bi bi-fuel-pump"></i>
+              <span class="menu-text">Abastecimentos</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Novo abastecimento — registrar novo abastecimento">
+            <a class="nav-link <%= (activePage === 'abastecimento-novo' ? 'active' : '') %>" href="/abastecimento/novo">
+              <i class="bi bi-plus-circle"></i>
+              <span class="menu-text">Novo Abastecimento</span>
+            </a>
+          </li>
+
+
+
+
+
+          <style>
+            /* Botão seta fechado */
+            .btn-submenu-toggle {
+              background-color: #f1f1f1;
+              color: #333;
+              border: none;
+            }
+
+            /* Hover no botão seta */
+            .btn-submenu-toggle:hover {
+              background-color: #e2e2e2;
+              color: #000;
+            }
+
+            /* Botão seta quando submenu ativo/aberto */
+            .btn-submenu-toggle.active {
+              background-color: #0d6efd;
+              color: #fff;
+            }
+          </style>
+
+          <!-- Manutenções -->
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Manutenções automáticas — criadas pelo sistema ao atingir km; marque como feita">
+            <a class="nav-link <%= activePage === 'manutencoes' ? 'active' : '' %>" href="/manutencoes">
+              <i class="bi bi-tools"></i>
+              <span class="menu-text">Manutenções</span>
+            </a>
+          </li>
+
+          <!-- Estatísticas de Manutenções -->
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Estatísticas gerais das manutenções da frota">
+            <a class="nav-link <%= activePage === 'manutencoes-estatisticas' ? 'active' : '' %>"
+              href="/manutencoes/estatisticas">
+              <i class="bi bi-bar-chart-line"></i>
+              <span class="menu-text">Estatísticas</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            data-bs-title="Estatísticas avançadas — KPIs, gráficos, uso de veículos, manutenção e custos">
+            <a class="nav-link <%= activePage === 'estatisticas-avancada' ? 'active' : '' %>"
+              href="/estatisticas-avancada" aria-label="Estatísticas avançadas">
+              <i class="bi bi-bar-chart-line-fill"></i>
+              <span class="menu-text">Estatísticas avançadas</span>
+            </a>
+          </li>
+
+
+          <!-- 
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Configurar thresholds — defina quilometragem que dispara manutenções automáticas">
+            <a class="nav-link <%= activePage === 'manutencoes-config' ? 'active' : '' %>" href="/manutencoes/config">
+              <i class="bi bi-sliders"></i>
+              <span class="menu-text">Configurar thresholds</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Manutenções manuais — adicione descrições, km e data manualmente">
+            <a class="nav-link <%= activePage === 'manutencoes-manuais' ? 'active' : '' %>" href="/manutencoes-manuais">
+              <i class="bi bi-pencil-square"></i>
+              <span class="menu-text">Manutenções Manuais</span>
+            </a>
+          </li>
+-->
+
+
+
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Relatório de Consumo — consumo por veículo; análise por período">
+            <a class="nav-link <%= (activePage === 'relatorio-consumo' ? 'active' : '') %>" href="/relatorio-consumo">
+              <i class="bi bi-speedometer"></i>
+              <span class="menu-text">Rel. Consumo</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Novo usuário — preencha nome, e‑mail, senha e tipo de acesso; salve">
+            <a class="nav-link <%= (activePage === 'register' ? 'active' : '') %>" href="/register">
+              <i class="bi bi-person-plus-fill"></i>
+              <span class="menu-text">Reg. Usuário</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Editar usuários — gerencie permissões e dados dos usuários">
+            <a class="nav-link <%= (activePage === 'usuarios' ? 'active' : '') %>" href="/usuarios">
+              <i class="bi bi-people-fill"></i>
+              <span class="menu-text">Editar Usuários</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Conserto Viável — consulte FIPE por marca/modelo/ano; informe custo do conserto e calcule viabilidade">
+            <a class="nav-link <%= (activePage === 'conserto-viavel' ? 'active' : '') %>" href="/conserto-viavel">
+              <i class="bi bi-wrench-adjustable-circle"></i>
+              <span class="menu-text">Conserto Viável</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Fotos da CNH — veja miniaturas e clique para ampliar">
+            <a class="nav-link <%= (activePage === 'fotos-cnh' ? 'active' : '') %>" href="/motoristas/fotos-cnh">
+              <i class="bi bi-card-image"></i>
+              <span class="menu-text">Fotos CNH</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Auditoria — registre e revise logs de alterações">
+            <a class="nav-link <%= (activePage === 'auditoria' ? 'active' : '') %>" href="/auditoria">
+              <i class="bi bi-journal-text"></i>
+              <span class="menu-text">Auditoria</span>
+            </a>
+          </li>
+
+          <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="right"
+            title="Dashboard — visão geral: status da frota, alertas e notificações">
+            <a class="nav-link <%= (activePage === 'gps-controle' ? 'active' : '') %>" href="/admin/gps-controle">
+              <i class="bi bi-geo-alt"></i>
+              <span class="menu-text">GEO Fence</span>
+            </a>
+          </li>
+
+
+
+
+
+          <% } %>
+
+      </ul>
+    </aside>
+
+
+    <!-- Conteúdo Principal -->
+    <main>
+      <!-- cada página será injetado aqui -->
+      <%- body %>
+    </main>
+    <!-- Botão de Scroll -->
+    <button id="scrollBtn" class="btn btn-primary">
+      <i id="scrollIcon" class="bi bi-chevron-expand"></i>
+
+    </button>
+    <script>
+
+      const csrfToken = document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute('content');
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const scrollBtn = document.getElementById("scrollBtn");
+
+        window.addEventListener("scroll", function () {
+          if (window.scrollY > 100) {
+            scrollBtn.style.display = "block";
+          } else {
+            scrollBtn.style.display = "none";
+          }
+        });
+
+        scrollBtn.addEventListener("click", function () {
+          if (window.scrollY > window.innerHeight / 2) {
+            window.scrollTo({ top: 0, behavior: "smooth" }); // Sobe rápido
+          } else {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); // Desce rápido
+          }
+        });
+      });
+    </script>
+    <script>
+      //Previne o uso do F12, Ctrl+Shift+I, Ctrl+Shift+J e Ctrl+U
+      document.addEventListener('keydown', function (e) {
+        if (e.key === "F12" ||
+          (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J")) ||
+          (e.ctrlKey && e.key === "U")) {
+          e.preventDefault();
+        }
+      }); 
+    </script>
+
+  </div>
+
+  <!-- Rodapé -->
+  <footer>
+    <div class="container">
+      <span>&copy; 2025 Controle de Frota. Todos os direitos reservados.</span>
+    </div>
+  </footer>
+
+
+  <!-- Bibliotecas externas com defer -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
+
+  <!-- 7) Leaflet.draw JS via cdnjs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+
+  <script>
+    // Inicializa os tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].forEach(el => new bootstrap.Tooltip(el));
+
+    // Toggle da sidebar
+    const toggleSidebar = document.getElementById('toggleSidebar');
+    const sidebar = document.getElementById('sidebar');
+
+    toggleSidebar.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+
+      // atualiza atributo aria para acessibilidade
+      const expanded = sidebar.classList.contains('collapsed') ? 'false' : 'true';
+      toggleSidebar.setAttribute('aria-expanded', expanded);
+
+      // animação do ícone (pequena rotação para indicar mudança) -- usa classe no botão
+      toggleSidebar.querySelector('i').style.transform = sidebar.classList.contains('collapsed') ? 'rotate(0deg)' : 'rotate(0deg)';
+
+    });
+  </script>
+
+  <script>
+    /**
+     * Bloqueia o menu de contexto (clique direito)
+     * @param {MouseEvent|Event} e
+     * @returns {boolean}
+     */
+    function disableContextMenu(e) {
+      e.preventDefault();
+      return false;
+    }
+
+    // Garantir que qualquer outro disparo de contextmenu seja bloqueado
+    document.addEventListener('contextmenu', disableContextMenu);
+  </script>
+  <script>
+    document.getElementById('link-viagens')
+      .addEventListener('click', function (e) {
+        e.preventDefault();
+        document.getElementById('loading').style.display = 'flex';
+        window.location.href = this.href;
+      });
+  </script>
+
+
+  <script>
+    /* Inline notifications JS - cole no layout.ejs antes do </body> */
+    document.addEventListener('DOMContentLoaded', () => {
+      const badge = document.getElementById('notifBadge');
+      const list = document.getElementById('notifList');
+      const markAllBtn = document.getElementById('markAllRead');
+      const csrf = (typeof csrfToken !== 'undefined' && csrfToken) || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+      function updateBadgeCount(count) {
+        if (!badge) return;
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.style.display = (count && count > 0) ? 'inline-block' : 'none';
+      }
+
+      async function fetchCount() {
+        try {
+          const res = await fetch('/notifications/unread-count', { credentials: 'same-origin' });
+          if (!res.ok) return;
+          const j = await res.json();
+          updateBadgeCount(j.count || 0);
+        } catch (e) {
+          console.warn('Erro fetchCount notifications:', e);
+        }
+      }
+
+      async function fetchList() {
+        if (!list) return;
+        // placeholder de carregamento
+        list.innerHTML = '<div class="px-3 py-2 text-muted small">Carregando...</div>';
+        try {
+          const res = await fetch('/notifications/list', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+          });
+          const raw = await res.text();
+          let rows;
+          try {
+            rows = raw ? JSON.parse(raw) : [];
+          } catch (parseErr) {
+            console.warn('Resposta não-JSON de /notifications/list:', raw, parseErr);
+            list.innerHTML = '<div class="px-3 py-2 text-danger small">Erro ao interpretar resposta do servidor</div>';
+            return;
+          }
+          if (!res.ok) {
+            // Se veio JSON mas com status não-OK, trate como vazio ou mensagem amigável
+            if (Array.isArray(rows)) {
+              list.innerHTML = rows.length ? '' : '<div class="px-3 py-2 text-muted small">Sem notificações</div>';
+              rows.forEach(r => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item d-flex align-items-start';
+                if (!r.lida) item.classList.add('bg-light');
+                item.innerHTML = `
+              <div class=\"flex-grow-1\">
+                <div class=\"small text-muted\">${new Date(r.criado_em).toLocaleString()}</div>
+                <div>${r.mensagem}</div>
+              </div>
+              <div class=\"ms-2\">
+                <button class=\"btn btn-sm btn-outline-secondary mark-read\" data-id=\"${r.id}\">OK</button>
+              </div>`;
+                list.appendChild(item);
+              });
+              // bind dos botões OK
+              list.querySelectorAll('.mark-read').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                  const id = e.currentTarget.dataset.id;
+                  const csrfLocal = csrf || document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content');
+                  await fetch(`/notifications/mark-read/${id}`, { method: 'POST', credentials: 'same-origin', headers: csrfLocal ? { 'X-CSRF-Token': csrfLocal } : undefined });
+                  fetchCount();
+                  fetchList();
+                });
+              });
+              return;
+            }
+            list.innerHTML = `<div class=\"px-3 py-2 text-danger small\">Erro ao carregar notificações (HTTP ${res.status})</div>`;
+            return;
+          }
+          list.innerHTML = '';
+          if (!Array.isArray(rows) || !rows.length) {
+            list.innerHTML = '<div class="px-3 py-2 text-muted small">Sem notificações</div>';
+            return;
+          }
+          rows.forEach(r => {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item d-flex align-items-start';
+            if (!r.lida) item.classList.add('bg-light');
+            item.innerHTML = `
+          <div class="flex-grow-1">
+            <div class="small text-muted">${new Date(r.criado_em).toLocaleString()}</div>
+            <div>${r.mensagem}</div>
+          </div>
+          <div class="ms-2">
+            <button class="btn btn-sm btn-outline-secondary mark-read" data-id="${r.id}">OK</button>
+          </div>
+        `;
+            list.appendChild(item);
+          });
+
+          list.querySelectorAll('.mark-read').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const id = e.currentTarget.dataset.id;
+              const csrfLocal = csrf || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+              await fetch(`/notifications/mark-read/${id}`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: csrfLocal ? { 'X-CSRF-Token': csrfLocal } : undefined
+              });
+              fetchCount();
+              fetchList();
+            });
+          });
+        } catch (e) {
+          console.warn('Erro fetchList notifications:', e);
+          list.innerHTML = '<div class="px-3 py-2 text-danger small">Erro de rede ao carregar notificações</div>';
+        }
+      }
+
+      if (markAllBtn) {
+        markAllBtn.addEventListener('click', async () => {
+          await fetch('/notifications/mark-all-read', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: csrf ? { 'X-CSRF-Token': csrf } : undefined
+          });
+          fetchCount();
+          fetchList();
+        });
+      }
+
+      // Atualiza lista ao abrir o dropdown
+      const notifToggle = document.getElementById('notifDropdown');
+      if (notifToggle) {
+        // Ao abrir o dropdown
+        notifToggle.addEventListener('show.bs.dropdown', () => {
+          fetchCount();
+          fetchList();
+        });
+        // Clique no sino também força atualização
+        notifToggle.addEventListener('click', () => {
+          fetchCount();
+          fetchList();
+        });
+      }
+
+      if (typeof io !== 'undefined') {
+        try {
+          const socket = io();
+          socket.on('connect', () => { });
+          socket.on('newNotification', () => { fetchCount(); fetchList(); });
+          socket.on('oilChangeNotification', () => { fetchCount(); fetchList(); });
+          socket.on('manutencao:criada', () => { fetchCount(); fetchList(); });
+          socket.on('manutencao:realizada', () => { fetchCount(); fetchList(); });
+        } catch (e) {
+          console.warn('Erro ao conectar socket.io para notifications:', e);
+        }
+      }
+
+      // inicializa
+      fetchCount();
+      fetchList();
+      // fallback: atualiza o badge a cada 30s mesmo sem eventos socket
+      setInterval(fetchCount, 30000);
+    });
+  </script>
+
+</body>
+
+</html>

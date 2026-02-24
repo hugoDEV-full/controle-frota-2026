@@ -1,0 +1,66 @@
+<%
+// manutencao-nova.ejs
+// Variáveis esperadas: veiculo (obj), csrfToken, user
+function fmtDateInput(d) { if (!d) return ''; if (typeof d === 'string') return d.substring(0,10); try { return d.toISOString().substring(0,10); } catch(e) { return ''; } }
+%>
+
+<div class="container-fluid my-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Nova manutenção</h5>
+            <small class="text-muted">Veículo: <%= veiculo.nome %> <%= veiculo.placa ? '(' + veiculo.placa + ')' : '' %></small>
+          </div>
+          <div>
+            <a href="/veiculos/<%= veiculo.id %>/manutencoes" class="btn btn-sm btn-outline-secondary">Voltar</a>
+          </div>
+        </div>
+
+        <form action="/veiculos/<%= veiculo.id %>/manutencoes" method="post" enctype="multipart/form-data" class="card-body">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <div class="mb-3">
+            <label for="tipo" class="form-label">Tipo (livre)</label>
+            <input id="tipo" name="tipo" type="text" class="form-control" placeholder="Descreva o tipo de manutenção (ex: Troca de óleo, Rodízio...)" autocomplete="off">
+            <div class="form-text">Campo livre: escreva o tipo de manutenção.</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="descricao" class="form-label">Descrição</label>
+            <textarea id="descricao" name="descricao" rows="4" class="form-control" placeholder="Detalhes da manutenção..."></textarea>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <label for="km_agendado" class="form-label">KM agendado</label>
+              <input type="number" id="km_agendado" name="km_agendado" class="form-control">
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label for="data_agendada" class="form-label">Data agendada</label>
+              <input type="date" id="data_agendada" name="data_agendada" class="form-control" value="<%= fmtDateInput(new Date()) %>">
+            </div>
+
+            <div class="col-12 col-md-4 d-grid">
+              <label class="form-label d-none d-md-block">&nbsp;</label>
+              <div class="d-grid d-md-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100 w-md-auto">Criar manutenção</button>
+                <a href="/veiculos/<%= veiculo.id %>/manutencoes" class="btn btn-outline-secondary w-100 w-md-auto">Cancelar</a>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="mb-3">
+            <label for="fotos" class="form-label">Anexos (fotos / PDFs)</label>
+            <input type="file" id="fotos" name="fotos" multiple accept="image/*,application/pdf" class="form-control">
+            <div class="form-text">Você pode adicionar imagens ou PDFs. Arquivos serão vinculados após criar a manutenção.</div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

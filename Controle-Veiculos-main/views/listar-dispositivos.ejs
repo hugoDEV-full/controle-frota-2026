@@ -1,0 +1,78 @@
+
+
+<head>
+
+  <title><%= title %></title>
+  
+</head>
+
+
+  <div class="container-fluid py-4">
+    <div class="row">
+      <div class="col-12 mb-3 d-flex justify-content-between align-items-center">
+        <h2 class="h5 mb-0">Dispositivos Cadastrados</h2>
+        <a href="/cadastrar-dispositivo" class="btn btn-primary btn-sm">
+          + Novo Dispositivo
+        </a>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-12">
+        <div class="table-responsive"><!-- wrapper responsivo -->
+          <table class="table table-striped align-middle">
+            <thead class="table-light">
+              <tr>
+                <th class="text-nowrap">ID</th>
+                <th class="text-nowrap">Hostname</th>
+                <th class="text-nowrap">Hash</th>
+                <th class="text-nowrap">Status</th>
+                <th class="text-nowrap">Criado em</th>
+                <th class="text-nowrap">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% devices.forEach(d => { %>
+                <tr>
+                  <td class="text-truncate" style="max-width:120px;"><%= d.dev_id %></td>
+                  <td class="text-truncate" style="max-width:150px;"><%= d.dev_name %></td>
+                  <td class="text-truncate" style="max-width:150px;"><%= d.dev_key %></td>
+                  <td>
+                    <% if (d.dev_status === 1) { %>
+                      <span class="badge bg-success">Autorizado</span>
+                    <% } else { %>
+                      <span class="badge bg-secondary">Pendente</span>
+                    <% } %>
+                  </td>
+                  <td class="text-nowrap"><%= new Date(d.dev_created).toLocaleString('pt-BR') %></td>
+                  <td>
+                    <div class="d-flex flex-wrap gap-1">
+                      <a href="/editar-dispositivo/<%= d.dev_id %>" class="btn btn-warning btn-sm flex-grow-1">
+                        <i class="bi bi-pencil-square me-1"></i>Editar
+                      </a>
+                      <form action="/excluir-dispositivo/<%= d.dev_id %>" method="POST" class="flex-grow-1">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-danger btn-sm w-100" onclick="return confirmarExclusao()">
+                          <i class="bi bi-trash"></i>
+                          Excluir
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function confirmarExclusao() {
+      if (!confirm('Tem certeza que deseja excluir este dispositivo?')) return false;
+      if (!confirm('Essa ação é irreversível. Deseja continuar mesmo assim?')) return false;
+      if (!confirm('Última chance: excluir mesmo?')) return false;
+      return true;
+    }
+  </script>

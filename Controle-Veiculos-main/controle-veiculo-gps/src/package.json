@@ -1,0 +1,63 @@
+{
+    "name": "frota-server",
+    "private": true,
+    "version": "0.10.9",
+    "description": "servidor websocket para comunicação com celulares.",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js --production",
+        "dev": "ts-node-dev --clear --respawn --transpile-only -- index.js --dev",
+        "livereload": "livereload -p 35729 -x node_modules -e ts,ejs -w 250",
+        "live": "npm version patch --no-git-tag-version --no-commit-hooks && npm install --no-audit --no-fund --silent && concurrently --prefix none \"npm run dev\" \"npm run livereload\""
+    },
+    "nodemonConfig": {
+        "ignore": [
+            "node_modules/*"
+        ],
+        "watch": [
+            "*"
+        ],
+        "restartable": "rs",
+        "delay": 100,
+        "verbose": false,
+        "legacyWatch": false,
+        "ext": "js",
+        "exec": "node index.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "keywords": [
+        "sau-celular",
+        "websocket",
+        "inova"
+    ],
+    "author": "INOVA Dev Team",
+    "license": "ISC",
+    "dependencies": {
+        "bcrypt": "^6.0.0",
+        "browser-sync": "^3.0.4",
+        "concurrently": "latest",
+        "dotenv": "^7.0.0",
+        "ejs": "^3.1.10",
+        "express": "^4.21.2",
+        "express-session": "^1.18.1",
+        "firebase-admin": "^12.3.0",
+        "fs": "^0.0.1-security",
+        "google-auth-library": "^9.13.0",
+        "http": "0.0.0",
+        "livereload": "latest",
+        "moment": "^2.30.1",
+        "mysql2": "^3.14.1",
+        "node-fetch": "latest",
+        "nodemon": "^3.1.10",
+        "passport": "^0.7.0",
+        "passport-local": "^1.0.0",
+        "session-file-store": "^1.5.0",
+        "sharp": "^0.34.1",
+        "socket.io": "^2.2.0",
+        "socket.io-client": "^2.2.0",
+        "ts-node-dev": "^2.0.0"
+    }
+}

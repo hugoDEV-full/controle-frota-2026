@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Registrar Veículo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .img-preview{display:inline-block;width:140px;height:100px;border:1px solid #ddd;border-radius:6px;object-fit:cover;margin-right:8px}
+    .preview-wrap{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+    .preview-meta{font-size:0.85rem;color:#666}
+    .remove-preview{cursor:pointer;font-size:0.9rem;color:#c00;margin-left:6px}
+    .file-error{color:#c00;font-size:0.85rem;margin-top:6px;display:block}
+  </style>
+</head>
+<body>
+  <div class="container mt-4 mb-5">
+    <h1>Registrar Veículo</h1>
+    <p>Usuário: <strong><%= user?.email || '—' %></strong> | Permissão: <strong><%= user?.role || '—' %></strong></p>
+
+    <% if (errors && errors.length) { %>
+      <div class="alert alert-danger">
+        <ul class="mb-0">
+          <% errors.forEach(err => { %>
+            <li><%= (typeof err === 'string') ? err : (err.msg || JSON.stringify(err)) %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+
+    <form id="form-registrar" action="/registrar-veiculo" method="POST" enctype="multipart/form-data" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="row g-3">
+        <!-- Nome / Placa -->
+        <div class="col-md-6">
+          <label for="nome" class="form-label">Nome do Veículo</label>
+          <input id="nome" name="nome" type="text" required class="form-control <%= errorFields.includes('nome') ? 'is-invalid' : '' %>" value="<%= data.nome || '' %>">
+          <div class="invalid-feedback">Nome é obrigatório.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="placa" class="form-label">Placa</label>
+          <input id="placa" name="placa" type="text" required pattern="[A-Z0-9]{3}-[A-Z0-9]{4}" title="Ex: ABC-1234" class="form-control <%= errorFields.includes('placa') ? 'is-invalid' : '' %>" value="<%= data.placa || '' %>">
+          <div class="invalid-feedback">Informe uma placa no formato ABC-1234.</div>
+        </div>
+
+        <!-- KM / Última Troca -->
+        <div class="col-md-4">
+          <label for="km" class="form-label">Quilometragem</label>
+          <input id="km" name="km" type="number" min="0" required class="form-control <%= errorFields.includes('km') ? 'is-invalid' : '' %>" value="<%= data.km || '' %>">
+          <div class="invalid-feedback">Quilometragem deve ser >= 0.</div>
+        </div>
+
+        <div class="col-md-4">
+          <label for="ultimaTrocaOleo" class="form-label">Última Troca de Óleo (km)</label>
+          <input id="ultimaTrocaOleo" name="ultimaTrocaOleo" type="number" min="0" required class="form-control <%= errorFields.includes('ultimaTrocaOleo') ? 'is-invalid' : '' %>" value="<%= data.ultimaTrocaOleo || '' %>">
+          <div class="invalid-feedback">Informe a quilometragem da última troca.</div>
+        </div>
+ <hr>
+ <h4>FIPE: marca / modelo / ano</h4>
+        <!-- Marca / Modelo / Ano — APENAS FIPE -->
+        <div class="col-md-4">
+          <label for="marca_fipe" class="form-label">Marca (FIPE)</label>
+          <select id="marca_fipe" name="marca" class="form-select <%= errorFields.includes('marca') ? 'is-invalid' : '' %>">
+            <option value="">-- carregando marcas... --</option>
+          </select>
+        </div>
+
+        <div class="col-md-5">
+          <label for="modelo_fipe" class="form-label">Modelo (FIPE)</label>
+          <select id="modelo_fipe" name="modelo" class="form-select <%= errorFields.includes('modelo') ? 'is-invalid' : '' %>">
+            <option value="">-- selecione modelo --</option>
+          </select>
+          <div class="invalid-feedback">Modelo é obrigatório.</div>
+        </div>
+
+        <div class="col-md-3">
+          <label for="ano_fipe" class="form-label">Ano (FIPE)</label>
+          <select id="ano_fipe" name="ano" class="form-select <%= errorFields.includes('ano') ? 'is-invalid' : '' %>">
+            <option value="">-- selecione ano --</option>
+          </select>
+          <div class="invalid-feedback">Ano é obrigatório.</div>
+        </div>
+
+           <!-- Ano fabricação (mantido) -->
+        <div class="col-md-4">
+          <label for="ano_fabricacao" class="form-label">Ano de Fabricação</label>
+          <input id="ano_fabricacao" name="ano_fabricacao" type="text" class="form-control" value="<%= data.ano_fabricacao || '' %>">
+        </div>
+
+        <!-- Cor -->
+        <div class="col-md-3">
+          <label for="cor" class="form-label">Cor</label>
+          <input id="cor" name="cor" type="text" required class="form-control <%= errorFields.includes('cor') ? 'is-invalid' : '' %>" value="<%= data.cor || '' %>">
+          <div class="invalid-feedback">Cor é obrigatória.</div>
+        </div>
+
+        <!-- Device select (device_id) -->
+        <div class="col-md-6">
+          <label for="device_id" class="form-label">Dispositivo GPS</label>
+          <select id="device_id" name="device_id" class="form-select <%= errorFields.includes('device_id') ? 'is-invalid' : '' %>">
+            <option value="">-- selecione --</option>
+            <% devices.forEach(d => { %>
+              <option value="<%= d.dev_id %>" <%= String(data.device_id || '') === String(d.dev_id) ? 'selected' : '' %>><%= d.dev_name %></option>
+            <% }) %>
+          </select>
+          <div class="invalid-feedback">Selecione um dispositivo GPS.</div>
+        </div>
+<hr>
+        <h4>Novos Dados</h4>
+        <!-- RENAVAM / Chassi -->
+        <div class="col-md-6">
+          <label for="renavam" class="form-label">RENAVAM</label>
+          <input id="renavam" name="renavam" type="text" class="form-control" value="<%= data.renavam || '' %>">
+        </div>
+
+        <div class="col-md-6">
+          <label for="chassi" class="form-label">Chassi</label>
+          <input id="chassi" name="chassi" type="text" class="form-control" value="<%= data.chassi || '' %>">
+        </div>
+
+     
+        <hr>
+<h4>Identificação / Tipologia</h4>
+        <!-- Tipologia (select) -->
+        <div class="col-md-4">
+          <label for="tipologia_sel" class="form-label">Tipologia</label>
+          <select id="tipologia_sel" name="tipologia" class="form-select">
+            <% const tipologias = ['USA','USB','Passeio','Utilitário','Carga','Ônibus','Motocicleta','Outro']; %>
+            <option value="">-- selecione --</option>
+            <% tipologias.forEach(t => { %>
+              <option value="<%= t %>" <%= String(data.tipologia||'') === t ? 'selected' : '' %>><%= t %></option>
+            <% }) %>
+          </select>
+        </div>
+    <hr>
+<h4>Documentação</h4>
+        <!-- Licenciamento (date) -->
+        <div class="col-md-3">
+          <label for="licenciamento" class="form-label">Licenciamento</label>
+          <input id="licenciamento" name="licenciamento" type="date" class="form-control"
+            value="<%= (typeof data.licenciamento === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.licenciamento)) ? data.licenciamento : '' %>">
+        </div>
+
+        <!-- Seguro DPVAT (date) -->
+        <div class="col-md-3">
+          <label for="seguro_dpvat" class="form-label">Seguro DPVAT </label>
+          <input id="seguro_dpvat" name="seguro_dpvat" type="date" class="form-control"
+            value="<%= (typeof data.seguro_dpvat === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.seguro_dpvat)) ? data.seguro_dpvat : '' %>">
+        </div>
+
+        <!-- CRLV: APENAS DATE (name="crlv") -->
+        <div class="col-md-6">
+          <label for="crlv" class="form-label">CRLV </label>
+          <input id="crlv" name="crlv" type="date" class="form-control"
+            value="<%= (typeof data.crlv === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.crlv)) ? data.crlv : '' %>">
+          
+        </div>
+
+        <!-- Status IPVA -->
+        <div class="col-md-3">
+          <label for="status_ipva" class="form-label">Status IPVA</label>
+          <select id="status_ipva" name="status_ipva" class="form-select">
+            <option value="">-- selecione --</option>
+            <% const ipvas = ['Pago','Não pago','Isento','Parcelado','Outro']; ipvas.forEach(s=>{ %>
+              <option value="<%= s %>" <%= String(data.status_ipva||'') === s ? 'selected' : '' %>><%= s %></option>
+            <% }) %>
+          </select>
+        </div>
+ <hr>
+<h4>Especificações Técnicas</h4>
+        <!-- Tipo combustível -->
+        <div class="col-md-4">
+          <label for="tipo_combustivel" class="form-label">Tipo de Combustível</label>
+          <select id="tipo_combustivel" name="tipo_combustivel" class="form-select">
+            <% const combustiveis = ['Gasolina','Flex','Diesel','GNV','Elétrico','Híbrido','Outro']; %>
+            <option value="">-- selecione --</option>
+            <% combustiveis.forEach(c=>{ %>
+              <option value="<%= c %>" <%= String(data.tipo_combustivel||'') === c ? 'selected' : '' %>><%= c %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- CAPACIDADE DE CARGA — input number (kg exato) -->
+        <div class="col-md-4">
+          <label for="capacidade_carga" class="form-label">Capacidade de Carga (kg) — valor exato</label>
+          <input id="capacidade_carga" name="capacidade_carga" type="number" min="0" step="1" class="form-control" placeholder="Ex: 500" value="<%= (data.capacidade_carga !== undefined && data.capacidade_carga !== null) ? String(data.capacidade_carga) : '' %>">
+          <div class="form-text small">Informe o valor em kg (número exato). Deixe vazio se não souber.</div>
+        </div>
+
+        <div class="col-md-4">
+          <label for="capacidade_passageiros" class="form-label">Capacidade Passageiros</label>
+          <select id="capacidade_passageiros" name="capacidade_passageiros" class="form-select">
+            <option value="">-- selecione --</option>
+            <% for (let i=1;i<=60;i++){ %>
+              <option value="<%= i %>" <%= String(data.capacidade_passageiros||'') === String(i) ? 'selected' : '' %>><%= i %></option>
+            <% } %>
+          </select>
+        </div>
+
+        <!-- POTÊNCIA DO MOTOR — input number (cv exato) -->
+        <div class="col-md-4">
+          <label for="potencia_motor" class="form-label">Potência do Motor (cv) — valor exato</label>
+          <input id="potencia_motor" name="potencia_motor" type="number" min="1" step="1" class="form-control" placeholder="Ex: 110" value="<%= (data.potencia_motor !== undefined && data.potencia_motor !== null) ? String(data.potencia_motor) : '' %>">
+          <div class="form-text small">Informe potência em cv (número inteiro).</div>
+        </div>
+
+        <!-- Dimensões / Calibragem -->
+        <div class="col-md-4">
+          <label for="dimensoes" class="form-label">Dimensões</label>
+          <input id="dimensoes" name="dimensoes" type="text" class="form-control" value="<%= data.dimensoes || '' %>">
+        </div>
+        <hr>
+<h4>Manutenção Preventiva</h4>
+
+        <div class="col-md-4">
+          <label for="calibragem_pneus_sel" class="form-label">Calibragem dos Pneus (psi)</label>
+          <select id="calibragem_pneus_sel" name="calibragem_pneus" class="form-select">
+            <% const pressures = ['28','30','32','34','36','38','Outro']; %>
+            <option value="">-- selecione --</option>
+            <% pressures.forEach(pp=>{ %>
+              <option value="<%= pp %>" <%= String(data.calibragem_pneus||'') === pp ? 'selected' : '' %>><%= pp %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- Vencimentos -->
+        <div class="col-md-4">
+          <label for="venc_extintor" class="form-label">Venc. Extintor</label>
+          <input id="venc_extintor" name="venc_extintor" type="date" class="form-control" value="<%= (typeof data.venc_extintor === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.venc_extintor)) ? data.venc_extintor : '' %>">
+        </div>
+
+        <div class="col-md-4">
+          <label for="venc_triangulo" class="form-label">Venc. Triângulo</label>
+          <input id="venc_triangulo" name="venc_triangulo" type="date" class="form-control" value="<%= (typeof data.venc_triangulo === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.venc_triangulo)) ? data.venc_triangulo : '' %>">
+        </div>
+
+        <div class="col-md-4">
+          <label for="venc_colete" class="form-label">Venc. Colete</label>
+          <input id="venc_colete" name="venc_colete" type="date" class="form-control" value="<%= (typeof data.venc_colete === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.venc_colete)) ? data.venc_colete : '' %>">
+        </div>
+        <hr>
+<h4>Fotos do Veículo</h4>
+        <!-- Uploads -->
+        <div class="col-12 mt-2">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="foto_frente" class="form-label">Foto Frente</label>
+              <input id="foto_frente" name="foto_frente" type="file" accept="image/*" class="form-control">
+              <span id="foto_frente_error" class="file-error" style="display:none;"></span>
+              <div id="preview_foto_frente" class="preview-wrap"></div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="foto_traseira" class="form-label">Foto Traseira</label>
+              <input id="foto_traseira" name="foto_traseira" type="file" accept="image/*" class="form-control">
+              <span id="foto_traseira_error" class="file-error" style="display:none;"></span>
+              <div id="preview_foto_traseira" class="preview-wrap"></div>
+            </div>
+
+            <div class="col-md-4">
+              <label for="foto_banco" class="form-label">Foto Banco</label>
+              <input id="foto_banco" name="foto_banco" type="file" accept="image/*" class="form-control">
+              <span id="foto_banco_error" class="file-error" style="display:none;"></span>
+              <div id="preview_foto_banco" class="preview-wrap"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Registrar</button>
+        <a href="/" class="btn btn-secondary ms-2">Voltar</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+  // Dados iniciais
+  const INITIAL_DATA = <%- JSON.stringify(data || {}) %>;
+  const FIPE_RAW = <%- JSON.stringify(typeof fipe === 'undefined' ? null : fipe) %>;
+  </script>
+
+  <script>
+  /**********************
+   * FIPE selects loader
+   **********************/
+  (function(){
+    const BASE = 'https://parallelum.com.br/fipe/api/v1';
+    const selectMarca = document.getElementById('marca_fipe');
+    const selectModelo = document.getElementById('modelo_fipe');
+    const selectAno = document.getElementById('ano_fipe');
+
+    function clearSelect(sel){ while(sel.options.length) sel.remove(0); }
+    function addOption(sel,val,text,selected){ const o=document.createElement('option'); o.value=val; o.text=text; if(selected) o.selected=true; sel.add(o); }
+
+    async function fetchJson(url){
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      return res.json();
+    }
+
+    async function loadMarcas(){
+      try {
+        selectMarca.disabled = true;
+        clearSelect(selectMarca);
+        addOption(selectMarca,'','-- carregando marcas --');
+
+        const data = await fetchJson(`${BASE}/carros/marcas`);
+        const marcas = Array.isArray(data) ? data : (data.marcas || []);
+        clearSelect(selectMarca);
+        addOption(selectMarca,'','-- selecione marca --');
+        marcas.forEach(m=>{
+          const code = m.codigo ?? m.id ?? m.code ?? m.codigo_marca ?? m.name ?? m.nome ?? m;
+          const name = m.nome ?? m.name ?? m.nome_marca ?? m;
+          addOption(selectMarca,String(code),String(name), String(INITIAL_DATA.marca||'')===String(code) || String(INITIAL_DATA.marca||'')===String(name));
+        });
+        selectMarca.disabled = false;
+
+        const initialMarca = INITIAL_DATA.marca || '';
+        if(initialMarca){
+          let matched = [...selectMarca.options].find(o=>String(o.value)===String(initialMarca));
+          if(!matched) matched = [...selectMarca.options].find(o=>String(o.text)===String(initialMarca));
+          if(matched){ selectMarca.value = matched.value; loadModelos(matched.value, true).catch(()=>{}); }
+        }
+      } catch(err){
+        console.warn('FIPE marcas falhou:', err);
+        selectMarca.innerHTML = '<option value="">(FIPE indisponível)</option>';
+        selectModelo.innerHTML = '<option value="">(FIPE indisponível)</option>';
+        selectAno.innerHTML = '<option value="">(FIPE indisponível)</option>';
+      }
+    }
+
+    async function loadModelos(marcaCode, markSelected=false){
+      try {
+        selectModelo.disabled = true;
+        clearSelect(selectModelo);
+        addOption(selectModelo,'','-- carregando modelos --');
+
+        const data = await fetchJson(`${BASE}/carros/marcas/${marcaCode}/modelos`);
+        let modelos = [];
+        if(Array.isArray(data)) modelos = data;
+        else if(Array.isArray(data.modelos)) modelos = data.modelos;
+
+        clearSelect(selectModelo);
+        addOption(selectModelo,'','-- selecione modelo --');
+        modelos.forEach(m=>{
+          const code = m.codigo ?? m.id ?? m.codigo_modelo ?? m.name ?? m.nome ?? m;
+          const name = m.nome ?? m.name ?? m.modelName ?? m;
+          addOption(selectModelo,String(code),String(name), markSelected && (String(INITIAL_DATA.modelo||'')===String(code) || String(INITIAL_DATA.modelo||'')===String(name)));
+        });
+        selectModelo.disabled = false;
+
+        if(markSelected && INITIAL_DATA.modelo){
+          let matched = [...selectModelo.options].find(o=>String(o.value)===String(INITIAL_DATA.modelo));
+          if(!matched) matched = [...selectModelo.options].find(o=>String(o.text)===String(INITIAL_DATA.modelo));
+          if(matched){ selectModelo.value = matched.value; await loadAnos(marcaCode, matched.value, true); }
+        } else {
+          clearSelect(selectAno);
+          addOption(selectAno,'','-- selecione ano --');
+        }
+      } catch(err){
+        console.warn('FIPE modelos falhou:', err);
+        selectModelo.innerHTML = '<option value="">(FIPE indisponível)</option>';
+        selectAno.innerHTML = '<option value="">(FIPE indisponível)</option>';
+      }
+    }
+
+    async function loadAnos(marcaCode, modeloCode, markSelected=false){
+      try {
+        selectAno.disabled = true;
+        clearSelect(selectAno);
+        addOption(selectAno,'','-- carregando anos --');
+
+        const data = await fetchJson(`${BASE}/carros/marcas/${marcaCode}/modelos/${modeloCode}/anos`);
+        const anos = Array.isArray(data) ? data : (data.anos || data.years || []);
+        clearSelect(selectAno);
+        addOption(selectAno,'','-- selecione ano --');
+        anos.forEach(a=>{
+          const code = a.codigo ?? a.id ?? a.value ?? a.ano ?? a.label ?? a;
+          const label = a.nome ?? a.name ?? a.label ?? a.ano ?? a;
+          addOption(selectAno,String(code),String(label), markSelected && String(INITIAL_DATA.ano||'')===String(code));
+        });
+        selectAno.disabled = false;
+
+        if(markSelected && INITIAL_DATA.ano){
+          let matched = [...selectAno.options].find(o=>String(o.value)===String(INITIAL_DATA.ano));
+          if(!matched) matched = [...selectAno.options].find(o=>String(o.text)===String(INITIAL_DATA.ano));
+          if(matched) selectAno.value = matched.value;
+        }
+      } catch(err){
+        console.warn('FIPE anos falhou:', err);
+        selectAno.innerHTML = '<option value="">(FIPE indisponível)</option>';
+      }
+    }
+
+    // eventos
+    selectMarca.addEventListener('change', e => {
+      const v = e.target.value;
+      if(!v){
+        clearSelect(selectModelo); addOption(selectModelo,'','-- selecione modelo --');
+        clearSelect(selectAno); addOption(selectAno,'','-- selecione ano --');
+        return;
+      }
+      loadModelos(v,false);
+    });
+
+    selectModelo.addEventListener('change', e=>{
+      const modelCode = e.target.value;
+      const marcaCode = selectMarca.value;
+      if(modelCode && marcaCode) loadAnos(marcaCode, modelCode, false);
+    });
+
+    // inicializa
+    loadMarcas();
+
+    // validações antes do submit
+    document.getElementById('form-registrar').addEventListener('submit', function(e){
+      // exige selects FIPE preenchidos
+      if(!selectModelo.value || !selectAno.value){
+        e.preventDefault(); e.stopPropagation();
+        alert('Por favor selecione Modelo e Ano usando os selects FIPE.');
+        return;
+      }
+      // valida numéricos exatos
+      const pot = document.getElementById('potencia_motor').value;
+      const carga = document.getElementById('capacidade_carga').value;
+      if(pot && (!/^\d+$/.test(pot) || Number(pot) <= 0)){
+        e.preventDefault(); e.stopPropagation(); alert('Informe potência do motor válida (número inteiro positivo).'); return;
+      }
+      if(carga && (!/^\d+$/.test(carga) || Number(carga) < 0)){
+        e.preventDefault(); e.stopPropagation(); alert('Informe capacidade de carga válida (kg).'); return;
+      }
+      // valida crlv (se preenchido deve estar no formato YYYY-MM-DD)
+      const crlvVal = document.getElementById('crlv').value;
+      if(crlvVal && !/^\d{4}-\d{2}-\d{2}$/.test(crlvVal)){
+        e.preventDefault(); e.stopPropagation(); alert('CRLV deve ser uma data no formato YYYY-MM-DD.'); return;
+      }
+    });
+  })();
+  </script>
+
+  <script>
+  // image preview + bootstrap validation
+  (function(){
+    const MAX = 5*1024*1024;
+    function setup(inputId, previewId, errId) {
+      const input = document.getElementById(inputId);
+      const preview = document.getElementById(previewId);
+      const err = document.getElementById(errId);
+      if(!input||!preview) return;
+      function clearAll(){ preview.innerHTML=''; if(err){err.style.display='none'; err.textContent='';} input.classList.remove('is-invalid'); }
+      function mk(file){
+        clearAll();
+        if(!file) return;
+        if(file.size>MAX){ if(err){err.style.display='block'; err.textContent='Arquivo maior que 5MB'} input.classList.add('is-invalid'); }
+        if(!file.type.startsWith('image/')){ if(err){err.style.display='block'; err.textContent='Arquivo não é imagem'} input.classList.add('is-invalid'); return; }
+        const img=document.createElement('img'); img.className='img-preview'; img.alt=file.name;
+        const meta=document.createElement('div'); meta.className='preview-meta'; meta.textContent=`${file.name} (${Math.round(file.size/1024)} KB)`;
+        const rem=document.createElement('span'); rem.className='remove-preview'; rem.textContent='Remover'; rem.addEventListener('click',()=>{ input.value=''; clearAll(); });
+        const r=new FileReader(); r.onload=(e)=>{ img.src=e.target.result; preview.appendChild(img); const info=document.createElement('div'); info.appendChild(meta); info.appendChild(rem); preview.appendChild(info); };
+        r.readAsDataURL(file);
+      }
+      input.addEventListener('change', e=>{ const f=e.target.files && e.target.files[0]; if(f) mk(f); else clearAll(); });
+    }
+    setup('foto_frente','preview_foto_frente','foto_frente_error');
+    setup('foto_traseira','preview_foto_traseira','foto_traseira_error');
+    setup('foto_banco','preview_foto_banco','foto_banco_error');
+  })();
+
+  (function(){
+    'use strict';
+    const forms=document.querySelectorAll('form[novalidate]');
+    Array.from(forms).forEach(form=>form.addEventListener('submit',e=>{ if(!form.checkValidity()){ e.preventDefault(); e.stopPropagation(); } form.classList.add('was-validated'); }, false));
+  })();
+  </script>
+</body>
+</html>

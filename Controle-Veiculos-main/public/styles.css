@@ -1,0 +1,74 @@
+/* Fundo geral em azul suave */
+body {
+    background: linear-gradient(to right, #E3F2FD, #BBDEFB);
+    color: #0D47A1;
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Container principal com fundo branco */
+.container {
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-width: 1000px;
+    margin: auto;
+}
+
+/* Títulos principais */
+h1, h2, h3 {
+    color: #0D47A1;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Estilizando a tabela */
+.table {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Botões personalizados */
+.btn-primary {
+    background-color: #1565C0;
+    border-color: #1565C0;
+}
+
+.btn-primary:hover {
+    background-color: #0D47A1;
+    border-color: #0D47A1;
+}
+
+.btn-warning {
+    background-color: #FFA726;
+    border-color: #FFA726;
+}
+
+.btn-danger {
+    background-color: #D32F2F;
+    border-color: #D32F2F;
+}
+
+/* Ajuste para telas pequenas */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+        max-width: 100%;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+    }
+    
+    .table {
+        font-size: 0.9rem;
+    }
+    
+    .btn {
+        font-size: 0.85rem;
+        padding: 8px;
+    }
+}

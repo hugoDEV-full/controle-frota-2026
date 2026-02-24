@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <title>Notificações - Troca de Óleo</title>
+
+  <!-- Bootstrap e Ícones -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/styles.css">
+
+  <style>
+    body { background-color: #f8f9fa; }
+    .card { border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    h1,h2 { font-weight: 600; display:flex; align-items:center; gap:10px; }
+    .badge-count { font-size:0.8rem; padding:0.35em 0.6em; }
+    table th { background-color: #0d6efd; color:#fff; text-align:center; vertical-align:middle; }
+    table td { vertical-align: middle; }
+    .alert { border-radius:10px; }
+    .notificacao-lida { opacity:0.6; background-color:#f8f9fa !important; }
+    .badge-lida { font-size:0.7rem; margin-left:0.5rem; }
+    .select-col { width: 48px; text-align: center; }
+  </style>
+</head>
+
+<body>
+  <div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex gap-2 align-items-center">
+        <a href="/" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="Voltar à página inicial do sistema">
+          <i class="fa-solid fa-arrow-left"></i> Voltar
+        </a>
+      </div>
+
+      <h1 data-bs-toggle="tooltip" title="Visualize todas as notificações de troca de óleo e quilometragem da frota">
+        <i class="fa-solid fa-bell"></i> Notificações
+      </h1>
+    </div>
+
+    <!-- Troca de Óleo (sem seleção, sem marcar como lida aqui) -->
+    <div class="card mb-5">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+           data-bs-toggle="tooltip"
+           title="Mostra os veículos que atingiram a quilometragem limite para troca de óleo">
+        <div class="d-flex align-items-center gap-3">
+          <h2 class="mb-0"><i class="fa-solid fa-oil-can"></i> Troca de Óleo</h2>
+          <small class="text-light ms-2"><%= oilVehicles.length %> veículos</small>
+        </div>
+
+        <div class="text-light small"></div>
+      </div>
+
+      <div class="card-body">
+        <% if (oilVehicles.length > 0) { %>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle" id="oilVehiclesTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Placa</th>
+                  <th>Nome</th>
+                  <th>Km Atual</th>
+                  <th>Última Troca</th>
+                  <th>Km desde Troca</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% oilVehicles.forEach(function(veiculo) {
+                     const notifId = veiculo.notificacao_id || veiculo.notif_id || veiculo.notification_id || '';
+                %>
+                  <tr id="tr-veiculo-<%= veiculo.id %>" data-veiculo-id="<%= veiculo.id %>" data-notif-id="<%= notifId %>" class="<%= veiculo.lida ? 'notificacao-lida' : '' %>">
+                    <td><%= veiculo.id %></td>
+                    <td><span class="badge bg-secondary"><%= veiculo.placa %></span></td>
+                    <td><%= veiculo.nome %></td>
+                    <td><%= veiculo.km.toLocaleString() %> km</td>
+                    <td><%= veiculo.ultimaTrocaOleo.toLocaleString() %> km</td>
+                    <td><strong><%= veiculo.km - veiculo.ultimaTrocaOleo %> km</strong></td>
+                    <td class="text-center">
+                      <div class="d-flex gap-2 justify-content-center align-items-center">
+                        <form action="/troca-feita/<%= veiculo.id %>" method="POST"
+                              onsubmit="return confirm('A troca de óleo é irreversível. Confirmar?');" style="margin:0;">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button type="submit" class="btn btn-warning btn-sm" data-bs-toggle="tooltip"
+                                  title="Confirmar troca de óleo">
+                            <i class="fa-solid fa-check"></i>Marcar como troca Realizada
+                          </button>
+                        </form>
+
+                        <% if (veiculo.lida) { %>
+                          <span class="badge bg-success">Lida</span>
+                        <% } else { %>
+                          <span class="text-muted small"></span>
+                        <% } %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } else { %>
+          <div class="alert alert-info mb-0" data-bs-toggle="tooltip"
+               title="Nenhum veículo atingiu a quilometragem necessária para troca">
+            <i class="fa-solid fa-circle-info"></i> Nenhum veículo necessita de troca de óleo.
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Alteração de Quilometragem (com seleção) -->
+    <div class="card mb-5">
+      <div class="card-header bg-warning d-flex justify-content-between align-items-center" data-bs-toggle="tooltip"
+           title="Notificações automáticas quando há alteração de quilometragem dos veículos">
+        <div class="d-flex align-items-center gap-3">
+          <h2 class="mb-0"><i class="fa-solid fa-road"></i> Alterações de Quilometragem</h2>
+          <small class="text-dark ms-2"><%= kmNotifications && kmNotifications.length ? kmNotifications.length : 0 %></small>
+        </div>
+
+        <!-- CONTROLES: seleção apenas nesta seção -->
+        <div class="d-flex gap-2">
+          <button id="btn-marcar-selecionados-km" class="btn btn-dark btn-sm" title="Marcar notificações selecionadas como lidas">
+            <i class="fa-solid fa-check"></i> Marcar selecionados como lidos
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <% if (kmNotifications && kmNotifications.length > 0) { %>
+          <div class="mb-2">
+            <input id="check-all-km" type="checkbox"> <label for="check-all-km" class="small">Selecionar todos</label>
+          </div>
+          <ul class="list-group" id="kmNotificationsList">
+            <% kmNotifications.forEach(function(notif) { %>
+              <li class="list-group-item d-flex justify-content-between align-items-center <%= notif.lida ? 'notificacao-lida' : '' %>"
+                  data-notif-id="<%= notif.id %>">
+                <div>
+                  <div class="d-flex align-items-start gap-2">
+                    <% if (!notif.lida) { %>
+                      <input type="checkbox" class="check-km" data-notif-id="<%= notif.id %>">
+                    <% } else { %>
+                      <input type="checkbox" disabled>
+                    <% } %>
+                    <div>
+                      <i class="fa-solid fa-car me-2 text-primary"></i>
+                      <span class="notif-mensagem"><%= notif.mensagem %></span>
+                      <br>
+                      <small><i class="fa-regular fa-clock"></i> <%= new Date(notif.data_hora).toLocaleString() %></small>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-2 align-items-center">
+                  <% if (!notif.lida) { %>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary btn-ok-km"
+                            data-notif-id="<%= notif.id %>"
+                            title="Marcar como lida">
+                      <i class="fa-solid fa-check"></i> OK
+                    </button>
+                  <% } else { %>
+                    <span class="badge bg-success">Lida</span>
+                  <% } %>
+
+                  <form action="/excluir-notificacao-alteracao-km/<%= notif.id %>" method="POST"
+                        onsubmit="return confirm('Excluir essa notificação é irreversível. Tem certeza?');" style="margin: 0;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn btn-danger btn-sm" data-bs-toggle="tooltip"
+                            title="Excluir esta notificação de alteração de quilometragem">
+                      <i class="fa-solid fa-trash-can"></i> Excluir
+                    </button>
+                  </form>
+                </div>
+
+              </li>
+            <% }); %>
+          </ul>
+        <% } else { %>
+          <div class="alert alert-secondary mb-0" data-bs-toggle="tooltip"
+               title="Sem alterações recentes de quilometragem registradas">
+            <i class="fa-solid fa-circle-check"></i> Nenhuma notificação de alteração de quilometragem.
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Notificações em tempo real (não alterar) -->
+    <div class="card" data-bs-toggle="tooltip"
+      title="Recebe notificações em tempo real do servidor, como alertas de troca de óleo ou eventos de km">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h2 class="mb-0"><i class="fa-solid fa-satellite-dish"></i> Tempo Real</h2>
+      </div>
+      <div class="card-body">
+        <ul id="notificationList" class="list-group mb-0"></ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bootstrap & Socket -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script>
+    // inicializa tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+  </script>
+
+  <!-- SCRIPT: marcar como lida (somente na seção KM) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+      function headers() {
+        return {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-Token': csrf
+        };
+      }
+
+      function setItemAsRead(el, ensureBadge = true) {
+        if (!el) return;
+        el.classList.add('notificacao-lida');
+
+        // remove checkbox se existir (KM items)
+        const cb = el.querySelector('.check-km');
+        if (cb) cb.remove();
+
+        // remove OK button se existir
+        const ok = el.querySelector('.btn-ok-km');
+        if (ok) ok.remove();
+
+        // add badge se nao existir
+        if (ensureBadge && !el.querySelector('.badge.bg-success')) {
+          const b = document.createElement('span');
+          b.className = 'badge bg-success';
+          b.textContent = 'Lida';
+          el.appendChild(b);
+        }
+      }
+
+      // Marcar selecionados apenas na seção KM
+      document.getElementById('btn-marcar-selecionados-km')?.addEventListener('click', async () => {
+        const checks = Array.from(document.querySelectorAll('.check-km:checked'));
+        if (checks.length === 0) {
+          alert('Selecione ao menos uma notificação de quilometragem.');
+          return;
+        }
+        if (!confirm(`Marcar ${checks.length} notificação(ões) selecionada(s) como lida(s)?`)) return;
+
+        const btn = document.getElementById('btn-marcar-selecionados-km');
+        btn.disabled = true;
+
+        const promises = checks.map(cb => {
+          const notifId = cb.getAttribute('data-notif-id');
+          return (async () => {
+            try {
+              const res = await fetch(`/notifications/mark-read/${encodeURIComponent(notifId)}`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: headers()
+              });
+              if (!res.ok) {
+                let ej = null; try { ej = await res.json(); } catch(e) {}
+                throw new Error('status ' + res.status + (ej && ej.error ? ' - ' + ej.error : ''));
+              }
+              const json = await res.json();
+              if (json && json.ok) {
+                const li = document.querySelector(`#kmNotificationsList li[data-notif-id="${notifId}"]`);
+                if (li) setItemAsRead(li, true);
+                return { ok: true, notifId };
+              } else {
+                throw new Error('Resposta inválida servidor');
+              }
+            } catch (err) {
+              console.error('Erro marcar notif', notifId, err);
+              return { ok: false, notifId, error: err.message || String(err) };
+            }
+          })();
+        });
+
+        const results = await Promise.all(promises);
+        const failed = results.filter(r => !r.ok);
+        if (failed.length) alert(`${failed.length} falha(s) ao marcar. Veja o console para detalhes.`);
+        btn.disabled = false;
+      });
+
+      // selecionar/desmarcar todos na lista KM
+      document.getElementById('check-all-km')?.addEventListener('change', (ev) => {
+        const checked = ev.target.checked;
+        document.querySelectorAll('.check-km').forEach(cb => {
+          if (!cb.disabled) cb.checked = checked;
+        });
+      });
+
+      // delegado: botão OK individual (KM)
+      document.body.addEventListener('click', async (ev) => {
+        const btnKm = ev.target.closest('.btn-ok-km');
+        if (!btnKm) return;
+        const id = btnKm.getAttribute('data-notif-id');
+        if (!id) return;
+        btnKm.disabled = true;
+        btnKm.classList.remove('btn-outline-primary');
+        btnKm.classList.add('btn-outline-secondary');
+        try {
+          const res = await fetch(`/notifications/mark-read/${encodeURIComponent(id)}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: headers()
+          });
+          if (!res.ok) throw new Error('Erro ao marcar notificação');
+          const json = await res.json();
+          if (json && json.ok) {
+            const li = document.querySelector(`#kmNotificationsList li[data-notif-id="${id}"]`);
+            if (li) setItemAsRead(li, true);
+          } else {
+            throw new Error('Resposta inválida do servidor');
+          }
+        } catch (err) {
+          console.error('Erro ao marcar km notification', err);
+          btnKm.disabled = false;
+          btnKm.classList.remove('btn-outline-secondary');
+          btnKm.classList.add('btn-outline-primary');
+        }
+      });
+
+      // socket listener opcional: atualiza UI se o servidor emitir eventos
+      try {
+        if (typeof io !== 'undefined') {
+          const socket = io();
+          socket.on('notificationMarkedRead', (payload) => {
+            if (!payload) return;
+            const id = payload.id;
+            const li = document.querySelector(`#kmNotificationsList li[data-notif-id="${id}"]`);
+            if (li) setItemAsRead(li, true);
+            // não alteramos trocas de óleo aqui (solicitado: não marcar óleo)
+          });
+        }
+      } catch (e) { /* ignore */ }
+
+    }); // DOMContentLoaded
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,52 @@
+<div class="container mt-4">
+  <h1>Mapa de Localização GPS</h1>
+  <div id="map" class="border rounded" style="height: 600px;"></div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('>> [CLIENT] DOM ready, iniciando mapa');
+
+    const map = L.map('map').setView([-23.55, -46.63], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    console.log('>> [CLIENT] Mapa Leaflet inicializado');
+
+    fetch('/gps-history')
+      .then(res => {
+        console.log('>> [CLIENT] /gps-history status:', res.status);
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        console.log('>> [CLIENT] Dados recebidos do histórico:', data);
+        data.forEach(pt => {
+          L.marker([pt.latitude, pt.longitude])
+            .addTo(map)
+            .bindPopup(new Date(pt.datahora_recebido).toLocaleString());
+        });
+      })
+      .catch(err => console.error('>> [CLIENT] Erro ao buscar histórico GPS:', err));
+
+  const io = new Server(server, {
+  cors: {
+    origin: ["https://frota.inova.in"],  // só seu domínio
+    methods: ["GET","POST"],
+    credentials: true
+  }
+});
+
+
+    socket.on('connect', () => {
+      console.log('>> [CLIENT] Conectado via Socket.IO');
+    });
+    socket.on('locationUpdate', pt => {
+      console.log('>> [CLIENT] locationUpdate recebido:', pt);
+      L.marker([pt.latitude, pt.longitude])
+        .addTo(map)
+        .bindPopup(`Nova posição: ${new Date().toLocaleTimeString()}`)
+        .openPopup();
+    });
+  });
+</script>

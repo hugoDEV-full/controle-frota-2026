@@ -1,0 +1,162 @@
+<% /* title já definido no res.render */ %>
+
+<div class="container my-4">
+  <h2 class="mb-4">📊 Estatísticas de Manutenções</h2>
+
+  <!-- Linha com status + tipos -->
+  <div class="row">
+    <!-- Status -->
+    <div class="col-lg-6 mb-3">
+      <div class="card h-100">
+        <div class="card-header fw-bold">Distribuição por Status</div>
+        <div class="card-body">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tipos -->
+    <div class="col-lg-6 mb-3">
+      <div class="card h-100">
+        <div class="card-header fw-bold">Manutenções por Tipo</div>
+        <div class="card-body">
+          <canvas id="tipoChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Veículos -->
+  <div class="card mb-3">
+    <div class="card-header fw-bold">Top 10 Veículos com mais Manutenções</div>
+    <div class="card-body">
+      <canvas id="veiculoChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Média tempo -->
+  <div class="row mt-3">
+    <div class="col-lg-6">
+      <div class="card bg-light border-0 shadow-sm">
+        <div class="card-body d-flex align-items-center">
+          <i class="bi bi-calendar-check display-5 text-primary me-3"></i>
+          <% if (tempoStats && tempoStats.media_dias != null) { %>
+            <div>
+              <h4 class="mb-0"><%= tempoStats.media_dias %> dias</h4>
+              <small class="text-muted">Média entre agendamento e realização</small>
+            </div>
+          <% } else { %>
+            <div>
+              <h5 class="mb-0 text-muted">Sem dados suficientes</h5>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <a href="/manutencoes" class="btn btn-secondary">⬅ Voltar</a>
+  </div>
+</div>
+
+<!-- Chart.js + plugin de labels -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script>
+  // Cores padrão
+  const colors = ['#0d6efd','#198754','#ffc107','#dc3545','#6c757d','#20c997','#6610f2','#fd7e14','#0dcaf0','#6f42c1'];
+
+  // registra plugin para garantir compatibilidade
+  if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+    Chart.register(ChartDataLabels);
+  }
+
+  // util: garantir arrays não undefined
+  const statusLabels = <%- JSON.stringify((statusStats || []).map(s => s.status)) %>;
+  const statusData = <%- JSON.stringify((statusStats || []).map(s => Number(s.total) || 0)) %>;
+
+  const tipoLabels = <%- JSON.stringify((tipoStats || []).map(t => t.tipo)) %>;
+  const tipoData = <%- JSON.stringify((tipoStats || []).map(t => Number(t.total) || 0)) %>;
+
+  const veiculoLabels = <%- JSON.stringify((veiculoStats || []).map(v => v.nome + ' (' + v.placa + ')')) %>;
+  const veiculoData = <%- JSON.stringify((veiculoStats || []).map(v => Number(v.total) || 0)) %>;
+
+  // Status (doughnut)
+  new Chart(document.getElementById('statusChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: statusLabels,
+      datasets: [{
+        data: statusData,
+        backgroundColor: colors.slice(0, statusLabels.length)
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' },
+        datalabels: {
+          color: '#fff',
+          formatter: (value, ctx) => {
+            let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            let perc = sum ? ((value / sum) * 100).toFixed(1) + '%' : '0%';
+            return value + ' (' + perc + ')';
+          }
+        }
+      }
+    }
+  });
+
+  // Tipo (barras horizontais)
+  new Chart(document.getElementById('tipoChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: tipoLabels,
+      datasets: [{
+        label: 'Qtd',
+        data: tipoData,
+        backgroundColor: '#0d6efd'
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: 'end',
+          align: 'right',
+          formatter: (val) => val
+        }
+      },
+      scales: { x: { beginAtZero: true } }
+    }
+  });
+
+  // Veículos (ranking top 10)
+  new Chart(document.getElementById('veiculoChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: veiculoLabels,
+      datasets: [{
+        label: 'Manutenções',
+        data: veiculoData,
+        backgroundColor: '#198754'
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: 'end',
+          align: 'top',
+          formatter: (val) => val
+        }
+      },
+      scales: {
+        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+</script>
+

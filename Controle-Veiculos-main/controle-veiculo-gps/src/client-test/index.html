@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="stylesheet" href="./css/index.css" />
+    <script src='./js/socket.io.js'></script>
+    <script src='./js/jquery.min.js'></script>
+    <script src='./js/index.js'></script>
+</head>
+<body>
+    <div id="messages-wrapper">
+        <ul id='messages'></ul>
+    </div>
+
+    <form id="form" class="disabled">
+        <select id="k"></select>
+        <input id="v" autocomplete="off" placeholder="JSON"/>
+        <button type="button" id="btn-send">Send</button>
+    </form>
+
+    <button type="button" id="btn-clear-logs" title="Limpar logs">clear logs</button>
+    <button type="button" id="btn-automatic-auths" title="Autenticar dispositivo e usuario">2auth</button>
+</body>
+</html>

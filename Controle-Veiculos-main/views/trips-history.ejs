@@ -1,0 +1,133 @@
+
+
+<div class="container mt-4">
+  <h1>Histórico de Viagens</h1>
+
+  <!-- FORMULÁRIO DE FILTROS -->
+  <form id="filterForm" class="row g-3 mb-4">
+    <div class="col-md-3">
+      <label for="startDate" class="form-label">Data Início</label>
+      <input type="date" id="startDate" class="form-control">
+    </div>
+    <div class="col-md-3">
+      <label for="endDate" class="form-label">Data Fim</label>
+      <input type="date" id="endDate" class="form-control">
+    </div>
+    <div class="col-md-3">
+      <label for="minDistance" class="form-label">Distância ≥ (km)</label>
+      <input type="number" id="minDistance" class="form-control" min="0" step="0.1" placeholder="0">
+    </div>
+    <div class="col-md-3 align-self-end">
+      <button type="submit" class="btn btn-primary w-100">Aplicar Filtros</button>
+    </div>
+  </form>
+
+  <!-- MAPA -->
+  <div id="map" class="border rounded mb-4" style="height: 600px;"></div>
+
+  <!-- LISTA DE VIAGENS -->
+  <div id="stats" class="list-group mb-5"></div>
+</div>
+
+<!-- Dependências JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Inicializa o mapa
+  const map = L.map('map').setView([-15.55, -47.63], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  let trips = [];
+  let polylines = [];
+
+  // Utilitário para cores aleatórias
+  function getRandomColor() {
+    return '#' + Math.floor(Math.random() * 16777215).toString(16);
+  }
+
+  // Renderiza no mapa e na lista apenas as trips informadas
+  function renderTrips(filtered) {
+    // limpa mapa e lista
+    polylines.forEach(line => map.removeLayer(line));
+    polylines = [];
+    document.getElementById('stats').innerHTML = '';
+
+    filtered.forEach(trip => {
+      // Desenha rota
+      const latlngs = trip.points.map(p => [p.latitude, p.longitude]);
+      const line = L.polyline(latlngs, {
+        color: getRandomColor(),
+        weight: 4,
+        opacity: 0.7
+      }).addTo(map);
+      polylines.push(line);
+
+      // Popup com detalhes
+      line.bindPopup(`
+        <b>Viagem ${trip.tripId}</b><br>
+        Início: ${new Date(trip.start).toLocaleString()}<br>
+        Fim: ${new Date(trip.end).toLocaleString()}<br>
+        Duração: ${trip.durationStr}<br>
+        Distância: ${trip.distanceKm} km<br>
+        Vel. média: ${trip.avgKmh} km/h
+      `);
+
+      // Item na lista
+      const item = document.createElement('a');
+      item.href = '#';
+      item.className = 'list-group-item list-group-item-action';
+      item.innerHTML = `
+        <div class="d-flex w-100 justify-content-between">
+          <h5 class="mb-1">Viagem ${trip.tripId}</h5>
+          <small>${trip.durationStr}</small>
+        </div>
+        <p class="mb-1">
+          ${trip.distanceKm} km &bull; Média ${trip.avgKmh} km/h
+        </p>
+        <small>Início: ${new Date(trip.start).toLocaleString()}</small>
+      `;
+      item.addEventListener('click', () => {
+        map.fitBounds(line.getBounds());
+        line.openPopup();
+      });
+      document.getElementById('stats').appendChild(item);
+    });
+  }
+
+  // 2. Carrega todas as viagens
+  fetch('/trips-history')
+    .then(res => res.json())
+    .then(data => {
+      trips = data;
+      renderTrips(trips);
+    })
+    .catch(err => {
+      console.error('Erro ao carregar viagens:', err);
+      document.getElementById('stats').innerHTML = `
+        <div class="alert alert-danger">Erro ao buscar histórico de viagens.</div>
+      `;
+    });
+
+  // 3. Aplica filtros do formulário
+  document.getElementById('filterForm').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const startDate = document.getElementById('startDate').value;
+    const endDate   = document.getElementById('endDate').value;
+    const minDist   = parseFloat(document.getElementById('minDistance').value) || 0;
+
+    const filtered = trips.filter(trip => {
+      const tripDay = new Date(trip.start).toISOString().split('T')[0];
+      if (startDate && tripDay < startDate) return false;
+      if (endDate   && tripDay > endDate)   return false;
+      if (trip.distanceKm < minDist) return false;
+      return true;
+    });
+
+    renderTrips(filtered);
+  });
+});
+</script>

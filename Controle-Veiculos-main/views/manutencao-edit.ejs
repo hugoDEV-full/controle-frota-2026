@@ -1,0 +1,170 @@
+<%
+// manutencao-edit.ejs
+// Variáveis esperadas: manut (obj), csrfToken, user, arquivos (opcional array)
+// Helper: formata Date/string para YYYY-MM-DD
+function fmtDateInput(d) {
+  if (!d) return '';
+  if (typeof d === 'string') return d.length >= 10 ? d.substring(0,10) : d;
+  if (d instanceof Date) return d.toISOString().substring(0,10);
+  try { return String(d).substring(0,10); } catch(e) { return ''; }
+}
+%>
+
+<div class="container-fluid my-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-9">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+          <div>
+            <h5 class="mb-1">Editar manutenção — ID: <%= manut.id %></h5>
+            <small class="text-muted">Veículo: <%= manut.veiculo_nome || manut.veiculo_id %> <% if (manut.placa) { %> — Placa: <%= manut.placa %><% } %></small>
+          </div>
+          <div class="ms-md-3">
+            <a href="/manutencoes" class="btn btn-sm btn-outline-secondary">Voltar</a>
+          </div>
+        </div>
+
+        <form id="editForm" action="/manutencoes/<%= manut.id %>/edit" method="post" enctype="multipart/form-data" class="card-body">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <div class="mb-3">
+            <label for="tipo" class="form-label">Tipo (livre)</label>
+            <input id="tipo" name="tipo" type="text" class="form-control" placeholder="Descreva o tipo de manutenção" value="<%= manut.tipo || '' %>" autocomplete="off">
+            <div class="form-text">Campo livre — escreva o tipo desejado.</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="descricao" class="form-label">Descrição</label>
+            <textarea id="descricao" name="descricao" rows="4" class="form-control"><%= manut.descricao || '' %></textarea>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-3">
+              <label for="km_agendado" class="form-label">KM agendado</label>
+              <input type="number" id="km_agendado" name="km_agendado" class="form-control" value="<%= manut.km_agendado || '' %>">
+            </div>
+
+            <div class="col-12 col-md-3">
+              <label for="data_agendada" class="form-label">Data agendada</label>
+              <input type="date" id="data_agendada" name="data_agendada" class="form-control" value="<%= fmtDateInput(manut.data_agendada) %>">
+            </div>
+
+            <div class="col-12 col-md-3">
+              <label for="data_realizada" class="form-label">Data realizada</label>
+              <input type="date" id="data_realizada" name="data_realizada" class="form-control" value="<%= fmtDateInput(manut.data_realizada) %>">
+            </div>
+
+            <div class="col-12 col-md-3">
+              <label for="status" class="form-label">Status</label>
+              <select id="status" name="status" class="form-select">
+                <option value="pendente" <%= manut.status === 'pendente' ? 'selected' : '' %>>Pendente</option>
+                <option value="em_manutencao" <%= manut.status === 'em_manutencao' ? 'selected' : '' %>>Em manutenção</option>
+                <option value="realizada" <%= manut.status === 'realizada' ? 'selected' : '' %>>Realizada</option>
+                <option value="cancelada" <%= manut.status === 'cancelada' ? 'selected' : '' %>>Cancelada</option>
+              </select>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="mb-3">
+            <label for="fotos" class="form-label">Adicionar anexos (fotos / documentos)</label>
+            <input type="file" id="fotos" name="fotos" class="form-control" multiple accept="image/*,application/pdf">
+            <div class="form-text">Novos arquivos serão adicionados aos já existentes.</div>
+          </div>
+
+          <div class="d-grid d-md-flex justify-content-between gap-2">
+            <div class="d-grid gap-2" style="min-width: 220px;">
+              <a href="/manutencoes" class="btn btn-outline-secondary w-100 w-md-auto">Cancelar</a>
+              <button type="submit" class="btn btn-primary w-100 w-md-auto">Salvar alterações</button>
+            </div>
+
+            <div class="d-grid" style="min-width: 160px;">
+              <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Excluir manutenção</button>
+            </div>
+          </div>
+        </form>
+
+        <!-- form delete separado -->
+        <form id="deleteForm" action="/manutencoes/<%= manut.id %>/delete" method="post" class="d-none">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        </form>
+
+        <% if (typeof arquivos !== 'undefined') { %>
+          <div class="card-body border-top">
+            <h6 class="mb-3">Anexos existentes</h6>
+            <% if ((arquivos || []).length === 0) { %>
+              <p class="text-muted">Nenhum anexo cadastrado.</p>
+            <% } else { %>
+              <div class="row row-cols-1 row-cols-md-2 g-3">
+                <% arquivos.forEach(function(a) {
+                     var safeName = (a.original_name || '').replace(/'/g, '&#39;');
+                %>
+                  <div class="col">
+                    <div class="card h-100">
+                      <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between">
+                          <div>
+                            <div class="fw-semibold"><%= a.original_name %></div>
+                            <small class="text-muted"><%= a.mime %> • <%= Math.round(a.size/1024) %> KB • <%= a.criado_em %></small>
+                          </div>
+                          <div class="text-end">
+                            <% if (a.mime && a.mime.indexOf('image/') === 0) { %>
+                              <a href="/manutencoes/arquivo/<%= a.id %>/download" target="_blank" class="btn btn-sm btn-outline-primary mb-2">Visualizar</a>
+                            <% } else { %>
+                              <a href="/manutencoes/arquivo/<%= a.id %>/download" class="btn btn-sm btn-outline-primary mb-2">Baixar</a>
+                            <% } %>
+
+                            <form action="/manutencoes/<%= manut.id %>/arquivo/<%= a.id %>/delete" method="post" onsubmit="return confirm('Remover anexo: <%= safeName %>?')" class="d-inline-block">
+                              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                              <button type="submit" class="btn btn-sm btn-outline-danger">Excluir anexo</button>
+                            </form>
+                          </div>
+                        </div>
+
+                        <% if (a.mime && a.mime.indexOf('image/') === 0) { %>
+                          <div class="mt-3 text-center">
+                            <img src="/manutencoes/arquivo/<%= a.id %>/download" alt="<%= a.original_name %>" class="img-fluid rounded" style="max-height:160px; object-fit:contain;">
+                          </div>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+            <% } %>
+          </div>
+        <% } %>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal excluir -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteLabel">Confirmar exclusão</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        Tem certeza que deseja excluir a manutenção ID: <strong><%= manut.id %></strong>? Esta ação removerá também os anexos relacionados.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" onclick="document.getElementById('deleteForm').submit();">Excluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // aviso se seleção de arquivos for grande
+  document.getElementById('fotos')?.addEventListener('change', function() {
+    if (this.files && this.files.length > 30) alert('Você selecionou muitos arquivos. O limite recomendado é 30 por upload.');
+  });
+</script>
+
+

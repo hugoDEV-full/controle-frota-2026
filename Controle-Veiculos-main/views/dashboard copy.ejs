@@ -1,0 +1,1373 @@
+<title>
+  <%= title %>
+</title>
+
+<style>
+  .vehicle-marker-icon i {
+    color: #1978c8;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+  }
+</style>
+
+<style>
+  #map {
+    width: 94%;
+    height: 500px;
+    border-radius: 10px;
+    margin: 20px auto;
+    /* 20px em cima e embaixo, auto nas laterais */
+  }
+
+
+  /* Estilização do menu lateral */
+  #vehicle-menu {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    width: 200px;
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 5px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  #vehicle-menu h4 {
+    margin-top: 0;
+  }
+
+  .vehicle-item {
+    padding: 5px;
+    border-bottom: 1px solid #ccc;
+    cursor: pointer;
+  }
+
+  .vehicle-item:hover {
+    background: #f0f0f0;
+  }
+
+  /* Cartões com altura fixa */
+  .standard-card {
+    border-radius: 0.5rem;
+    height: 200px;
+    overflow: hidden;
+  }
+
+  .standard-card .card-header {
+    background-color: rgba(0, 0, 0, 0.05);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .standard-card .card-body {
+    padding: 1rem;
+    height: calc(200px - 3rem);
+    /* Altura total menos o header */
+    overflow-y: auto;
+  }
+</style>
+
+<style>
+  /* Aplica transição suave em qualquer marcador com a classe .vehicle-marker-icon */
+  .vehicle-marker-icon.leaflet-marker-icon {
+    transition: transform 0.5s linear;
+  }
+</style>
+
+</head>
+
+<body>
+  <div class="container-fluid mt-4">
+    <!-- Cabeçalho da Página -->
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+      <div>
+        <h1>Controle de Frota</h1>
+        <div id="datetime" class="text-center mb-2" style="font-size:0.75rem; line-height:1rem; color:#666;">
+        </div>
+
+        <span class="navbar-text text-dark">
+          <i class="bi bi-person-circle"></i>
+          <%= user ? user.email : 'Usuário' %> - <%= user ? user.role : 'Sem Permissão' %>
+        </span>
+      </div>
+      <!-- Card de sessão (mesmo HTML anterior, com IDs) -->
+      <div class="d-flex justify-content-end">
+        <div class="card shadow-sm rounded-lg my-3" style="max-width: 350px;">
+          <div class="card-body p-2">
+            <h5 class="card-title mb-2">Sessão</h5>
+
+            <p class="mb-1">
+              <small>
+                <i class="fa-solid fa-user-clock fa-fw me-1" aria-hidden="true"></i>
+                <strong>Logado:</strong>
+              </small>
+              <span id="sess-elapsed" class="badge bg-primary badge-sm">--m --s</span>
+            </p>
+
+            <p class="mb-2">
+              <small>
+                <i class="fa-solid fa-hourglass-half fa-fw me-1" aria-hidden="true"></i>
+                <strong>Restante:</strong>
+              </small>
+              <span id="sess-remaining" class="badge bg-warning text-dark badge-sm">--m --s</span>
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+
+
+
+    <!-- Lista de Veículos -->
+    <div class="mb-4 border-bottom pt-3 pb-2 mb-3">
+      <p>Escolha um veículo para registrar o uso:</p>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Veículo</th>
+            <th>Placa</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% veiculos.forEach(veiculo=> { %>
+            <tr>
+              <td>
+                <%= veiculo.nome %>
+              </td>
+              <td>
+                <%= veiculo.placa %>
+              </td>
+              <td>
+                <a href="/usar/<%= veiculo.id %>" class="btn btn-primary" data-bs-toggle="tooltip"
+                  data-bs-placement="top"
+                  title="Cada deslocamento é um uso diferente. Ex.: ir da empresa ao SAMU é um uso, e voltar do SAMU à empresa é outro uso.">
+                  <i class="bi bi-play-circle"></i> Registrar Uso
+                </a>
+                <% if (user.role==='admin' ) { %>
+                  <a href="/registrar-multa/<%= veiculo.id %>" class="btn btn-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Registrar Multas
+                  </a>
+                  <% } %>
+                    <a href="/editar-veiculo/<%= veiculo.id %>" class="btn btn-warning">
+                      <i class="bi bi-pencil-square"></i> Editar
+                    </a>
+                    <% if (user.role==='admin' ) { %>
+                      <form action="/excluir-veiculo/<%= veiculo.id %>" method="POST" style="display:inline;" onsubmit="
+                          if (!confirm('Esse veículo tem <%= veiculo.manutCount %> manutenção(ões) vinculada(s). Deseja prosseguir e removê-las?')) return false;
+                          if (!confirm('Esse veículo tem <%= veiculo.multaCount %> multa(s) vinculada(s). Deseja prosseguir e removê-las?')) return false;
+                          if (!confirm('Esse veículo tem <%= veiculo.usoCount %> uso(s) vinculados. Deseja prosseguir e removê-los?')) return false;
+                          return confirm('Exclusão final: isto é irreversível. Tem certeza?');
+                        ">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="btn btn-danger">
+                          <i class="bi bi-trash"></i> Excluir
+                        </button>
+                      </form>
+                      <% } %>
+
+              </td>
+            </tr>
+            <% }); %>
+        </tbody>
+      </table>
+      <div class="d-flex gap-2">
+        <a href="/relatorio-uso" class="btn btn-secondary">
+          <i class="bi bi-file-earmark-text"></i> Finalizar-editar Uso / Ver Relatório de Uso
+        </a>
+        <% if (user.role==='admin' ) { %>
+          <a href="/registrar-veiculo" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Registrar Veículo
+          </a>
+          <% } %>
+      </div>
+    </div>
+
+    <div class="row mb-3 align-items-center">
+      <!-- Label sempre ocupa uma coluna automática -->
+      <div class="col-12 col-md-auto mb-2 mb-md-0">
+
+        <label for="deviceSelect" class="form-label">Selecione o dispositivo:</label>
+      </div>
+
+
+      <!-- Em volta do select, no seu EJS -->
+      <div class="input-group">
+        <span class="input-group-text">
+          <i class="fas fa-car"></i>
+        </span>
+        <select id="deviceSelect" class="form-select">
+          <option>Carregando...</option>
+        </select>
+        <span id="deviceSpinner" class="input-group-text d-none">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </span>
+      </div>
+
+
+      <!-- Botão ocupa toda a largura em xs, largura automática em md+ 
+      <div class="col-12 col-md-auto">
+        <button id="btnMostrarTodos" class="btn btn-outline-primary w-100 w-md-auto">
+          Mostrar todos
+        </button>
+      </div>-->
+    </div>
+
+
+
+    <div class="d-flex flex-column vh-100 p-0">
+      <div class="bg-light py-2 text-center w-100">
+        <h1 class="h4 mb-1">Mapa de Localização GPS</h1>
+        <p class="small text-muted mb-0">💡 Em celular, use na horizontal para melhor aproveitamento</p>
+      </div>
+      <div id="map" class="flex-fill border-0 rounded-0 mb-2"></div>
+    </div>
+
+
+    <% if (user.role==='admin' ) { %>
+      <div class="accordion" id="statsAccordion">
+
+        <!-- 1) Informações Gerais -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingGeneral">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGeneral"
+              aria-expanded="true" aria-controls="collapseGeneral">
+              <i class="bi bi-bar-chart-fill me-2"></i> Informações Gerais
+            </button>
+          </h2>
+          <div id="collapseGeneral" class="accordion-collapse collapse show" aria-labelledby="headingGeneral"
+            data-bs-parent="#statsAccordion">
+            <div class="accordion-body">
+              <div class="row mb-4">
+                <h4 class="mb-3">Informações Gerais</h4>
+                <!-- Motoristas com CNH válida -->
+                <div class="col-md-3">
+                  <div class="card standard-card text-white bg-success mb-3">
+                    <div class="card-header"><i class="bi bi-check-circle"></i> Motoristas que Podem Dirigir</div>
+                    <div class="card-body">
+                      <p class="display-6">
+                        <%= totalMotoristasValidos || 0 %>
+                      </p>
+                      <p>CNH válida</p>
+                    </div>
+                  </div>
+                </div>
+                <!-- Motoristas com CNH vencida -->
+                <div class="col-md-3">
+                  <div class="card standard-card text-white bg-danger mb-3">
+                    <div class="card-header"><i class="bi bi-x-circle"></i> Motoristas que Não Podem Dirigir</div>
+                    <div class="card-body">
+                      <p class="display-6">
+                        <%= totalMotoristasInvalidos || 0 %>
+                      </p>
+                      <p>CNH vencida</p>
+                    </div>
+                  </div>
+                </div>
+                <!-- Lista: Motoristas Válidos -->
+                <div class="col-md-3">
+                  <div class="card mb-3">
+                    <div class="card-header bg-success text-white">Motoristas que Podem Dirigir</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <ul class="list-group list-group-flush">
+                        <% motoristasValidosList.forEach(motorista=> { %>
+                          <li class="list-group-item">
+                            <strong>
+                              <%= motorista.nome %>
+                            </strong> - <%= motorista.email %><br>
+                              <small>Validade: <%= motorista.validade %></small>
+                          </li>
+                          <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <!-- Lista: Motoristas Inválidos -->
+                <div class="col-md-3">
+                  <div class="card mb-3">
+                    <div class="card-header bg-danger text-white">Motoristas que Não Podem Dirigir</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <ul class="list-group list-group-flush">
+                        <% motoristasInvalidosList.forEach(motorista=> { %>
+                          <li class="list-group-item">
+                            <strong>
+                              <%= motorista.nome %>
+                            </strong> - <%= motorista.email %><br>
+                              <small>Validade: <%= motorista.validade %></small>
+                          </li>
+                          <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <!-- Veículos -->
+                <div class="col-md-3">
+                  <div class="card standard-card text-white bg-primary mb-3">
+                    <div class="card-header"><i class="bi bi-truck"></i> Veículos</div>
+                    <div class="card-body">
+                      <p class="display-6">
+                        <%= totalVeiculos || 0 %>
+                      </p>
+                      <p>Veículos cadastrados</p>
+                    </div>
+                  </div>
+                </div>
+                <!-- Multas -->
+                <div class="col-md-3">
+                  <div class="card standard-card text-white bg-danger mb-3">
+                    <div class="card-header"><i class="bi bi-exclamation-octagon"></i> Multas</div>
+                    <div class="card-body">
+                      <p class="display-6">
+                        <%= totalMultas || 0 %>
+                      </p>
+                      <p>Multas registradas</p>
+                    </div>
+                  </div>
+                </div>
+                <!-- Uso -->
+                <div class="col-md-3">
+                  <div class="card standard-card text-white bg-success mb-3">
+                    <div class="card-header"><i class="bi bi-speedometer2"></i> Uso</div>
+                    <div class="card-body">
+                      <p class="display-6">
+                        <%= totalUso || 0 %>
+                      </p>
+                      <p>Registros de uso</p>
+                    </div>
+                  </div>
+                </div>
+                <!-- Motoristas Ativos -->
+                <div class="col-md-3">
+                  <div class="card standard-card text-white bg-warning mb-3">
+                    <div class="card-header"><i class="bi bi-people"></i> Motoristas Ativos</div>
+                    <div class="card-body">
+                      <p class="display-6">
+                        <%= totalMotoristasAtivos || 0 %>
+                      </p>
+                      <p>Em atividade</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2) Relatórios de Uso -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingUso">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+              data-bs-target="#collapseUso" aria-expanded="false" aria-controls="collapseUso">
+              <i class="bi bi-calendar-day me-2"></i> Relatórios de Uso
+            </button>
+          </h2>
+          <div id="collapseUso" class="accordion-collapse collapse" aria-labelledby="headingUso"
+            data-bs-parent="#statsAccordion">
+            <div class="accordion-body">
+              <div class="row mb-4">
+                <h4 class="mb-3">Relatórios de Uso</h4>
+                <!-- Uso por Dia -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-info mb-3">
+                    <div class="card-header"><i class="bi bi-calendar-day"></i> Uso por Dia</div>
+                    <div class="card-body">
+                      <% if (usoDia.length> 0) { %>
+                        <% usoDia.forEach(item=> { %>
+                          <p class="mb-1">
+                            <strong>
+                              <%= new Intl.DateTimeFormat('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit',
+                                year:'numeric' }).format(new Date(item.dia)) %>:
+                            </strong>
+                            <%= item.totalUsoDia %> usos<br>
+                              <small>🕒 <%= item.primeiroUso %> / <%= item.ultimoUso %></small>
+                          </p>
+                          <% }) %>
+                            <% } else { %>
+                              <p>Nenhum uso registrado.</p>
+                              <% } %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Uso por Mês -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-success mb-3">
+                    <div class="card-header"><i class="bi bi-calendar3"></i> Uso por Mês</div>
+                    <div class="card-body">
+                      <% if (usoMes.length> 0) { %>
+                        <% usoMes.forEach(item=> { %>
+                          <p class="mb-1"><strong>
+                              <%= item.mes %>:
+                            </strong>
+                            <%= item.totalUsoMes %> usos
+                          </p>
+                          <% }) %>
+                            <% } else { %>
+                              <p>Nenhum uso registrado.</p>
+                              <% } %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Uso por Ano -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-warning mb-3">
+                    <div class="card-header"><i class="bi bi-calendar4"></i> Uso por Ano</div>
+                    <div class="card-body">
+                      <% if (usoAno.length> 0) { %>
+                        <% usoAno.forEach(item=> { %>
+                          <p class="mb-1"><strong>
+                              <%= item.ano %>:
+                            </strong>
+                            <%= item.totalUsoAno %> usos
+                          </p>
+                          <% }) %>
+                            <% } else { %>
+                              <p>Nenhum uso registrado.</p>
+                              <% } %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3) Relatórios de Multas -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingMultas">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+              data-bs-target="#collapseMultas" aria-expanded="false" aria-controls="collapseMultas">
+              <i class="bi bi-exclamation-octagon me-2"></i> Relatórios de Multas
+            </button>
+          </h2>
+          <div id="collapseMultas" class="accordion-collapse collapse" aria-labelledby="headingMultas"
+            data-bs-parent="#statsAccordion">
+            <div class="accordion-body">
+              <div class="row mb-4">
+                <h4 class="mb-3">Relatórios de Multas</h4>
+                <!-- Multas por Mês -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-secondary mb-3">
+                    <div class="card-header"><i class="bi bi-calendar3"></i> Multas por Mês</div>
+                    <div class="card-body">
+                      <% if (multasMes.length> 0) { %>
+                        <% multasMes.forEach(item=> { %>
+                          <p class="mb-1"><strong>
+                              <%= item.mes %>:
+                            </strong>
+                            <%= item.totalMultasMes %> multas
+                          </p>
+                          <% }) %>
+                            <% } else { %>
+                              <p>Nenhuma multa registrada.</p>
+                              <% } %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Multas por Ano -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-dark mb-3">
+                    <div class="card-header"><i class="bi bi-calendar4"></i> Multas por Ano</div>
+                    <div class="card-body">
+                      <% if (multasAno.length> 0) { %>
+                        <% multasAno.forEach(item=> { %>
+                          <p class="mb-1"><strong>
+                              <%= item.ano %>:
+                            </strong>
+                            <%= item.totalMultasAno %> multas
+                          </p>
+                          <% }) %>
+                            <% } else { %>
+                              <p>Nenhuma multa registrada.</p>
+                              <% } %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Multas por Motorista -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-info mb-3">
+                    <div class="card-header"><i class="bi bi-people"></i> Multas por Motorista</div>
+                    <div class="card-body">
+                      <% if (multasMotorista.length> 0) { %>
+                        <% multasMotorista.forEach(item=> { %>
+                          <p class="mb-1"><strong>
+                              <%= item.motorista %>:
+                            </strong>
+                            <%= item.totalMultasMotorista %> multas
+                          </p>
+                          <% }) %>
+                            <% } else { %>
+                              <p>Nenhuma multa registrada.</p>
+                              <% } %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4) KM Rodados -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingKm">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+              data-bs-target="#collapseKm" aria-expanded="false" aria-controls="collapseKm">
+              <i class="bi bi-speedometer2 me-2"></i> KM Rodados
+            </button>
+          </h2>
+          <div id="collapseKm" class="accordion-collapse collapse" aria-labelledby="headingKm"
+            data-bs-parent="#statsAccordion">
+            <div class="accordion-body">
+              <div class="row mb-4">
+                <h4 class="mb-3">KM Rodados</h4>
+                <!-- KM por Motorista -->
+                <div class="col-md-3">
+                  <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">KM por Motorista</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <ul class="list-group list-group-flush">
+                        <% kmMotorista.forEach(m=> { %>
+                          <li class="list-group-item"><strong>
+                              <%= m.motorista %>
+                            </strong>: <%= m.totalKm %> km</li>
+                          <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <!-- KM por Viagem -->
+                <div class="col-md-3">
+                  <div class="card mb-3">
+                    <div class="card-header bg-secondary text-white">KM por Viagem (Últ.10)</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <ul class="list-group list-group-flush">
+                        <% kmViagem.forEach(v=> { %>
+                          <li class="list-group-item">Viagem #<%= v.viagemId %>: <%= v.kmViagem %> km</li>
+                          <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <!-- KM por Dia -->
+                <div class="col-md-3">
+                  <div class="card mb-3">
+                    <div class="card-header bg-info text-white">KM por Dia (Últ.7 dias)</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <ul class="list-group list-group-flush">
+                        <% kmDia.forEach(d=> { %>
+                          <li class="list-group-item"><strong>
+                              <%= d.dia %>
+                            </strong>: <%= d.totalKmDia %> km</li>
+                          <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <!-- KM por Mês -->
+                <div class="col-md-3">
+                  <div class="card mb-3">
+                    <div class="card-header bg-warning text-dark">KM por Mês (Últ.6 meses)</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <ul class="list-group list-group-flush">
+                        <% kmMes.forEach(m=> { %>
+                          <li class="list-group-item"><strong>
+                              <%= m.mes %>
+                            </strong>: <%= m.totalKmMes %> km</li>
+                          <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <!-- KM por Ano -->
+                <div class="col-md-3">
+                  <div class="card mb-3">
+                    <div class="card-header bg-dark text-white">KM por Ano (Últ.5 anos)</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <ul class="list-group list-group-flush">
+                        <% kmAno.forEach(a=> { %>
+                          <li class="list-group-item"><strong>
+                              <%= a.ano %>
+                            </strong>: <%= a.totalKmAno %> km</li>
+                          <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5) Relatórios de Viagens -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingViagens">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+              data-bs-target="#collapseViagens" aria-expanded="false" aria-controls="collapseViagens">
+              <i class="bi bi-geo-alt me-2"></i> Relatórios de Viagens
+            </button>
+          </h2>
+          <div id="collapseViagens" class="accordion-collapse collapse" aria-labelledby="headingViagens"
+            data-bs-parent="#statsAccordion">
+            <div class="accordion-body">
+              <div class="row mb-4">
+                <h4 class="mb-3">Relatórios de Viagens</h4>
+                <!-- Viagens por Dia -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-secondary mb-3">
+                    <div class="card-header"><i class="bi bi-calendar-day"></i> Viagens por Dia</div>
+                    <div class="card-body">
+                      <% viagensTrabalhoDia.forEach(item=> { %>
+                        <p class="mb-1">
+                          <strong>
+                            <%= new
+                              Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}).format(new
+                              Date(item.dia)) %> (Trabalho):
+                          </strong>
+                          <%= item.totalViagensTrabalho %> viagens
+                        </p>
+                        <% }) %>
+                          <% viagensPessoalDia.forEach(item=> { %>
+                            <p class="mb-1">
+                              <strong>
+                                <%= new
+                                  Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}).format(new
+                                  Date(item.dia)) %> (Pessoal):
+                              </strong>
+                              <%= item.totalViagensPessoal %> viagens
+                            </p>
+                            <% }) %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Viagens por Mês -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-info mb-3">
+                    <div class="card-header"><i class="bi bi-calendar3"></i> Viagens por Mês</div>
+                    <div class="card-body">
+                      <% viagensTrabalhoMes.forEach(item=> { %>
+                        <p class="mb-1"><strong>
+                            <%= item.mes %> (Trabalho):
+                          </strong>
+                          <%= item.totalViagensTrabalho %> viagens
+                        </p>
+                        <% }) %>
+                          <% viagensPessoalMes.forEach(item=> { %>
+                            <p class="mb-1"><strong>
+                                <%= item.mes %> (Pessoal):
+                              </strong>
+                              <%= item.totalViagensPessoal %> viagens
+                            </p>
+                            <% }) %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Viagens por Ano -->
+                <div class="col-md-4">
+                  <div class="card standard-card text-white bg-dark mb-3">
+                    <div class="card-header"><i class="bi bi-calendar4"></i> Viagens por Ano</div>
+                    <div class="card-body">
+                      <% viagensTrabalhoAno.forEach(item=> { %>
+                        <p class="mb-1"><strong>
+                            <%= item.ano %> (Trabalho):
+                          </strong>
+                          <%= item.totalViagensTrabalho %> viagens
+                        </p>
+                        <% }) %>
+                          <% viagensPessoalAno.forEach(item=> { %>
+                            <p class="mb-1"><strong>
+                                <%= item.ano %> (Pessoal):
+                              </strong>
+                              <%= item.totalViagensPessoal %> viagens
+                            </p>
+                            <% }) %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6) Tempo de Uso -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingTempo">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+              data-bs-target="#collapseTempo" aria-expanded="false" aria-controls="collapseTempo">
+              <i class="bi bi-clock-history me-2"></i> Tempo de Uso
+            </button>
+          </h2>
+          <div id="collapseTempo" class="accordion-collapse collapse" aria-labelledby="headingTempo"
+            data-bs-parent="#statsAccordion">
+            <div class="accordion-body">
+              <div class="row mb-4">
+                <h4 class="mb-3">Estatísticas: Tempo de Uso</h4>
+                <!-- Tempo de Uso por Dia -->
+                <div class="col-md-3 mb-3">
+                  <div class="card">
+                    <div class="card-header bg-primary text-white">Tempo de Uso - Dia</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <% tempoUsoDia.forEach(item=> { %>
+                        <p><strong>
+                            <%= item.dia %>:
+                          </strong>
+                          <%= item.totalTempoUsoDia %>
+                        </p>
+                        <% }) %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Tempo de Uso por Mês -->
+                <div class="col-md-3 mb-3">
+                  <div class="card">
+                    <div class="card-header bg-success text-white">Tempo de Uso - Mês</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <% tempoUsoMes.forEach(item=> { %>
+                        <p><strong>
+                            <%= item.mes %>:
+                          </strong>
+                          <%= item.totalTempoUsoMes %>
+                        </p>
+                        <% }) %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Tempo de Uso por Ano -->
+                <div class="col-md-3 mb-3">
+                  <div class="card">
+                    <div class="card-header bg-warning text-dark">Tempo de Uso - Ano</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <% tempoUsoAno.forEach(item=> { %>
+                        <p><strong>
+                            <%= item.ano %>:
+                          </strong>
+                          <%= item.totalTempoUsoAno %>
+                        </p>
+                        <% }) %>
+                    </div>
+                  </div>
+                </div>
+                <!-- Tempo de Uso por Motorista -->
+                <div class="col-md-3 mb-3">
+                  <div class="card">
+                    <div class="card-header bg-danger text-white">Tempo de Uso - Motorista</div>
+                    <div class="card-body" style="max-height:200px;overflow-y:auto">
+                      <% tempoUsoMotorista.forEach(item=> { %>
+                        <p><strong>
+                            <%= item.motorista %>:
+                          </strong>
+                          <%= item.totalTempoUsoMotorista %>
+                        </p>
+                        <% }) %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /accordion -->
+
+
+
+
+
+      <!-- Tabela de Manutenções Pendentes 
+      <div class="row mt-4">
+        <div class="col-md-12">
+          <h3>Manutenções Pendentes</h3>
+          <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+              <thead class="thead-dark">
+                <tr>
+                  <th>ID</th>
+                  <th>Veículo</th>
+                  <th>Placa</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>KM Agendado</th>
+                  <th>Data Agendada</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (manutencoesPendentes.length> 0) { %>
+                  <% manutencoesPendentes.forEach(function(m) { %>
+                    <tr>
+                      <td>
+                        <%= m.id %>
+                      </td>
+                      <td>
+                        <%= m.veiculo_nome %>
+                      </td>
+                      <td>
+                        <%= m.placa %>
+                      </td>
+                      <td>
+                        <%= m.tipo %>
+                      </td>
+                      <td>
+                        <%= m.descricao || 'N/A' %>
+                      </td>
+                      <td>
+                        <%= m.km_agendado || 'N/A' %>
+                      </td>
+                      <td>
+                        <% if (m.data_agendada) { %>
+                          <%= new Date(m.data_agendada).toLocaleDateString() %>
+                            <% } else { %>
+                              N/A
+                              <% } %>
+                      </td>
+                      <td>
+                        <form action="/manutencoes/realizada/<%= m.id %>" method="POST">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button type="submit" class="btn btn-sm btn-success"
+                            onclick="return confirm('Marcar como manutenção realizada é irreversível. Tem certeza que deseja realmente marcar como realizada?');">Marcar
+                            como Realizada</button>
+                        </form>
+
+
+                      </td>
+                    </tr>
+                    <% }); %>
+                      <% } else { %>
+                        <tr>
+                          <td colspan="8" class="text-center">Nenhuma manutenção pendente.</td>
+                        </tr>
+                        <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div> -->
+
+
+  </div>
+
+
+  <% } %>
+
+
+
+    <script>
+      //tootips
+      document.addEventListener('DOMContentLoaded', () => {
+        const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+      });
+    </script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const deviceSelect = document.getElementById('deviceSelect');
+        const spinner = document.getElementById('deviceSpinner');
+
+        // Inicia Mapa
+        const map = L.map('map').setView([-23.55, -46.63], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        L.control.fullscreen({ position: 'topleft' }).addTo(map);
+
+        // Reposiciona o "X" do popup
+        map.on('popupopen', e => {
+          const c = e.popup._container;
+          c.style.overflow = 'visible';
+          c.style.maxWidth = '200px';
+          c.style.maxHeight = '120px';
+          const btn = c.querySelector('.leaflet-popup-close-button');
+          if (btn) {
+            btn.style.top = '10px';
+            btn.style.right = '6px';
+          }
+        });
+
+        // “Voltar ao veículo”
+        const ReturnControl = L.Control.extend({
+          options: { position: 'topleft' },
+          onAdd() {
+            const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control');
+            btn.innerHTML = '<i class="fas fa-crosshairs"></i>';
+            Object.assign(btn.style, {
+              width: '34px', height: '34px', lineHeight: '34px',
+              textAlign: 'center', fontSize: '18px', cursor: 'pointer'
+            });
+            btn.addEventListener('click', e => {
+              L.DomEvent.stopPropagation(e);
+              const p = vehicleMarker.getLatLng();
+              map.flyTo(p, 16, { animate: true, duration: 0.5 });
+              vehicleMarker.openPopup();
+            });
+            return btn;
+          }
+        });
+        map.addControl(new ReturnControl());
+
+        // Geofences
+        (async function loadGeofences() {
+          try {
+            const res = await fetch('/geofences-json');
+            if (!res.ok) throw 0;
+            const data = await res.json();
+            data.forEach(g => {
+              const coords = g.wkt_polygon.slice(9, -2)
+                .split(',')
+                .map(p => p.trim().split(' ').reverse().map(Number));
+              if (!coords.length) return;
+              L.polygon(coords, {
+                color: 'red', weight: 2, dashArray: '5,5', fillOpacity: 0.1
+              })
+                .addTo(map)
+                .bindPopup(`<strong>${g.nome}</strong>`);
+            });
+          } catch {
+            console.error('Erro geofences');
+          }
+        })();
+
+        // Versão atualizada — prioriza nome_marca / nome_modelo salvos no backend
+async function loadDevicesDebug() {
+  try {
+    console.clear();
+    console.log('> loadDevicesDebug: iniciando...');
+
+    spinner.classList.remove('d-none');
+
+    // 1) buscar dispositivos do backend
+    console.log('> fetch /devices-com-veiculo ...');
+    const res = await fetch('/devices-com-veiculo');
+    console.log('> status /devices-com-veiculo:', res.status, res.statusText);
+    if (!res.ok) {
+      const text = await res.text().catch(() => null);
+      console.error('> Erro na requisição /devices-com-veiculo:', res.status, text);
+      throw new Error('Erro na requisição /devices-com-veiculo');
+    }
+
+    const devs = await res.json();
+    console.log('> dados recebidos do backend (devs):', devs);
+    console.log('> total devices retornados:', Array.isArray(devs) ? devs.length : 'não é array');
+
+    // mostrar cada device com tipos dos campos marca/modelo
+    (devs || []).forEach((d, i) => {
+      console.log(`> device[${i}] id=${d.id} name=${d.name} placa=${d.placa} marca=(${typeof d.marca}) ${d.marca} nome_marca=(${typeof d.nome_marca}) ${d.nome_marca} modelo=(${typeof d.modelo}) ${d.modelo} nome_modelo=(${typeof d.nome_modelo}) ${d.nome_modelo}`);
+    });
+
+    const FIPE_BASE = 'https://parallelum.com.br/fipe/api/v1';
+
+    // Determinar se precisamos de traduções FIPE:
+    // precisamos quando backend NÃO retornou nome_marca/nome_modelo e recebemos códigos numéricos
+    const marcasParaBuscar = new Set();
+    let precisaCarregarMarcasFIPE = false;
+    devs.forEach(d => {
+      const hasNomeMarca = d.nome_marca && String(d.nome_marca).trim() !== '';
+      const hasNomeModelo = d.nome_modelo && String(d.nome_modelo).trim() !== '';
+      const marcaIsCode = d.marca && /^\d+$/.test(String(d.marca));
+      const modeloIsCode = d.modelo && /^\d+$/.test(String(d.modelo));
+
+      // se não temos nome_marca e marca é código, precisamos traduzir essa marca
+      if (!hasNomeMarca && marcaIsCode) {
+        marcasParaBuscar.add(String(d.marca));
+        precisaCarregarMarcasFIPE = true;
+      }
+
+      // se não temos nome_modelo e modelo é código, garantimos que a marca numérica esteja na lista
+      if (!hasNomeModelo && modeloIsCode) {
+        // se marca também for código, adiciona; senão tentaremos mapear pelo que temos
+        if (marcaIsCode) marcasParaBuscar.add(String(d.marca));
+        precisaCarregarMarcasFIPE = true;
+      }
+    });
+
+    console.log('> marcas numéricas para buscar (se necessário):', Array.from(marcasParaBuscar));
+
+    let marcaCodeToNome = {};
+    // 2) buscar FIPE marcas apenas se necessário
+    if (precisaCarregarMarcasFIPE) {
+      try {
+        console.log('> fetch FIPE marcas (necessário) ...');
+        const fipeMarcasResp = await fetch(`${FIPE_BASE}/carros/marcas`);
+        console.log('> status FIPE marcas:', fipeMarcasResp.status);
+        if (fipeMarcasResp.ok) {
+          const fipeMarcas = await fipeMarcasResp.json();
+          (fipeMarcas || []).forEach(m => {
+            if (m && (m.codigo !== undefined || m.nome !== undefined)) {
+              marcaCodeToNome[String(m.codigo)] = m.nome || m.name || null;
+            }
+          });
+        } else {
+          console.warn('> FIPE marcas retornou status não-ok:', fipeMarcasResp.status);
+        }
+      } catch (e) {
+        console.warn('> Erro ao buscar FIPE marcas:', e);
+      }
+    } else {
+      console.log('> salto fetch FIPE marcas (não necessário)');
+    }
+    console.log('> quantidade marcas FIPE carregadas:', Object.keys(marcaCodeToNome).length);
+    console.log('> amostra marcaCodeToNome (primeiros 10):', Object.entries(marcaCodeToNome).slice(0, 10));
+
+    // 3) buscar modelos apenas para as marcas necessárias (quando precisarmos traduzir modelos por código)
+    const marcaCodigoParaModelosMap = {};
+    if (Object.keys(marcaCodeToNome).length && marcasParaBuscar.size) {
+      console.log('> buscando modelos FIPE apenas para marcas necessárias...');
+      await Promise.all(Array.from(marcasParaBuscar).map(async marcaCode => {
+        try {
+          console.log(`> fetch modelos para marca ${marcaCode} -> ${marcaCodeToNome[marcaCode] || 'NOME_DESCONHECIDO'}`);
+          const resp = await fetch(`${FIPE_BASE}/carros/marcas/${marcaCode}/modelos`);
+          console.log(`> status modelos marca ${marcaCode}:`, resp.status);
+          if (!resp.ok) {
+            console.warn('> resposta não-ok para marca', marcaCode);
+            return;
+          }
+          const data = await resp.json();
+          // endpoint devolve {modelos: [...], anos: ...}
+          const modelosArr = Array.isArray(data) ? data : (Array.isArray(data.modelos) ? data.modelos : []);
+          const modelosMap = {};
+          modelosArr.forEach(mo => {
+            if (mo && (mo.codigo !== undefined)) modelosMap[String(mo.codigo)] = mo.nome || mo.name || mo.modelName || null;
+          });
+          marcaCodigoParaModelosMap[marcaCode] = modelosMap;
+          console.log(`> carregados ${modelosArr.length} modelos para marca ${marcaCode}`);
+        } catch (e) {
+          console.warn('> Erro ao buscar modelos FIPE para marca', marcaCode, e);
+        }
+      }));
+    } else {
+      console.log('> salto fetch modelos FIPE (nenhuma marca necessária)');
+    }
+    console.log('> marcas para as quais carregamos modelos:', Object.keys(marcaCodigoParaModelosMap));
+
+    // 4) resolver marca + modelo priorizando nome_marca/nome_modelo do backend
+    const resolvedDevs = devs.map(d => {
+      // se backend já forneceu nome_marca/nome_modelo, usa diretamente (prioridade)
+      let marcaResolvida = (d.nome_marca && String(d.nome_marca).trim() !== '') ? String(d.nome_marca).trim() : null;
+      let modeloResolvido = (d.nome_modelo && String(d.nome_modelo).trim() !== '') ? String(d.nome_modelo).trim() : null;
+
+      // se não temos nome_marca, tentar traduzir a partir de d.marca
+      if (!marcaResolvida) {
+        if (d.marca && /^\d+$/.test(String(d.marca))) {
+          marcaResolvida = marcaCodeToNome[String(d.marca)] || null;
+        } else if (d.marca) {
+          // d.marca pode já conter um nome (fallback)
+          marcaResolvida = String(d.marca).trim();
+        }
+      }
+
+      // se não temos nome_modelo, tentar traduzir a partir de d.modelo
+      if (!modeloResolvido) {
+        if (d.modelo && /^\d+$/.test(String(d.modelo))) {
+          // se temos mapa de modelos para a marca (e a marca é código), usa
+          const marcaCode = (d.marca && /^\d+$/.test(String(d.marca))) ? String(d.marca) : null;
+          if (marcaCode && marcaCodigoParaModelosMap[marcaCode]) {
+            modeloResolvido = marcaCodigoParaModelosMap[marcaCode][String(d.modelo)] || null;
+          } else {
+            // tentativa: buscar em qualquer marca carregada que contenha esse código
+            for (const [mCod, modelosMap] of Object.entries(marcaCodigoParaModelosMap)) {
+              if (modelosMap && modelosMap[String(d.modelo)]) {
+                modeloResolvido = modelosMap[String(d.modelo)];
+                // se marcaResolvida ainda for nula, tenta preencher com o nome da marca encontrada
+                if (!marcaResolvida) marcaResolvida = marcaCodeToNome[mCod] || marcaResolvida;
+                break;
+              }
+            }
+          }
+        } else if (d.modelo) {
+          // d.modelo pode já ser um nome
+          modeloResolvido = String(d.modelo).trim();
+        }
+      }
+
+      if (!marcaResolvida) marcaResolvida = 'Desconhecida';
+      if (!modeloResolvido) modeloResolvido = 'Desconhecido';
+
+      return { ...d, marcaResolvida, modeloResolvido };
+    });
+
+    console.log('> resolvedDevs (amostra):', resolvedDevs.slice(0, 20));
+    resolvedDevs.forEach((d, i) => {
+      if (d.marcaResolvida === 'Desconhecida') {
+        console.warn(`> device[${i}] id=${d.id} marcaResolvida=DESCONHECIDA modelo=${d.modelo}`);
+      }
+    });
+
+    // 5) popular o select (com logs)
+    resolvedDevs.sort((a, b) => b.id - a.id);
+    deviceSelect.innerHTML = '';
+    resolvedDevs.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = `${d.name} — Placa: ${d.placa || '—'} | Marca: ${d.marcaResolvida} | Modelo: ${d.modeloResolvido}`;
+      deviceSelect.append(opt);
+    });
+
+    if (resolvedDevs.length) deviceSelect.dispatchEvent(new Event('change'));
+
+    console.log('> loadDevicesDebug: finalizado com sucesso.');
+
+  } catch (err) {
+    deviceSelect.innerHTML = '<option>Erro ao carregar</option>';
+    console.error('> loadDevicesDebug: erro geral:', err);
+  } finally {
+    spinner.classList.add('d-none');
+  }
+}
+
+// execute
+loadDevicesDebug();
+
+
+
+
+
+        // Marcador principal (icone com popupAnchor ajustado para aparecer acima)
+        const vehicleIcon = L.divIcon({
+          html: '<i class="fas fa-car fa-2x"></i>',
+          className: 'vehicle-marker-icon',
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+          popupAnchor: [0, -5] // empurra o popup para cima do ícone
+        });
+
+        let vehicleMarker = L.marker(map.getCenter(), { icon: vehicleIcon })
+          .addTo(map);
+
+        // bindPopup com offset extra por segurança (mantém acima em diferentes zooms)
+        vehicleMarker.bindPopup('🚗 Veículo', { autoPan: true, closeButton: true, offset: L.point(0, -28) });
+
+        // Variável para controlar se o popup foi fechado manualmente
+        let popupManuallyClosed = false;
+
+        // camadas e helpers
+        const allVehicleLayer = L.featureGroup().addTo(map);
+        const allVehicleMarkers = {};
+        const colors = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#8e44ad', '#c0392b', '#2c3e50'];
+        let autoPan = true, socket;
+
+        // listener do select (mantive seu fluxo)
+        deviceSelect.addEventListener('change', () => {
+          const devId = deviceSelect.value;
+          if (!devId) return;
+          autoPan = true;
+
+          // desconecta socket anterior com segurança
+          if (socket) {
+            try { socket.emit('unsubscribeFromDevice', socket.deviceId || devId); } catch (e) {/* ignore */ }
+            socket.disconnect();
+            socket = null;
+          }
+
+          vehicleMarker.setLatLng(map.getCenter());
+
+          // Configura eventos de clique no marcador do veículo
+          vehicleMarker.off('click'); // Remove eventos anteriores
+          vehicleMarker.on('click', () => {
+            popupManuallyClosed = false;
+            vehicleMarker.togglePopup();
+
+            // Adiciona funcionalidade de "voltar ao veículo" ao clicar no carro
+            // Mesma ação do botão de mira (crosshairs)
+            const p = vehicleMarker.getLatLng();
+            map.flyTo(p, 16, { animate: true, duration: 0.5 });
+          });
+
+          // Quando o usuário fecha o popup com o X, marca que foi fechado manualmente
+          vehicleMarker.off('popupclose'); // Remove eventos anteriores
+          vehicleMarker.on('popupclose', () => {
+            popupManuallyClosed = true;
+          });
+
+          // Histórico único
+          fetch(`/gps-history?device=${devId}`)
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(hist => {
+              if (!hist.length) return;
+              const last = hist.pop();
+              const dt = new Date(last.datahora_recebido);
+              vehicleMarker
+                .setLatLng([+last.latitude, +last.longitude])
+                .setPopupContent(
+                  `<i class="fas fa-car"></i> ${deviceSelect.selectedOptions[0].text}<br>` +
+                  `<small class="text-muted">${dt.toLocaleDateString('pt-BR')} ${dt.toLocaleTimeString('pt-BR')}</small>`
+                );
+              if (autoPan) map.panTo([+last.latitude, +last.longitude], { animate: true, duration: 0.5 });
+              // não abre o popup automaticamente — só abre ao clicar no marker
+            })
+            .catch(() => console.error('Erro histórico'));
+
+          // Socket.IO real-time
+          socket = io();
+          socket.deviceId = devId;
+          let prevLat = null, prevLng = null, prevTime = null;
+
+          socket.on('connect', () => socket.emit('subscribeToDevice', devId));
+          socket.on('locationUpdate', pt => {
+            const lat = +pt.latitude,
+              lng = +pt.longitude,
+              currTime = new Date(pt.datahora_recebido);
+
+            let popupHtml = `<i class="fas fa-car"></i> ${deviceSelect.selectedOptions[0].text}<br>` +
+              `<small class="text-muted">${currTime.toLocaleDateString('pt-BR')} ${currTime.toLocaleTimeString('pt-BR')}</small>`;
+
+            // calcula velocidade se houver ponto anterior
+            if (prevTime !== null) {
+              const dist = L.latLng(prevLat, prevLng).distanceTo(L.latLng(lat, lng)); // metros
+              const dtSec = (currTime - prevTime) / 1000;                             // s
+              const speedKmh = dtSec > 0 ? (dist / dtSec) * 3.6 : 0;                       // km/h
+              popupHtml += `<br><strong>Velocidade:</strong> ${speedKmh.toFixed(1)} km/h`;
+            }
+
+            // atualiza posição e conteúdo do popup (sem forçar abertura)
+            vehicleMarker
+              .setLatLng([lat, lng])
+              .setPopupContent(popupHtml);
+
+            // se o popup estiver aberto E não foi fechado manualmente, mantém aberto (atualiza visual)
+            if (vehicleMarker.isPopupOpen() && !popupManuallyClosed) {
+              // reabrir para aplicar conteúdo atualizado (se necessário)
+              vehicleMarker.getPopup().setContent(popupHtml);
+              // garantir que continue aberto:
+              // OBS: não chamar openPopup() se o usuário tiver fechado manualmente (popupManuallyClosed === true)
+            }
+
+            // atualiza prev para próxima
+            prevLat = lat;
+            prevLng = lng;
+            prevTime = currTime;
+
+            if (autoPan) {
+              map.panTo([lat, lng], { animate: true, duration: 0.5 });
+            }
+          });
+        });
+
+
+        // "Mostrar Todos"
+        document.getElementById('btnMostrarTodos').addEventListener('click', () => {
+          if (map.hasLayer(vehicleMarker)) map.removeLayer(vehicleMarker);
+          allVehicleLayer.clearLayers();
+          Object.keys(allVehicleMarkers).forEach(id => delete allVehicleMarkers[id]);
+
+          const opts = Array.from(deviceSelect.options).filter(o => o.value);
+          Promise.all(opts.map((o, idx) =>
+            fetch(`/gps-history?device=${o.value}`)
+              .then(r => r.ok ? r.json() : Promise.reject())
+              .then(h => h.length ? {
+                id: o.value,
+                lat: +h.pop().latitude,
+                lng: +h.pop().longitude,
+                dt: new Date(h.pop().datahora_recebido),
+                color: colors[idx % colors.length],
+                deviceText: o.textContent
+              } : null)
+              .catch(() => null)
+          )).then(list => {
+            list.forEach(d => {
+              if (!d) return;
+              const mk = L.marker([d.lat, d.lng], {
+                icon: L.divIcon({
+                  html: `<i class="fas fa-car fa-lg" style="color:${d.color}"></i>`,
+                  className: 'vehicle-marker-icon',
+                  iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12]
+                })
+              }).bindPopup(
+                `${d.deviceText}<br>Atualizado em: ${d.dt.toLocaleDateString('pt-BR')} ${d.dt.toLocaleTimeString('pt-BR')}`
+              );
+              allVehicleLayer.addLayer(mk);
+              allVehicleMarkers[d.id] = mk;
+            });
+          });
+        });
+
+        // Força redraw
+        setTimeout(() => map.invalidateSize(), 500);
+      });
+    </script>
+
+
+
+
+
+
+
+
+
+
+
+    <script>
+      function updateDateTime() {
+        const now = new Date();
+        const options = {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        };
+        document.getElementById('datetime').innerText = now.toLocaleDateString('pt-BR', options);
+      }
+      // Atualiza a cada segundo
+      setInterval(updateDateTime, 1000);
+      updateDateTime();
+    </script>
+
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        let elapsed, remaining;
+        let localTimer, syncInterval;
+
+        function updateDOM() {
+          document.getElementById('sess-elapsed').textContent =
+            `${elapsed.minutes}m ${elapsed.seconds}s`;
+          document.getElementById('sess-remaining').textContent =
+            `${remaining.minutes}m ${remaining.seconds}s`;
+        }
+
+        function tickLocal() {
+          elapsed.seconds++;
+          if (elapsed.seconds === 60) {
+            elapsed.minutes++;
+            elapsed.seconds = 0;
+          }
+          if (remaining.minutes > 0 || remaining.seconds > 0) {
+            remaining.seconds--;
+            if (remaining.seconds < 0) {
+              remaining.minutes--;
+              remaining.seconds = 59;
+            }
+          }
+          updateDOM();
+        }
+
+        async function syncSession() {
+          try {
+            const res = await fetch('/session-info/json');
+            if (!res.ok) throw new Error(res.status);
+            const data = await res.json();
+            elapsed = data.elapsed;
+            remaining = data.remaining;
+            updateDOM();
+          } catch (err) {
+            console.error('Erro ao buscar sessão:', err);
+          }
+        }
+
+        (async () => {
+          await syncSession();                          // 1. busca inicial
+          localTimer = setInterval(tickLocal, 1000); // 2. contagem local
+          syncInterval = setInterval(syncSession, 10000); // 3. sincroniza a cada 10s
+        })();
+
+        window.addEventListener('beforeunload', () => {
+          clearInterval(localTimer);
+          clearInterval(syncInterval);
+        });
+      });
+    </script>

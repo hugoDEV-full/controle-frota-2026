@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Font Awesome (ícones usados nos botões) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-pbV6Y6kYqf6h0z0kQYQ6f6R7Y3sK1Z8x7k8Qw9Z5Bz8l6Y7c2Xb9Hq0Ykz1u3f4K" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Chart.js e adapter de datas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+  <style>
+    @media print {
+      .no-print {
+        display: none;
+      }
+    }
+
+    /* Ajuste para o canvas do Chart ocupar área decente */
+    #reembolsosChart {
+      width: 100%;
+      /* altura será definida também via atributo height no script para consistência */
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container my-5">
+    <h1 class="mb-4">Gerenciar Reembolsos</h1>
+
+    <!-- Formulário para cadastro de reembolso -->
+    <div class="card mb-4 no-print">
+      <div class="card-header">Novo Reembolso</div>
+      <div class="card-body">
+        <form action="/reembolsos" method="POST" enctype="multipart/form-data"
+          onsubmit="return confirm('Revisou as informações? Deseja realmente confirmar registrar reembolso?');">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="mb-3">
+            <label for="motorista_id" class="form-label">Motorista</label>
+            <select name="motorista_id" id="motorista_id" class="form-select" required>
+              <option value="">Selecione um motorista</option>
+              <% motoristas.forEach(function(motorista) { %>
+                <option value="<%= motorista.id %>"><%= motorista.nome %></option>
+              <% }); %>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="valor" class="form-label">Valor do Reembolso</label>
+            <input type="number" step="0.01" name="valor" id="valor" class="form-control" placeholder="Ex.: 150.00"
+              required>
+          </div>
+
+          <div class="mb-3">
+            <label for="comprovante" class="form-label">Comprovante de Abastecimento</label>
+            <input type="file" name="comprovante" id="comprovante" class="form-control" accept="image/*">
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1" aria-hidden="true"></i> Cadastrar
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <% if (user.role === 'admin') { %>
+
+      <!-- Lista de reembolsos detalhados -->
+      <div class="card mb-4">
+        <div class="card-header">Reembolsos Cadastrados</div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Motorista</th>
+                  <th>Valor</th>
+                  <th>Comprovante</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% reembolsos.forEach(function(reembolso) { %>
+                  <tr>
+                    <td><%= reembolso.motorista_nome %></td>
+                    <td>R$ <%= reembolso.valor %></td>
+                    <td>
+                      <% if (reembolso.comprovante) { %>
+                        <a href="#" class="btn btn-link p-0" data-bs-toggle="modal"
+                          data-bs-target="#modalComprovante-<%= reembolso.id %>">Visualizar</a>
+
+                        <!-- Modal do comprovante -->
+                        <div class="modal fade" id="modalComprovante-<%= reembolso.id %>" tabindex="-1"
+                          aria-labelledby="labelComprovante-<%= reembolso.id %>" aria-hidden="true">
+                          <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h5 class="modal-title" id="labelComprovante-<%= reembolso.id %>">Comprovante de
+                                  Reembolso</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                  aria-label="Fechar"></button>
+                              </div>
+                              <div class="modal-body text-center">
+                                <img src="/uploads/<%= reembolso.comprovante %>" alt="Comprovante"
+                                  class="img-fluid rounded" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      <% } else { %>
+                        Sem comprovante
+                      <% } %>
+                    </td>
+                    <td><%= new Date(reembolso.criado_em).toLocaleDateString('pt-BR') %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reembolsos Diários -->
+      <div id="reembolsosDiario" class="card mb-4">
+        <div class="card-header">Reembolsos Diários</div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead>
+                <tr>
+                  <th>Motorista</th>
+                  <th>Dia</th>
+                  <th>Total Reembolso (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% reembolsoDiario.forEach(function(r) { %>
+                  <tr>
+                    <td><%= r.motorista_nome %></td>
+                    <td><%= new Date(r.dia).toLocaleDateString('pt-BR') %></td>
+                    <td>R$ <%= r.total_reembolso %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <button onclick="printSection('reembolsosDiario')" class="btn btn-info no-print">
+            <i class="fas fa-print me-1" aria-hidden="true"></i> Imprimir Reembolsos Diários
+          </button>
+        </div>
+      </div>
+
+      <!-- Reembolsos Mensais -->
+      <div id="reembolsosMensal" class="card mb-4">
+        <div class="card-header">Reembolsos Mensais</div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead>
+                <tr>
+                  <th>Motorista</th>
+                  <th>Mês/Ano</th>
+                  <th>Total Reembolso (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% reembolsoMensal.forEach(function(r) {
+                    const partes = r.mes ? r.mes.split('-') : ['', ''];
+                    const ano = partes[0], mes = partes[1];
+                %>
+                  <tr>
+                    <td><%= r.motorista_nome %></td>
+                    <td><%= mes && ano ? mes + '/' + ano : 'N/A' %></td>
+                    <td>R$ <%= r.total_reembolso %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <button onclick="printSection('reembolsosMensal')" class="btn btn-info no-print">
+            <i class="fas fa-print me-1" aria-hidden="true"></i> Imprimir Reembolsos Mensais
+          </button>
+        </div>
+      </div>
+
+      <!-- Reembolsos Anuais -->
+      <div id="reembolsosAnual" class="card mb-4">
+        <div class="card-header">Reembolsos Anuais</div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead>
+                <tr>
+                  <th>Motorista</th>
+                  <th>Ano</th>
+                  <th>Total Reembolso (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% reembolsoAnual.forEach(function(r) { %>
+                  <tr>
+                    <td><%= r.motorista_nome %></td>
+                    <td><%= r.ano %></td>
+                    <td>R$ <%= r.total_reembolso %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <button onclick="printSection('reembolsosAnual')" class="btn btn-info no-print">
+            <i class="fas fa-print me-1" aria-hidden="true"></i> Imprimir Reembolsos Anuais
+          </button>
+        </div>
+      </div>
+
+      <!-- Gráfico dos Reembolsos -->
+      <div class="card mb-4">
+        <div class="card-header">Gráfico de Reembolsos</div>
+        <div class="card-body">
+          <canvas id="reembolsosChart"></canvas>
+          <div id="reembolsosChartMsg" class="mt-2 text-muted small"></div>
+        </div>
+      </div>
+
+      <a href="/" class="btn btn-primary my-4 no-print">
+        <i class="fas fa-home me-1" aria-hidden="true"></i> Voltar
+      </a>
+
+    <% } %>
+  </div>
+
+  <!-- Função de impressão -->
+  <script>
+    function printSection(sectionId) {
+      var printContents = document.getElementById(sectionId).innerHTML;
+      var originalContents = document.body.innerHTML;
+      document.body.innerHTML = printContents;
+      window.print();
+      document.body.innerHTML = originalContents;
+      location.reload();
+    }
+  </script>
+
+  <!-- Bootstrap Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <% if (user.role === 'admin') { %>
+    <script>
+      // garante que o canvas tenha tamanho fixo (evita crescimento visual)
+      const canvas = document.getElementById('reembolsosChart');
+      if (canvas) {
+        canvas.setAttribute('height', '360'); // define altura em pixels consistente
+      }
+
+      // Injeção segura do JSON: escape '<' como '\u003c' para evitar fechamento acidental do <script>
+      const reembolsosData = <%- JSON.stringify(reembolsosGrafico || []).replace(/</g, '\\u003c') %>;
+
+      const chartMsgEl = document.getElementById('reembolsosChartMsg');
+
+      // utilitária para desenhar/atualizar o gráfico
+      function renderReembolsosChart(labels, valores) {
+        // destrói instância anterior se existir (evita "crescimento" indefinido)
+        if (window.reembolsosChart) {
+          try {
+            window.reembolsosChart.destroy();
+          } catch (e) {
+            console.warn('Erro ao destruir chart anterior:', e);
+          }
+          window.reembolsosChart = null;
+        }
+
+        // gera cores automáticas (string concatenation para evitar template-literals dentro do EJS)
+        const backgroundColors = labels.map(function(_, i) {
+          return 'rgba(75, 192, 192, ' + (0.45 + (i % 4) * 0.1) + ')';
+        });
+        const borderColors = labels.map(function() { return 'rgb(75, 192, 192)'; });
+
+        const ctx = canvas.getContext('2d');
+        window.reembolsosChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Total de Reembolsos (R$)',
+              data: valores,
+              backgroundColor: backgroundColors,
+              borderColor: borderColors,
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Valor (R$)' }
+              },
+              x: {
+                title: { display: true, text: 'Motoristas' }
+              }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+
+      // Se não houver dados, exibe mensagem; caso contrário, agrupa e renderiza
+      if (!Array.isArray(reembolsosData) || reembolsosData.length === 0) {
+        if (chartMsgEl) chartMsgEl.textContent = 'Sem dados para exibir no gráfico.';
+      } else {
+        const reembolsosPorMotorista = {};
+        reembolsosData.forEach(item => {
+          const nome = item.motorista_nome || 'Não informado';
+          const valor = parseFloat(item.valor) || 0;
+          if (!reembolsosPorMotorista[nome]) reembolsosPorMotorista[nome] = 0;
+          reembolsosPorMotorista[nome] += valor;
+        });
+
+        const labels = Object.keys(reembolsosPorMotorista);
+        const valores = Object.values(reembolsosPorMotorista);
+
+        renderReembolsosChart(labels, valores);
+      }
+
+      /* 
+        Se você utilizar atualização dinâmica (ex.: polling, SSE ou WebSocket),
+        chame renderReembolsosChart(novosLabels, novosValores) para substituir os dados
+        (isso destrói e recria o gráfico de forma segura).
+      */
+    </script>
+  <% } %>
+</body>
+
+</html>

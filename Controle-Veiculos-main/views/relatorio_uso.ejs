@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatório de Uso de Veículos</title>
+
+  <!-- Bootstrap CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+  />
+
+  <!-- DataTables CSS Bootstrap 5 -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css"
+  />
+
+  <!-- DataTables Responsive CSS Bootstrap 5 -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap5.min.css"
+  />
+</head>
+
+<body class="bg-light">
+  <div class="container-fluid mt-4">
+    <div class="row">
+      <div class="col-12">
+        <h1 class="text-center mb-4">Relatório de Uso de Veículos</h1>
+
+        <div class="text-center mb-3">
+          <a href="/" class="btn btn-secondary"> <i class="bi bi-house-door-fill me-1" aria-hidden="true"></i>Voltar para a Página Inicial</a>
+        </div>
+
+        <div class="mb-3">
+          <button id="deleteSelected" class="btn btn-danger"><i class="bi bi-trash me-1" aria-hidden="true"></i>Excluir Selecionados</button>
+        </div>
+
+        <div class="table-responsive">
+          <table id="usoTable" class="table table-striped table-hover table-sm w-100">
+            <thead class="table-dark">
+              <tr>
+                <!-- 0: Checkbox de seleção (colapsa no mobile) -->
+                <th> </th>
+
+                <!-- 1: ID (sempre visível no mobile) -->
+                <th class="all">ID</th>
+
+                <!-- 2: Veículo (sempre visível no mobile) -->
+                <th class="all">Veículo</th>
+
+                <!-- 3: Ações (sempre visível no mobile) -->
+                <th class="all">Ações</th>
+
+                <!-- 4: Motorista (sempre visível no mobile) -->
+                <th class="all">Motorista</th>
+
+                <!-- 5: Data de Início (sempre visível no mobile) -->
+                <th class="all">Data de Início</th>
+
+                <!-- 6: Data de Fim (sempre visível no mobile) -->
+                <th class="all">Data de Fim</th>
+
+                <!-- 7: KM Inicial (colapsa no mobile) -->
+                <th>KM Inicial</th>
+
+                <!-- 8: KM Final (colapsa no mobile) -->
+                <th>KM Final</th>
+
+                <!-- 9: Finalidade (colapsa no mobile) -->
+                <th>Finalidade</th>
+
+                <!-- 10: Descrição (colapsa no mobile) -->
+                <th>Descrição</th>
+
+                <!-- 11: Data de Criação (colapsa no mobile) -->
+                <th>Data de Criação</th>
+
+                <!-- 12: Foto de Quilometragem Final (colapsa no mobile) -->
+                <th>Foto de Quilometragem Final</th>
+
+                <!-- 13: Multas (colapsa no mobile) -->
+                <th>Multas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Dados carregados via Ajax -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Bootstrap para Exibir Imagem -->
+  <div
+    class="modal fade"
+    id="imageModal"
+    tabindex="-1"
+    aria-labelledby="imageModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="imageModalLabel">Foto de Quilometragem</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Fechar"
+          ></button>
+        </div>
+        <div class="modal-body text-center">
+          <img id="modalImage" src="" class="img-fluid" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery (necessário para DataTables) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+
+  <!-- DataTables JS -->
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+  <!-- DataTables Responsive JS -->
+  <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap5.min.js"></script>
+
+  <!-- Bootstrap JS -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
+  ></script>
+
+  <script>
+    // Função para atualizar a imagem do modal
+    function updateModalImage(imgSrc) {
+      document.getElementById('modalImage').src = imgSrc;
+    }
+
+    $(document).ready(function () {
+      var table = $('#usoTable').DataTable({
+        serverSide: true,
+        ajax: '/api/relatorio-uso',
+        order: [[11, 'desc']], // “Data de Criação” é a coluna de índice 11
+        pageLength: 25,
+        lengthMenu: [
+          [10, 25, 50, -1],
+          [10, 25, 50, 'Todos']
+        ],
+        responsive: true, // Habilita DataTables Responsive
+        language: {
+          sEmptyTable: 'Nenhum registro encontrado',
+          sInfo: 'Mostrando de _START_ até _END_ de _TOTAL_ registros',
+          sInfoEmpty: 'Mostrando 0 até 0 de 0 registros',
+          sInfoFiltered: '(Filtrados de _MAX_ registros)',
+          sLengthMenu: 'Mostrar _MENU_ registros por página',
+          sLoadingRecords: 'Carregando...',
+          sProcessing: 'Processando...',
+          sSearch: 'Pesquisar:',
+          sZeroRecords: 'Nenhum registro encontrado',
+          oPaginate: {
+            sNext: 'Próximo',
+            sPrevious: 'Anterior',
+            sFirst: 'Primeiro',
+            sLast: 'Último'
+          },
+          oAria: {
+            sSortAscending: ': Ordenar colunas de forma ascendente',
+            sSortDescending: ': Ordenar colunas de forma descendente'
+          }
+        },
+        columns: [
+          {
+            // 0: Checkbox (colapsa no mobile)
+            data: 'id',
+            orderable: false,
+            searchable: false,
+            render: function (data) {
+              return `<input type="checkbox" class="form-check-input selectRow" value="${data}" />`;
+            }
+          },
+          {
+            // 1: ID (sempre visível)
+            data: 'id',
+            searchable: true
+          },
+          {
+            // 2: Veículo (placa, sempre visível)
+            data: 'placa'
+          },
+          {
+            // 3: Ações (sempre visível)
+            data: 'id',
+            orderable: false,
+            searchable: false,
+            render: function (data) {
+              return `
+                <div class="d-flex gap-1">
+                  <a href="/editar-uso/${data}" class="btn btn-warning btn-sm" title="Editar"><i class="bi bi-pencil-square"></i>Editar / Finalizar uso</a>
+                  <form
+                    action="/excluir-uso/${data}"
+                    method="POST"
+                    onsubmit="return confirm('Tem certeza que deseja excluir este uso?');"
+                    style="display: inline-block;"
+                  >
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button type="submit" class="btn btn-danger btn-sm" title="Excluir">
+                      <i class="bi bi-trash"></i>Excluir
+                    </button>
+                  </form>
+                </div>
+              `;
+            }
+          },
+          {
+            // 4: Motorista (sempre visível)
+            data: 'motorista'
+          },
+          {
+            // 5: Data de Início (sempre visível)
+            data: 'data_hora_inicial',
+            render: function (data) {
+              return new Date(data).toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              });
+            }
+          },
+          {
+            // 6: Data de Fim (sempre visível)
+            data: 'data_hora_final',
+            render: function (data) {
+              return data
+                ? new Date(data).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                  })
+                : 'Não definido';
+            }
+          },
+          {
+            // 7: KM Inicial (colapsa no mobile)
+            data: 'km_inicial'
+          },
+          {
+            // 8: KM Final (colapsa no mobile)
+            data: 'km_final'
+          },
+          {
+            // 9: Finalidade (colapsa no mobile)
+            data: 'finalidade'
+          },
+          {
+            // 10: Descrição (colapsa no mobile)
+            data: 'descricao'
+          },
+          {
+            // 11: Data de Criação (colapsa no mobile)
+            data: 'data_criacao',
+            render: function (data) {
+              return new Date(data).toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              });
+            }
+          },
+          {
+            // 12: Foto de Quilometragem Final (colapsa no mobile)
+            data: 'foto_km',
+            orderable: false,
+            searchable: false,
+            render: function (data) {
+              return data
+                ? `<img src="/uploads/${data}" alt="Foto Quilometragem" class="img-fluid rounded" style="max-width: 80px; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#imageModal" onclick="updateModalImage('/uploads/${data}')" />`
+                : `<span class="text-muted small">Não disponível</span>`;
+            }
+          },
+          {
+            // 13: Multas (colapsa no mobile)
+            data: 'multas',
+            orderable: false,
+            searchable: false,
+            render: function (data) {
+              return data
+                ? `<span class="badge bg-danger">Multas: ${data}</span>`
+                : '';
+            }
+          }
+        ]
+      });
+
+      // Seleciona ou desmarca todos os checkboxes
+      $('#selectAll').on('click', function () {
+        $('.selectRow').prop('checked', this.checked);
+      });
+
+      // Ação para excluir os registros selecionados
+      $('#deleteSelected').on('click', function () {
+        var selectedIds = $('.selectRow:checked')
+          .map(function () {
+            return this.value;
+          })
+          .get();
+
+        if (selectedIds.length === 0) {
+          alert('Nenhum registro selecionado.');
+          return;
+        }
+
+        if (!confirm('Tem certeza que deseja excluir os registros selecionados?')) {
+          return;
+        }
+
+        $.ajax({
+          url: '/excluir-multiplos-usos',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ ids: selectedIds, _csrf: '<%= csrfToken %>' }),
+          success: function (response) {
+            alert(response.message);
+            table.ajax.reload();
+          },
+          error: function () {
+            alert('Erro ao excluir registros.');
+          }
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

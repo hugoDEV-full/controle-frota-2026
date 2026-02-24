@@ -1,0 +1,469 @@
+<% /* views/admin-stats.ejs — versão melhorada com tooltips, cores e export CSV */ %>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title><%= title || 'Estatísticas (Admin)' %></title>
+
+  <!-- Bootstrap CSS (projeto já usa) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <style>
+    :root{
+      --kpi-height: 120px;
+      --card-radius: .75rem;
+    }
+    body { background: #f8f9fa; }
+    .kpi-card { min-height: var(--kpi-height); border-radius: var(--card-radius); }
+    .kpi-value { font-size: 1.6rem; font-weight:700; }
+    .small-muted { font-size: .85rem; color: #6c757d; }
+    .kpi-icon { font-size: 1.8rem; opacity: .85; }
+    .card-accent { border-left: .5rem solid; }
+    #map { height: 420px; border-radius: .5rem; }
+    .legend-dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; }
+    .controls { gap: .5rem; display:flex; align-items:center; }
+    @media (max-width: 768px) {
+      .controls { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container my-4">
+
+    <div class="d-flex align-items-start justify-content-between mb-3">
+      <div>
+        <h3 class="mb-0">Dashboard — Estatísticas da Frota</h3>
+        <small class="text-muted">Visão consolidada para administradores</small>
+      </div>
+      <div class="text-end">
+        <small class="text-muted d-block">Usuário: <%= user && user.email ? user.email : '—' %></small>
+        <div class="mt-2 controls">
+          <button id="btnRefresh" class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="tooltip" title="Atualizar dados" aria-label="Atualizar dados">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+          <button id="btnExportCsv" class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="tooltip" title="Exportar dados visíveis (CSV)">
+            <i class="bi bi-download"></i> Exportar CSV
+          </button>
+          <a class="btn btn-outline-dark btn-sm" href="/" data-bs-toggle="tooltip" title="Voltar ao sistema">Voltar</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- filtros -->
+    <form id="filterForm" class="row g-2 mb-3" method="get" action="/admin/stats" role="search" aria-label="Filtros de estatísticas">
+      <div class="col-auto">
+        <label class="form-label small">Início</label>
+        <input class="form-control" type="date" name="start" value="<%= filters && filters.start ? filters.start : '' %>">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small">Fim</label>
+        <input class="form-control" type="date" name="end" value="<%= filters && filters.end ? filters.end : '' %>">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small">Veículo</label>
+        <select class="form-select" name="veiculo_id">
+          <option value="">Todos</option>
+          <% if (Array.isArray(veiculosList)) { veiculosList.forEach(v => { %>
+            <option value="<%= v.id %>" <%= (filters && String(filters.veiculo_id) === String(v.id)) ? 'selected' : '' %>><%= v.placa %> <%= v.nome ? '— ' + v.nome : '' %></option>
+          <% }) } %>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label small">Motorista</label>
+        <select class="form-select" name="motorista">
+          <option value="">Todos</option>
+          <% if (Array.isArray(motoristasList)) { motoristasList.forEach(m => { %>
+            <option value="<%= m.nome %>" <%= (filters && filters.motorista === m.nome) ? 'selected' : '' %>><%= m.nome %></option>
+          <% }) } %>
+        </select>
+      </div>
+      <div class="col-auto d-flex align-items-end">
+        <button class="btn btn-primary" type="submit">Filtrar</button>
+      </div>
+    </form>
+
+    <!-- KPIs coloridos -->
+    <div class="row g-3" aria-hidden="false">
+      <% 
+        // heurísticas visuais:
+        const gasto = stats && stats.abastecimentos_totais && stats.abastecimentos_totais.gasto ? Number(stats.abastecimentos_totais.gasto) : 0;
+        const consumo = stats && stats.consumo_medio_l_km != null ? Number(stats.consumo_medio_l_km) : null;
+        const multaValor = stats && stats.kpi_frota && stats.kpi_frota.total_valor_multas ? Number(stats.kpi_frota.total_valor_multas) : 0;
+        // thresholds (ajustáveis)
+        const gastoWarn = 10000;
+        const consumoWarn = 0.12; // 12 L / 100km -> 0.12 L/km => ajustar conforme frota
+        const multaWarn = 5000;
+      %>
+
+      <div class="col-md-3">
+        <div class="card kpi-card card-accent" style="border-left-color: #0d6efd;">
+          <div class="card-body d-flex justify-content-between">
+            <div>
+              <small class="small-muted">Veículos</small>
+              <div class="kpi-value" aria-live="polite">
+                <%= (stats && stats.kpi_frota && stats.kpi_frota.total_veiculos) ? stats.kpi_frota.total_veiculos : 0 %>
+              </div>
+              <small class="text-muted">Cadastrados</small>
+            </div>
+            <div class="text-end">
+              <i class="bi bi-truck kpi-icon text-primary" data-bs-toggle="tooltip" title="Número total de veículos no sistema"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card kpi-card card-accent" style="border-left-color: #198754;">
+          <div class="card-body d-flex justify-content-between">
+            <div>
+              <small class="small-muted">Motoristas</small>
+              <div class="kpi-value"><%= (stats && stats.kpi_frota && stats.kpi_frota.total_motoristas) ? stats.kpi_frota.total_motoristas : 0 %></div>
+              <small class="text-muted">Ativos</small>
+            </div>
+            <div class="text-end">
+              <i class="bi bi-person-lines-fill kpi-icon text-success" data-bs-toggle="tooltip" title="Total de motoristas"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <% const gastoClass = gasto > gastoWarn ? 'text-danger' : gasto > gastoWarn/2 ? 'text-warning' : 'text-success'; %>
+        <div class="card kpi-card card-accent" style="border-left-color: #dc3545;">
+          <div class="card-body d-flex justify-content-between">
+            <div>
+              <small class="small-muted">Gasto Combustível (período)</small>
+              <div class="kpi-value <%= gastoClass %>">R$ <%= gasto.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}) %></div>
+              <small class="text-muted">Soma dos abastecimentos</small>
+            </div>
+            <div class="text-end">
+              <i class="bi bi-fuel-pump kpi-icon <%= gastoClass %>" data-bs-toggle="tooltip" title="Total gasto com combustível no período filtrado"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <% 
+          let consumoClass = 'text-muted';
+          if (consumo != null) consumoClass = consumo > consumoWarn ? 'text-danger' : 'text-success';
+        %>
+        <div class="card kpi-card card-accent" style="border-left-color: #ffc107;">
+          <div class="card-body d-flex justify-content-between">
+            <div>
+              <small class="small-muted">Consumo estimado</small>
+              <div class="kpi-value <%= consumoClass %>">
+                <% if (consumo != null) { %>
+                  <%= (consumo * 100).toFixed(2) %> L / 100 km
+                <% } else { %>
+                  —
+                <% } %>
+              </div>
+              <small class="text-muted">Estimativa L/100km</small>
+            </div>
+            <div class="text-end">
+              <i class="bi bi-speedometer2 kpi-icon <%= consumoClass %>" data-bs-toggle="tooltip" title="Consumo médio estimado (baseado nos registros disponíveis)"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- quick insights row: badges e progress -->
+    <div class="row mt-3 g-3">
+      <div class="col-md-4">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Multas — valor total</strong>
+              <div class="small text-muted">No período (ou total)</div>
+            </div>
+            <div class="<%= multaValor > multaWarn ? 'text-danger' : 'text-secondary' %>">
+              R$ <%= multaValor.toLocaleString('pt-BR', {minimumFractionDigits:2}) %>
+            </div>
+          </div>
+          <div class="mt-3">
+            <small class="text-muted">Alertas</small>
+            <div class="progress" style="height:8px;">
+              <% 
+                const pct = Math.min(100, Math.round((multaValor / (multaWarn || 1)) * 100));
+                const pctClass = multaValor > multaWarn ? 'bg-danger' : 'bg-success';
+              %>
+              <div class="progress-bar <%= pctClass %>" role="progressbar" style="width: <%= pct %>%" aria-valuenow="<%= pct %>" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-8">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>Top veículos por gasto</strong>
+              <div class="small text-muted">Principais gastos do período</div>
+            </div>
+            <div>
+              <small class="text-muted">Exibir até 10</small>
+            </div>
+          </div>
+          <ul class="list-group list-group-flush mt-2">
+            <% if (Array.isArray(stats && stats.top_veiculos_abastecimento) && stats.top_veiculos_abastecimento.length) { %>
+              <% stats.top_veiculos_abastecimento.forEach(v => { %>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong><%= v.placa %></strong> <small class="text-muted">— <%= v.qtd %>x</small><br>
+                    <small class="text-muted">Litros: <%= Number(v.litros || 0).toLocaleString('pt-BR', {minimumFractionDigits:2}) %></small>
+                  </div>
+                  <div>R$ <%= Number(v.gasto || 0).toLocaleString('pt-BR', {minimumFractionDigits:2}) %></div>
+                </li>
+              <% }) %>
+            <% } else { %>
+              <li class="list-group-item">Sem dados no período.</li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- gráficos + map -->
+    <div class="row mt-4 g-3">
+      <div class="col-lg-8">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Gastos com Abastecimento (por dia)</h5>
+            <small class="text-muted">Bar = gasto R$ · Linha = litros</small>
+          </div>
+          <canvas id="chartAbastecimento" height="140" aria-label="Gráfico de gastos por dia"></canvas>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <h6 class="mb-2">Infrações — Top motoristas</h6>
+          <ul class="list-group">
+            <% if (Array.isArray(stats && stats.multas_por_motorista) && stats.multas_por_motorista.length) { %>
+              <% stats.multas_por_motorista.forEach(m => { %>
+                <li class="list-group-item d-flex justify-content-between">
+                  <div><%= m.motorista || '—' %><br><small class="text-muted"><%= m.qtd %> multas</small></div>
+                  <div>R$ <%= Number(m.total_valor || 0).toLocaleString('pt-BR', {minimumFractionDigits:2}) %></div>
+                </li>
+              <% }) %>
+            <% } else { %>
+              <li class="list-group-item">Sem dados.</li>
+            <% } %>
+          </ul>
+        </div>
+
+        <div class="card p-3 mt-3">
+          <h6 class="mb-2">Geofences (violations)</h6>
+          <% if (Array.isArray(stats && stats.geofence_violations) && stats.geofence_violations.length) { %>
+            <ul class="list-group">
+              <% stats.geofence_violations.forEach(g => { %>
+                <li class="list-group-item d-flex justify-content-between">
+                  <div><%= g.nome %></div>
+                  <div><span class="badge bg-secondary"><%= g.qtd_viols %></span></div>
+                </li>
+              <% }) %>
+            </ul>
+          <% } else { %>
+            <div class="small text-muted">Nenhuma violação registrada (ou consultas espaciais não suportadas).</div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- mapa -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Mapa — pontos recentes & geofences</h5>
+            <div>
+              <span class="legend-dot" style="background:#0d6efd"></span><small class="text-muted">Início viagem</small>
+              &nbsp;&nbsp;
+              <span class="legend-dot" style="background:#e03"></span><small class="text-muted">Geofence</small>
+            </div>
+          </div>
+          <div id="map" role="region" aria-label="Mapa com pontos e geofences"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- tabela resumo diário -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card p-3">
+          <h5>Resumo diário — Abastecimento</h5>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped">
+              <thead class="table-light">
+                <tr>
+                  <th>Dia</th>
+                  <th class="text-end">Gasto (R$)</th>
+                  <th class="text-end">Litros</th>
+                  <th class="text-end">Qtd</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (Array.isArray(stats && stats.abastecPorDia) && stats.abastecPorDia.length) { %>
+                  <% stats.abastecPorDia.forEach(r => { %>
+                    <tr>
+                      <td><%= r.dia %></td>
+                      <td class="text-end">R$ <%= Number(r.gasto || 0).toLocaleString('pt-BR', {minimumFractionDigits:2}) %></td>
+                      <td class="text-end"><%= Number(r.litros || 0).toLocaleString('pt-BR', {minimumFractionDigits:2}) %></td>
+                      <td class="text-end"><%= r.qtd %></td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr><td colspan="4">Sem dados no período.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // inicializa tooltips
+    document.addEventListener('DOMContentLoaded', () => {
+      const tList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tList.forEach(el => new bootstrap.Tooltip(el, {trigger: 'hover focus'}));
+    });
+
+    // dados injetados do servidor — a rota já sanitizou BigInt/Buffer
+    const stats = <%- JSON.stringify(stats || {}) %>;
+
+    // --- Chart: Abastecimento por dia ---
+    (function () {
+      const ctx = document.getElementById('chartAbastecimento');
+      if (!ctx) return;
+      const labels = (stats.abastecPorDia || []).map(r => r.dia);
+      const dataGasto = (stats.abastecPorDia || []).map(r => Number(r.gasto || 0));
+      const dataLitros = (stats.abastecPorDia || []).map(r => Number(r.litros || 0));
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Gasto (R$)', data: dataGasto, yAxisID: 'y', backgroundColor: 'rgba(13,110,253,0.7)' },
+            { label: 'Litros', data: dataLitros, type: 'line', yAxisID: 'y1', tension: 0.3, borderWidth: 2, pointRadius: 3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            y: { position: 'left', title: { display: true, text: 'R$' } },
+            y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Litros' } }
+          },
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: { mode: 'index', intersect: false }
+          }
+        }
+      });
+    })();
+
+    // --- Leaflet map: pontos + geofences ---
+    (function () {
+      try {
+        const map = L.map('map').setView([-15.8, -47.9], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        const pontos = stats.pontos_recentes || [];
+        const markers = L.layerGroup();
+        pontos.forEach(p => {
+          const lat = Number(p.start_lat);
+          const lng = Number(p.start_lng);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const m = L.circleMarker([lat, lng], { radius: 6, color: '#0d6efd', fillOpacity: 0.9 });
+            m.bindPopup(`<strong>Veículo:</strong> ${p.veiculo_id || ''}<br><strong>Motorista:</strong> ${p.motorista || ''}<br><small>${p.ts || ''}</small>`);
+            markers.addLayer(m);
+          }
+        });
+        markers.addTo(map);
+
+        const gfLayers = [];
+        (stats.geofences || []).forEach(g => {
+          if (g && g.geojson) {
+            try {
+              const layer = L.geoJSON(g.geojson, { style: { color: '#e03', weight: 2, fillOpacity: 0.06 }});
+              layer.bindPopup(`<strong>${g.nome}</strong><br>${g.descricao || ''}`);
+              layer.addTo(map);
+              gfLayers.push(layer);
+            } catch(e) {
+              console.warn('geofence inválida', g && g.id);
+            }
+          }
+        });
+
+        // ajuste de bounds
+        const all = [];
+        markers.getLayers().forEach(l => all.push(l));
+        gfLayers.forEach(l => all.push(l));
+        if (all.length) {
+          const group = L.featureGroup(all);
+          map.fitBounds(group.getBounds().pad(0.15));
+        }
+      } catch (e) {
+        console.warn('Erro ao inicializar mapa:', e && e.message);
+      }
+    })();
+
+    // --- Export CSV (gera CSV dos dados principais visíveis) ---
+    document.getElementById('btnExportCsv').addEventListener('click', () => {
+      try {
+        // junte arrays relevantes: abastecPorDia, top_veiculos_abastecimento, multas_por_motorista
+        const rows = [];
+        rows.push(['Resumo diário — Abastecimento']);
+        rows.push(['dia','gasto','litros','qtd']);
+        (stats.abastecPorDia || []).forEach(r => rows.push([r.dia, r.gasto, r.litros, r.qtd]));
+        rows.push([]);
+        rows.push(['Top veículos por gasto']);
+        rows.push(['placa','gasto','litros','qtd']);
+        (stats.top_veiculos_abastecimento || []).forEach(r => rows.push([r.placa, r.gasto, r.litros, r.qtd]));
+        rows.push([]);
+        rows.push(['Top motoristas (multas)']);
+        rows.push(['motorista','qtd','total_valor']);
+        (stats.multas_por_motorista || []).forEach(r => rows.push([r.motorista, r.qtd, r.total_valor]));
+
+        const csv = rows.map(r => r.map(c => {
+          if (c === null || c === undefined) return '';
+          const s = String(c).replace(/"/g, '""');
+          return `"${s}"`;
+        }).join(',')).join('\\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `estatisticas_frota_${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Erro ao exportar CSV: ' + (e && e.message));
+      }
+    });
+
+    // --- Refresh button (re-submete o form atual) ---
+    document.getElementById('btnRefresh').addEventListener('click', () => {
+      document.getElementById('filterForm').requestSubmit();
+    });
+  </script>
+</body>
+</html>

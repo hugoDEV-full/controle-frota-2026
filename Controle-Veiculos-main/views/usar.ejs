@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrar Uso de Veículo — Recentes (select)</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    :root{ --control-bg: rgba(255,255,255,0.95); --control-radius: 12px; --shadow: 0 6px 18px rgba(0,0,0,0.12); }
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    .page-wrap{min-height:100vh;display:flex;flex-direction:column}
+    .topbar{padding:0.6rem 1rem;background:linear-gradient(180deg,#fff,#f7f7f7);border-bottom:1px solid #e9ecef}
+    #route-picker{height:75vh;width:100%;transition:height .12s ease;min-height:320px;}
+    .map-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;height:100vh;width:100vw;z-index:99999}
+    .map-controls{position:absolute;top:12px;left:12px;z-index:1002;display:flex;gap:.5rem;flex-direction:column}
+    .map-controls .control-card{background:var(--control-bg);border-radius:var(--control-radius);box-shadow:var(--shadow);padding:.4rem .6rem}
+    .map-actions{position:absolute;top:12px;right:12px;z-index:1002;display:flex;gap:.5rem}
+    .btn-control{background:var(--control-bg);border:none;padding:.45rem .6rem;border-radius:10px;box-shadow:var(--shadow);cursor:pointer}
+    .search-bar{min-width:320px;max-width:720px;display:flex;align-items:center;gap:.5rem}
+    .search-bar input{border-radius:10px;padding:.5rem .75rem;border:1px solid #ddd;min-height:42px;box-shadow:none}
+    .list-group-position{position:absolute;left:12px;top:72px;z-index:1003;width:calc(100% - 24px);max-width:720px}
+    .form-area{padding:1rem;background:#fff}
+    .leaflet-container { z-index: 1; }
+    .geo-alert{position:fixed; right:16px; bottom:16px; z-index:11000;}
+    .instr{font-size:.9rem;color:#555}
+    .recent-select { width:100%; }
+    @media (max-width:768px){ #route-picker{height:62vh} .search-bar{min-width:220px} .list-group-position{left:8px;right:8px;top:110px} }
+  </style>
+</head>
+
+<body>
+  <div class="page-wrap">
+    <div class="topbar d-flex align-items-center justify-content-between">
+      <div>
+        <h5 class="mb-0">Registrar Uso do Veículo</h5>
+        <div class="instr">Instruções: arraste os marcadores <strong>Início</strong> e <strong>Fim</strong>. Use <em>Localizar</em> para pegar sua posição atual (funciona em HTTPS / localhost).</div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-outline-primary btn-sm" id="btn-locate-top" data-bs-toggle="tooltip" title="Usar minha localização (requer HTTPS ou localhost)"><i class="fa fa-location-arrow"></i> Localizar</button>
+        <button class="btn btn-outline-secondary btn-sm" id="btn-toggle-full" data-bs-toggle="tooltip" title="Alternar tela cheia"><i class="fa fa-expand"></i></button>
+      </div>
+    </div>
+
+    <!-- MAPA -->
+    <div class="container-fluid p-0 position-relative">
+      <div id="route-picker" aria-label="Mapa" tabindex="0"></div>
+
+      <div class="map-controls">
+        <div class="control-card search-bar" data-bs-toggle="tooltip" title="Buscar endereço (Brasil)">
+          <i class="fa fa-map-marker-alt"></i>
+          <input id="global_search" placeholder="Buscar endereço ou ponto (ex.: Av. Paulista, 1000)" autocomplete="off" aria-label="Busca global" />
+          <!-- botão de localizar duplicado removido aqui -->
+        </div>
+      </div>
+
+      <div class="list-group-position">
+        <div id="global_suggestions" class="list-group"></div>
+      </div>
+
+      <div class="map-actions">
+        <!-- Mantive: centralizar e zoom; removi expand e localizar duplicados -->
+        <button class="btn-control" id="btn-recenter" data-bs-toggle="tooltip" title="Centralizar no Início"><i class="fa fa-crosshairs"></i></button>
+        <button class="btn-control" id="btn-zoom-in" data-bs-toggle="tooltip" title="Aumentar"><i class="fa fa-plus"></i></button>
+        <button class="btn-control" id="btn-zoom-out" data-bs-toggle="tooltip" title="Diminuir"><i class="fa fa-minus"></i></button>
+      </div>
+    </div>
+
+    <!-- FORMULÁRIO -->
+    <div class="container form-area mt-3">
+      <form action="/usar/<%= veiculo.id %>" method="POST" id="formUsoVeiculo" class="needs-validation" novalidate enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Motorista</label>
+            <input class="form-control" value="<%= motoristaEmail %>" readonly data-bs-toggle="tooltip" title="Email do motorista logado">
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">KM inicial</label>
+            <input name="km_inicial" id="km_inicial" class="form-control" value="<%= kmInicial %>" readonly data-bs-toggle="tooltip" title="Quilometragem registrada no veículo">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Data e Hora</label>
+            <input id="data_hora_display" class="form-control" type="text" readonly aria-label="Data e hora (DD/MM/YYYY HH:MM:SS)" data-bs-toggle="tooltip" title="Data e hora local (formato brasileiro)">
+            <input id="data_hora_inicial" name="data_hora_inicial" type="hidden" value="">
+          </div>
+
+          <div class="col-md-12">
+            <label class="form-label">Finalidade</label>
+            <select id="finalidade" name="finalidade" class="form-select" required data-bs-toggle="tooltip" title="Selecione a finalidade do uso">
+              <option value="">Selecione...</option>
+              <option>Pessoal</option>
+              <option>Trabalho</option>
+            </select>
+            <div class="invalid-feedback">Selecione a finalidade.</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Descrição <span class="text-danger">*</span></label>
+            <textarea id="descricao" name="descricao" class="form-control" rows="2" placeholder="Detalhes..." required data-bs-toggle="tooltip" title="Descreva a finalidade / destino. Campo obrigatório."></textarea>
+            <div class="invalid-feedback">A descrição é obrigatória.</div>
+          </div>
+
+          <!-- START -->
+          <div class="col-md-6 position-relative">
+            <label class="form-label">Endereço Início</label>
+            <input id="start_addr" name="start_addr" class="form-control" placeholder="Clique no mapa ou selecione um recente..." autocomplete="off" required data-bs-toggle="tooltip" title="Endereço de partida (pode ser ajustado arrastando o marcador)">
+            <div class="invalid-feedback">Informe o endereço de início ou clique no mapa.</div>
+            <div id="start_suggestions" class="list-group position-absolute w-100" style="z-index:1000;"></div>
+
+            <div class="mt-2">
+              <small class="text-muted">Endereços recentes (Início)</small>
+              <select id="recent_start_select" class="form-select recent-select" data-bs-toggle="tooltip" title="Selecione um endereço recente para usar como Início">
+                <option value="">Carregando endereços recentes...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- END -->
+          <div class="col-md-6 position-relative">
+            <label class="form-label">Endereço Fim</label>
+            <input id="end_addr" name="end_addr" class="form-control" placeholder="Clique no mapa ou selecione um recente..." autocomplete="off" required data-bs-toggle="tooltip" title="Endereço de destino (pode ser ajustado arrastando o marcador)">
+            <div class="invalid-feedback">Informe o endereço de destino ou clique no mapa.</div>
+            <div id="end_suggestions" class="list-group position-absolute w-100" style="z-index:1000;"></div>
+
+            <div class="mt-2">
+              <small class="text-muted">Endereços recentes (Fim)</small>
+              <select id="recent_end_select" class="form-select recent-select" data-bs-toggle="tooltip" title="Selecione um endereço recente para usar como Fim">
+                <option value="">Carregando endereços recentes...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- hidden coords -->
+          <input type="hidden" id="start_lat" name="start_lat">
+          <input type="hidden" id="start_lng" name="start_lng">
+          <input type="hidden" id="end_lat" name="end_lat">
+          <input type="hidden" id="end_lng" name="end_lng">
+
+          <div class="col-12">
+            <strong>Distância (estimada):</strong> <span id="route-distance">--</span> km
+          </div>
+
+          <div class="col-12 d-flex justify-content-end gap-2">
+            <button type="submit" id="btnSubmit" class="btn btn-success" data-bs-toggle="tooltip" title="Registrar uso do veículo">Registrar Uso</button>
+            <a href="/" class="btn btn-secondary" data-bs-toggle="tooltip" title="Voltar à página inicial">Voltar</a>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="geoAlert" class="alert alert-warning geo-alert d-none" role="alert"></div>
+
+  <!-- Dependências -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // --- Tooltips ---
+      const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+
+      // --- Dados do servidor (EJS) ---
+      const vehicleHasLocation = <%= (veiculo && veiculo.lat && veiculo.lng) ? 'true' : 'false' %>;
+      const vehicleLat = Number(<%= (veiculo && veiculo.lat) ? veiculo.lat : -15.793889 %>);
+      const vehicleLng = Number(<%= (veiculo && veiculo.lng) ? veiculo.lng : -47.882778 %>);
+      const vehicleIdForRecent = <%= veiculo && veiculo.id ? veiculo.id : 'null' %>;
+
+      // --- Mapa (Leaflet) ---
+      const defaultCenter = { lat: vehicleHasLocation ? vehicleLat : -15.793889, lng: vehicleHasLocation ? vehicleLng : -47.882778 };
+      const map = L.map('route-picker', { preferCanvas: true, zoomControl: false, attributionControl: false }).setView([defaultCenter.lat, defaultCenter.lng], vehicleHasLocation ? 15 : 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      L.control.scale({imperial:false}).addTo(map);
+
+      // --- Controles básicos ---
+      if (document.getElementById('btn-zoom-in')) document.getElementById('btn-zoom-in').addEventListener('click', ()=> map.zoomIn());
+      if (document.getElementById('btn-zoom-out')) document.getElementById('btn-zoom-out').addEventListener('click', ()=> map.zoomOut());
+      if (document.getElementById('btn-recenter')) document.getElementById('btn-recenter').addEventListener('click', ()=> {
+        const sLat = parseFloat(document.getElementById('start_lat').value) || defaultCenter.lat;
+        const sLng = parseFloat(document.getElementById('start_lng').value) || defaultCenter.lng;
+        map.setView([sLat, sLng], 15);
+      });
+
+      // --- Fullscreen UI toggle (topbar only) ---
+      function toggleFullscreenUI(){
+        const container = document.getElementById('route-picker');
+        const isFull = container.classList.toggle('map-fullscreen');
+        const icon = document.querySelector('#btn-toggle-full i');
+        if(icon) icon.className = isFull ? 'fa fa-compress' : 'fa fa-expand';
+        setTimeout(()=> map.invalidateSize(), 260);
+      }
+      if (document.getElementById('btn-toggle-full')) document.getElementById('btn-toggle-full').addEventListener('click', toggleFullscreenUI);
+
+      // --- Localizar (manual via topbar) ---
+      if (document.getElementById('btn-locate-top')) document.getElementById('btn-locate-top').addEventListener('click', attemptManualLocate);
+
+      // --- Icons / vars ---
+      const greenIcon = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', iconSize:[25,41], iconAnchor:[12,41], shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png' });
+      const redIcon   = L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', iconSize:[25,41], iconAnchor:[12,41], shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png' });
+      let startMarker = null, endMarker = null, routeLine = null, watchId = null, watchTimeout = null;
+
+      function pad(n){ return n.toString().padStart(2,'0'); }
+      function showGeoAlert(msg, timeout=7000){ const a = document.getElementById('geoAlert'); a.textContent = msg; a.classList.remove('d-none'); clearTimeout(a._t); a._t = setTimeout(()=> a.classList.add('d-none'), timeout); }
+
+      function offsetLatLon(lat, lon, meters, bearingDeg){
+        const R = 6378137; const br = bearingDeg * Math.PI/180; const lat1 = lat*Math.PI/180; const lon1 = lon*Math.PI/180; const dDivR = meters/R;
+        const lat2 = Math.asin(Math.sin(lat1)*Math.cos(dDivR) + Math.cos(lat1)*Math.sin(dDivR)*Math.cos(br));
+        const lon2 = lon1 + Math.atan2(Math.sin(br)*Math.sin(dDivR)*Math.cos(lat1), Math.cos(dDivR)-Math.sin(lat1)*Math.sin(lat2));
+        return [lat2*180/Math.PI, lon2*180/Math.PI];
+      }
+
+      // --- Cache helpers (sessionStorage) ---
+      function cacheGet(lat, lng){
+        try {
+          const k = `revgeo::${lat.toFixed(6)},${lng.toFixed(6)}`;
+          return sessionStorage.getItem(k);
+        } catch(e){ return null; }
+      }
+      function cacheSet(lat, lng, name){
+        try {
+          const k = `revgeo::${lat.toFixed(6)},${lng.toFixed(6)}`;
+          sessionStorage.setItem(k, name);
+        } catch(e){}
+      }
+
+      // reverse geocode with Nominatim (caching + small delay to be polite)
+      async function reverseGeocodeFetch(lat, lng){
+        const cached = cacheGet(lat,lng);
+        if(cached) return cached;
+        try {
+          const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+          const res = await fetch(url, { headers: { 'Accept': 'application/json', 'User-Agent': 'MyApp/1.0 (contato@example.com)' }});
+          if (!res.ok) throw new Error('Nominatim falhou');
+          const js = await res.json();
+          const name = js && js.display_name ? js.display_name : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          cacheSet(lat,lng,name);
+          await new Promise(r => setTimeout(r, 160));
+          return name;
+        } catch (err) {
+          console.warn('reverseGeocodeFetch erro', err);
+          return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+      }
+
+      // --- Markers creation with dragend handlers that now capture readable address ---
+      function createInitialMarkers(centerLat, centerLng){
+        const [endLat,endLng] = offsetLatLon(centerLat, centerLng, 220, 80);
+
+        if(!startMarker){
+          startMarker = L.marker([centerLat, centerLng], { draggable:true, icon:greenIcon }).addTo(map)
+            .bindTooltip('Início',{permanent:true,direction:'top'});
+          startMarker.on('dragend', async ()=> {
+            const p = startMarker.getLatLng();
+            document.getElementById('start_lat').value = p.lat;
+            document.getElementById('start_lng').value = p.lng;
+            await onMarkerDragged('start', p.lat, p.lng);
+            updateRoute();
+          });
+        } else startMarker.setLatLng([centerLat, centerLng]);
+
+        if(!endMarker){
+          endMarker = L.marker([endLat,endLng], { draggable:true, icon:redIcon }).addTo(map)
+            .bindTooltip('Fim',{permanent:true,direction:'top'});
+          endMarker.on('dragend', async ()=> {
+            const p = endMarker.getLatLng();
+            document.getElementById('end_lat').value = p.lat;
+            document.getElementById('end_lng').value = p.lng;
+            await onMarkerDragged('end', p.lat, p.lng);
+            updateRoute();
+          });
+        } else endMarker.setLatLng([endLat,endLng]);
+
+        document.getElementById('start_lat').value = centerLat; document.getElementById('start_lng').value = centerLng;
+        document.getElementById('end_lat').value = endLat; document.getElementById('end_lng').value = endLng;
+
+        const startCached = cacheGet(centerLat, centerLng);
+        if (startCached) document.getElementById('start_addr').value = startCached;
+        const endCached = cacheGet(endLat, endLng);
+        if (endCached) document.getElementById('end_addr').value = endCached;
+
+        setTimeout(()=> map.invalidateSize(), 120);
+        updateRoute();
+      }
+
+      async function onMarkerDragged(which, lat, lng){
+        const name = await reverseGeocodeFetch(lat, lng);
+        if (which === 'start') {
+          document.getElementById('start_addr').value = name;
+          document.getElementById('start_lat').value = lat;
+          document.getElementById('start_lng').value = lng;
+          updateRecentSelectWithDragged('recent_start_select', lat, lng, name, 'Início (arrastado)');
+        } else {
+          document.getElementById('end_addr').value = name;
+          document.getElementById('end_lat').value = lat;
+          document.getElementById('end_lng').value = lng;
+          updateRecentSelectWithDragged('recent_end_select', lat, lng, name, 'Fim (arrastado)');
+        }
+      }
+
+      function updateRecentSelectWithDragged(selectId, lat, lng, label, prefix){
+        const sel = document.getElementById(selectId);
+        if(!sel) return;
+        const value = `${Number(lat)},${Number(lng)}`;
+        let foundIndex = -1;
+        for (let i=0;i<sel.options.length;i++){
+          const opt = sel.options[i];
+          if (!opt.value) continue;
+          const [olat, olng] = opt.value.split(',').map(Number);
+          if (olat && olng && olat.toFixed(6) === Number(lat).toFixed(6) && olng.toFixed(6) === Number(lng).toFixed(6)){
+            foundIndex = i; break;
+          }
+        }
+        if (foundIndex >= 0){
+          sel.selectedIndex = foundIndex;
+        } else {
+          const opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = `${prefix}: ${label}`;
+          sel.insertBefore(opt, sel.options[1] || null);
+          sel.selectedIndex = 1;
+        }
+      }
+
+      function updateRoute(){
+        if(!startMarker || !endMarker) return;
+        const a = startMarker.getLatLng(); const b = endMarker.getLatLng();
+        if(routeLine) map.removeLayer(routeLine);
+        const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+        fetch(url).then(r=>r.json()).then(osrm=>{
+          if(osrm && osrm.routes && osrm.routes[0]){
+            const coords = osrm.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+            routeLine = L.polyline(coords, { weight:4, dashArray:'6,4', opacity:0.9 }).addTo(map);
+            try{ map.fitBounds(routeLine.getBounds(), { padding:[40,40] }); }catch(e){}
+            document.getElementById('route-distance').textContent = (osrm.routes[0].distance/1000).toFixed(2);
+          } else document.getElementById('route-distance').textContent = '--';
+        }).catch(err=>{ console.warn('OSRM',err); document.getElementById('route-distance').textContent = '--'; });
+      }
+
+      // --- Autocomplete Nominatim kept ---
+      function setupAutocomplete(inputId, suggestionsId, onSelect){
+        const inp = document.getElementById(inputId); const sug = document.getElementById(suggestionsId);
+        let timer = null;
+        inp.addEventListener('input', ()=>{ clearTimeout(timer); const q = inp.value.trim(); if(q.length<2){ sug.innerHTML=''; return; }
+          timer = setTimeout(()=> {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=br&limit=12`)
+              .then(r=>r.json()).then(arr=>{ sug.innerHTML=''; if(!arr||!arr.length){ sug.innerHTML='<div class="list-group-item small text-muted">Nenhum resultado</div>'; return; }
+                arr.forEach(f=>{ const item=document.createElement('button'); item.type='button'; item.className='list-group-item list-group-item-action'; item.textContent=f.display_name; item.onclick=()=>{ onSelect([parseFloat(f.lat),parseFloat(f.lon)], f.display_name); sug.innerHTML=''; }; sug.appendChild(item); });
+              }).catch(e=>{ console.warn(e); sug.innerHTML=''; });
+          }, 220);
+        });
+        document.addEventListener('click', e=>{ if(!inp.contains(e.target) && !sug.contains(e.target)) sug.innerHTML=''; });
+      }
+
+      setupAutocomplete('start_addr','start_suggestions', ([lat,lon],display)=>{ document.getElementById('start_addr').value = display; document.getElementById('start_lat').value = lat; document.getElementById('start_lng').value = lon; if(!startMarker) createInitialMarkers(lat,lon); else startMarker.setLatLng([lat,lon]); updateRoute(); });
+      setupAutocomplete('end_addr','end_suggestions', ([lat,lon],display)=>{ document.getElementById('end_addr').value = display; document.getElementById('end_lat').value = lat; document.getElementById('end_lng').value = lon; if(!endMarker) createInitialMarkers(lat,lon); else endMarker.setLatLng([lat,lon]); updateRoute(); });
+
+      // --- Global top search preserved ---
+      const searchInput = document.getElementById('global_search'); const suggestionsBox = document.getElementById('global_suggestions');
+      let searchTimer = null;
+      searchInput.addEventListener('input', ()=>{ clearTimeout(searchTimer); const q = searchInput.value.trim(); if(q.length<2){ suggestionsBox.innerHTML=''; return; }
+        searchTimer = setTimeout(()=> {
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=br&limit=8`)
+            .then(r=>r.json()).then(arr=>{ suggestionsBox.innerHTML=''; if(!arr||!arr.length){ suggestionsBox.innerHTML='<div class="list-group-item small text-muted">Nenhum resultado</div>'; return; }
+              arr.forEach(it=>{ const b=document.createElement('button'); b.type='button'; b.className='list-group-item list-group-item-action'; b.innerText = it.display_name; b.addEventListener('click', ()=>{ searchInput.value = it.display_name; suggestionsBox.innerHTML=''; applyCoordsFromSearch(parseFloat(it.lat), parseFloat(it.lon), it.display_name); }); suggestionsBox.appendChild(b); });
+            }).catch(e=>{ console.warn('search error',e); suggestionsBox.innerHTML=''; });
+        }, 220);
+      });
+      document.addEventListener('click', e=>{ if(!document.querySelector('.search-bar').contains(e.target)) suggestionsBox.innerHTML=''; });
+
+      function applyCoordsFromSearch(lat, lng, displayName){
+        if(!startMarker || !endMarker) createInitialMarkers(lat, lng);
+        else {
+          startMarker.setLatLng([lat, lng]);
+          const [endLat,endLng] = offsetLatLon(lat, lng, 220, 90);
+          if(!endMarker) createInitialMarkers(endLat, endLng); else endMarker.setLatLng([endLat,endLng]);
+          document.getElementById('start_addr').value = displayName;
+          document.getElementById('start_lat').value = lat;
+          document.getElementById('start_lng').value = lng;
+          document.getElementById('end_lat').value = endLat;
+          document.getElementById('end_lng').value = endLng;
+          document.getElementById('end_addr').value = `Destino próximo (${endLat.toFixed(6)}, ${endLng.toFixed(6)})`;
+          updateRoute();
+        }
+        map.setView([lat,lng],16);
+      }
+
+      // create markers initially centered
+      const center = map.getCenter();
+      createInitialMarkers(center.lat, center.lng);
+
+      // ===========================
+      // RECENTES: carregar e mostrar nomes legíveis (somente front-end)
+      // ===========================
+      const startSelect = document.getElementById('recent_start_select');
+      const endSelect = document.getElementById('recent_end_select');
+
+      async function loadRecentSelectsFast(){
+        startSelect.innerHTML = '<option value="">Carregando endereços recentes...</option>';
+        endSelect.innerHTML = '<option value="">Carregando endereços recentes...</option>';
+        try {
+          const url = vehicleIdForRecent ? `/api/enderecos-recentes/${vehicleIdForRecent}` : '/api/enderecos-recentes';
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          if (!res.ok) throw new Error('Erro ao buscar endereços recentes');
+          const js = await res.json();
+
+          let startList = [], endList = [];
+          if (Array.isArray(js.recent)) {
+            startList = js.recent.slice(0,30);
+            endList = js.recent.slice(0,30);
+          } else {
+            startList = (js.start || []).slice(0,30);
+            endList = (js.end || []).slice(0,30);
+          }
+
+          startSelect.innerHTML = '<option value="">Selecione um endereço recente...</option>';
+          endSelect.innerHTML = '<option value="">Selecione um endereço recente...</option>';
+
+          const toResolveStart = [];
+          const toResolveEnd = [];
+
+          for (const it of startList) {
+            if (it.lat == null || it.lng == null) continue;
+            const lat = Number(it.lat), lng = Number(it.lng);
+            const opt = document.createElement('option');
+            opt.value = `${lat},${lng}`;
+            if (it.display_name) {
+              opt.textContent = String(it.display_name);
+              cacheSet(lat,lng,String(it.display_name));
+            } else {
+              const cached = cacheGet(lat,lng);
+              if (cached) {
+                opt.textContent = cached;
+              } else {
+                opt.textContent = `Início: ${lat.toFixed(6)}, ${lng.toFixed(6)} (carregando nome...)`;
+                toResolveStart.push({lat,lng,option:opt});
+              }
+            }
+            startSelect.appendChild(opt);
+          }
+
+          for (const it of endList) {
+            if (it.lat == null || it.lng == null) continue;
+            const lat = Number(it.lat), lng = Number(it.lng);
+            const opt = document.createElement('option');
+            opt.value = `${lat},${lng}`;
+            if (it.display_name) {
+              opt.textContent = String(it.display_name);
+              cacheSet(lat,lng,String(it.display_name));
+            } else {
+              const cached = cacheGet(lat,lng);
+              if (cached) {
+                opt.textContent = cached;
+              } else {
+                opt.textContent = `Fim: ${lat.toFixed(6)}, ${lng.toFixed(6)} (carregando nome...)`;
+                toResolveEnd.push({lat,lng,option:opt});
+              }
+            }
+            endSelect.appendChild(opt);
+          }
+
+          const MAX_RESOLVE = 8;
+          const resolves = toResolveStart.concat(toResolveEnd).slice(0, MAX_RESOLVE);
+          for (const item of resolves){
+            try {
+              const name = await reverseGeocodeFetch(item.lat, item.lng);
+              if (item.option) item.option.textContent = name;
+            } catch(e){}
+          }
+
+          startSelect.addEventListener('change', ()=> {
+            const v = startSelect.value;
+            if (!v) return;
+            const [lat, lng] = v.split(',').map(Number);
+            document.getElementById('start_lat').value = lat;
+            document.getElementById('start_lng').value = lng;
+            const label = startSelect.options[startSelect.selectedIndex].textContent;
+            document.getElementById('start_addr').value = label;
+            if(!startMarker) createInitialMarkers(lat, lng); else startMarker.setLatLng([lat, lng]);
+            const currentEndLat = document.getElementById('end_lat').value;
+            if(!currentEndLat) {
+              const [endLat, endLng] = offsetLatLon(lat, lng, 220, 90);
+              document.getElementById('end_lat').value = endLat;
+              document.getElementById('end_lng').value = endLng;
+              if(!endMarker) createInitialMarkers(endLat, endLng); else endMarker.setLatLng([endLat, endLng]);
+            }
+            updateRoute();
+            map.setView([lat, lng], 15);
+          });
+
+          endSelect.addEventListener('change', ()=> {
+            const v = endSelect.value;
+            if (!v) return;
+            const [lat, lng] = v.split(',').map(Number);
+            document.getElementById('end_lat').value = lat;
+            document.getElementById('end_lng').value = lng;
+            const label = endSelect.options[endSelect.selectedIndex].textContent;
+            document.getElementById('end_addr').value = label;
+            if(!endMarker) createInitialMarkers(lat, lng); else endMarker.setLatLng([lat, lng]);
+            updateRoute();
+            map.setView([lat, lng], 15);
+          });
+
+        } catch (err) {
+          console.warn('Erro ao carregar endereços recentes:', err);
+          startSelect.innerHTML = '<option value="">Não foi possível carregar</option>';
+          endSelect.innerHTML = '<option value="">Não foi possível carregar</option>';
+        }
+      }
+
+      // carregar rapidinho
+      loadRecentSelectsFast().catch(()=>{});
+
+      // ===========================
+      // GEO helpers & date/time
+      // ===========================
+      function tryGetCurrentPosition(options = { enableHighAccuracy:true, timeout:9000, maximumAge:0 }){
+        return new Promise((resolve, reject) => {
+          if(!navigator.geolocation) return reject(new Error('Geolocalização não disponível'));
+          navigator.geolocation.getCurrentPosition(pos => resolve(pos), err => reject(err), options);
+        });
+      }
+      function tryWatchPosition(timeoutMs = 12000){
+        return new Promise((resolve, reject) => {
+          if(!navigator.geolocation) return reject(new Error('Geolocalização não disponível'));
+          watchId = navigator.geolocation.watchPosition(pos => {
+            if(pos && pos.coords){ resolve(pos); if(watchId) navigator.geolocation.clearWatch(watchId); clearTimeout(watchTimeout); }
+          }, err => { /* ignore repetitive errors here */ }, { enableHighAccuracy:true, maximumAge:0, timeout:10000 });
+          watchTimeout = setTimeout(()=>{ if(watchId) navigator.geolocation.clearWatch(watchId); reject(new Error('watchPosition timeout')); }, timeoutMs);
+        });
+      }
+
+      // Aplica melhor start: veículo -> navigator
+      async function applyBestStart(){
+        if(vehicleHasLocation){
+          createInitialMarkers(vehicleLat, vehicleLng);
+          map.setView([vehicleLat, vehicleLng], 15);
+          showGeoAlert('Início: posição do veículo usada (servidor).', 3000);
+          return;
+        }
+
+        try {
+          if(navigator.permissions && navigator.permissions.query){
+            const perm = await navigator.permissions.query({ name: 'geolocation' });
+            if(perm.state === 'denied'){
+              showGeoAlert('Permissão de localização negada. Ative nas configurações do navegador ou teste em HTTPS/localhost.', 9000);
+              return;
+            }
+          }
+        } catch(e){ /* ignore */ }
+
+        try {
+          const pos = await tryGetCurrentPosition();
+          const lat = pos.coords.latitude, lon = pos.coords.longitude;
+          createInitialMarkers(lat, lon);
+          map.setView([lat, lon], 15);
+          showGeoAlert('Localização atual detectada e aplicada como Início.', 3000);
+          return;
+        } catch (err1) {
+          try {
+            const pos2 = await tryWatchPosition(10000);
+            const lat = pos2.coords.latitude, lon = pos2.coords.longitude;
+            createInitialMarkers(lat, lon);
+            map.setView([lat, lon], 15);
+            showGeoAlert('Localização obtida via watchPosition e aplicada como Início.', 3000);
+            return;
+          } catch (err2) {
+            console.warn('Geolocation attempts failed:', err1, err2);
+            showGeoAlert('Não foi possível obter a localização atual (verifique permissão/HTTPS). Usando posição padrão.', 9000);
+            return;
+          }
+        }
+      }
+
+      applyBestStart();
+
+      async function attemptManualLocate(){
+        showGeoAlert('Tentando obter localização...', 3000);
+        try {
+          const pos = await tryGetCurrentPosition({ enableHighAccuracy:true, timeout:10000 });
+          const lat = pos.coords.latitude, lon = pos.coords.longitude;
+          createInitialMarkers(lat, lon);
+          map.setView([lat, lon], 15);
+          showGeoAlert('Localização do navegador aplicada como Início.', 3000);
+        } catch(e){
+          showGeoAlert('Falha ao obter localização: verifique permissão/HTTPS.', 5000);
+        }
+      }
+
+      // Data/hora: display BR + hidden ISO
+      function atualizarDataHora(){
+        const now = new Date();
+        const iso = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        const hidden = document.getElementById('data_hora_inicial'); if(hidden) hidden.value = iso;
+        const br = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        const display = document.getElementById('data_hora_display'); if(display) display.value = br;
+      }
+      atualizarDataHora();
+      const dtInterval = setInterval(atualizarDataHora, 1000);
+
+      // Form validation (Bootstrap) — descrição obrigatória
+      const form = document.getElementById('formUsoVeiculo');
+      const btnSubmit = document.getElementById('btnSubmit');
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+          form.classList.add('was-validated');
+          showGeoAlert('Corrija os campos obrigatórios antes de enviar.', 4000);
+          return;
+        }
+        btnSubmit.disabled = true;
+        clearInterval(dtInterval);
+      }, false);
+
+      // Cleanup events
+      document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ const el = document.getElementById('route-picker'); if(el.classList.contains('map-fullscreen')){ el.classList.remove('map-fullscreen'); map.invalidateSize(); } }});
+      window.addEventListener('resize', ()=> map.invalidateSize());
+      window.addEventListener('beforeunload', ()=>{ if(watchId) navigator.geolocation.clearWatch(watchId); if(watchTimeout) clearTimeout(watchTimeout); });
+
+      console.log('Front-end pronto — arrasteos capturam endereços legíveis, selects atualizados, cache ativo.');
+    });
+  </script>
+</body>
+
+</html>

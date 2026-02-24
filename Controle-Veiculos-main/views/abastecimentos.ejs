@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title><%= title %></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-4">
+    <h1><%= title %></h1>
+    <p><a href="/abastecimento/novo" class="btn btn-primary">Novo abastecimento</a></p>
+
+    <% 
+      // helpers locais para formatação em pt-BR
+      function formatDateBR(d) {
+        if (!d) return '';
+        try {
+          const dt = (d instanceof Date) ? d : new Date(d);
+          if (isNaN(dt)) return String(d);
+          return dt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+          return String(d);
+        }
+      }
+      function formatNumberBR(v, minFrac = 2, maxFrac = 2) {
+        if (v === null || v === undefined || v === '') return '—';
+        const n = Number(v);
+        if (isNaN(n)) return String(v);
+        return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: minFrac, maximumFractionDigits: maxFrac }).format(n);
+      }
+    %>
+
+    <table class="table table-striped table-sm">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th data-bs-toggle="tooltip" title="Data e hora do abastecimento (dd/mm/aaaa hh:mm)">Data/Hora</th>
+          <th data-bs-toggle="tooltip" title="Nome do veículo cadastrado">Veículo</th>
+          <th data-bs-toggle="tooltip" title="Placa informada no abastecimento">Placa</th>
+          <th data-bs-toggle="tooltip" title="Nome do posto">Posto</th>
+          <th data-bs-toggle="tooltip" title="Tipo de combustível">Comb.</th>
+          <th data-bs-toggle="tooltip" title="Quantidade em litros (formatado em pt-BR)">Litros</th>
+          <th data-bs-toggle="tooltip" title="Preço por litro (formatado em pt-BR)">Preço/L</th>
+          <th data-bs-toggle="tooltip" title="Preço total pago (formatado em pt-BR)">Total</th>
+          <th data-bs-toggle="tooltip" title="Quilometragem registrada no abastecimento">KM</th>
+          <th data-bs-toggle="tooltip" title="Nome do condutor">Condutor</th>
+          <th data-bs-toggle="tooltip" title="Usuário que registrou">Criado por</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!rows || !rows.length) { %>
+          <tr><td colspan="12" class="text-center">Nenhum registro encontrado.</td></tr>
+        <% } else { rows.forEach(r => { %>
+          <tr>
+            <td><%= r.id %></td>
+            <td><%= formatDateBR(r.data_hora) %></td>
+            <td><%= r.veiculo_nome || (r.nome_marca ? (r.nome_marca + (r.nome_modelo ? ' ' + r.nome_modelo : '')) : '—') %></td>
+            <td><%= r.placa || '—' %></td>
+            <td><%= r.posto || '—' %></td>
+            <td><%= r.tipo_combustivel || '—' %></td>
+            <td><%= (r.litros !== null && r.litros !== undefined) ? formatNumberBR(r.litros, 2, 2) : '—' %></td>
+            <td><%= (r.preco_litro !== null && r.preco_litro !== undefined) ? formatNumberBR(r.preco_litro, 4, 4) : '—' %></td>
+            <td><%= (r.preco_total !== null && r.preco_total !== undefined) ? formatNumberBR(r.preco_total, 2, 2) : '—' %></td>
+            <td><%= (r.km_atual !== null && r.km_atual !== undefined && r.km_atual !== '') ? formatNumberBR(r.km_atual, 0, 0) : '—' %></td>
+            <td><%= r.condutor || '—' %></td>
+            <td><%= r.criado_por || '—' %></td>
+          </tr>
+        <% }) } %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- bootstrap bundle (inclui Popper para tooltips) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // inicializa tooltips
+    document.addEventListener('DOMContentLoaded', function () {
+      var tlist = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tlist.forEach(function (el) { new bootstrap.Tooltip(el); });
+    });
+  </script>
+</body>
+</html>
