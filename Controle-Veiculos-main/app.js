@@ -117,40 +117,24 @@ const util = require('util');
 const query = util.promisify(pool.query).bind(pool);
 
 async function ensureTablesExist() {
+  console.log('>> [INIT] Executando seed automático (sempre)...');
   try {
-    // Verifica se a tabela usuarios existe (indica que o seed já rodou)
-    await query('SELECT 1 FROM usuarios LIMIT 1');
-    console.log('>> [INIT] Tabelas já existem — pulando seed automático');
-  } catch (err) {
-    if (err.code === 'ER_NO_SUCH_TABLE') {
-      console.log('>> [INIT] Tabelas não encontradas — executando seed automático...');
-      try {
-        // Importa e executa o seed como Promise
-        const seed = require('./seed-database.js');
-        if (typeof seed === 'function') {
-          await seed();
-        } else {
-          // Se o seed não for função, executa via spawn
-          const { spawn } = require('child_process');
-          await new Promise((resolve, reject) => {
-            const child = spawn('node', ['seed-database.js'], { 
-              stdio: 'inherit',
-              cwd: __dirname 
-            });
-            child.on('close', (code) => {
-              if (code === 0) resolve();
-              else reject(new Error(`Seed exited with code ${code}`));
-            });
-          });
-        }
-        console.log('>> [INIT] Seed automático executado com sucesso!');
-      } catch (seedErr) {
-        console.error('>> [INIT] Erro ao executar seed automático:', seedErr.message);
-        throw seedErr; // Propaga o erro para parar o app se o seed falhar
-      }
-    } else {
-      console.error('>> [INIT] Erro ao verificar tabelas:', err.message);
-    }
+    // Executa o seed via spawn para sempre atualizar as tabelas
+    const { spawn } = require('child_process');
+    await new Promise((resolve, reject) => {
+      const child = spawn('node', ['seed-database.js'], { 
+        stdio: 'inherit',
+        cwd: __dirname 
+      });
+      child.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`Seed exited with code ${code}`));
+      });
+    });
+    console.log('>> [INIT] Seed automático executado com sucesso!');
+  } catch (seedErr) {
+    console.error('>> [INIT] Erro ao executar seed automático:', seedErr.message);
+    // Não para o app se o seed falhar, apenas loga o erro
   }
 }
 
