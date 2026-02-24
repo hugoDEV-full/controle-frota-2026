@@ -8506,7 +8506,7 @@ app.get('/abastecimentos', isAuthenticated, csrfProtection, async (req, res) => 
   try {
     const [rows] = await db.promise().query(
       `SELECT a.id, a.data_hora, a.placa, a.posto, a.tipo_combustivel, a.litros, a.preco_litro, a.preco_total, a.km_atual, a.condutor, a.criado_por, a.criado_em,
-              v.nome AS veiculo_nome, v.nome_marca, v.nome_modelo
+              v.nome AS veiculo_nome, v.marca, v.modelo
        FROM abastecimentos a
        LEFT JOIN veiculos v ON v.id = a.veiculo_id
        ORDER BY a.data_hora DESC
