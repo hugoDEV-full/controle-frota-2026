@@ -6560,56 +6560,71 @@ app.post(
 //////////////////////////////////fim editar ususarios e motoristas
 
 /////////////////////////////////////////////GPS conecção com os dados recebidos em database GPS, tabela gps_history
-// Pool GPS
-// === CONFIGURAÇÃO GPS usando as variáveis *_DEV ===
-const poolGps = mysql.createPool({
-  host: process.env.GSP_DB_HOST,
-  user: process.env.GSP_DB_USER,
-  password: process.env.GSP_DB_PASSWORD,
-  database: process.env.GSP_DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 5
-});
-const queryGps = util.promisify(poolGps.query).bind(poolGps);
+const GPS_ENABLED = Boolean(
+  process.env.GSP_DB_HOST &&
+  process.env.GSP_DB_USER &&
+  process.env.GSP_DB_PASSWORD &&
+  process.env.GSP_DB_NAME
+);
 
-// Teste de conexão 
-poolGps.getConnection((err, conn) => {
-  if (err) {
-    console.error('>> [SERVER] Falha ao conectar no DB GPS:', err.stack);
-    process.exit(1);
-  }
-  console.log('>> [SERVER] Conexão ao DB GPS OK');
-  conn.release();
-});
+let poolGps;
+let queryGps;
 
-// Rota para consumir histórico GPS, aceita ?device=ID
-app.get('/gps-history', async (req, res) => {
-  try {
-    const devId = req.query.device;
-    if (!devId) {
-      return res.status(400).json({ error: 'Falta o parâmetro device' });
+if (GPS_ENABLED) {
+  // Pool GPS
+  // === CONFIGURAÇÃO GPS usando as variáveis *_DEV ===
+  poolGps = mysql.createPool({
+    host: process.env.GSP_DB_HOST,
+    user: process.env.GSP_DB_USER,
+    password: process.env.GSP_DB_PASSWORD,
+    database: process.env.GSP_DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 5
+  });
+  queryGps = util.promisify(poolGps.query).bind(poolGps);
+
+  // Teste de conexão
+  poolGps.getConnection((err, conn) => {
+    if (err) {
+      console.error('>> [SERVER] Falha ao conectar no DB GPS:', err.stack);
+      return;
     }
+    console.log('>> [SERVER] Conexão ao DB GPS OK');
+    conn.release();
+  });
 
-    // Busca os 1000 pontos mais recentes (ORDER BY DESC)
-    const rows = await queryGps(
-      `SELECT latitude, longitude, datahora_recebido
-         FROM gps_history
-        WHERE fk_device = ?
-        ORDER BY datahora_recebido DESC
-        LIMIT 1000`,
-      [devId]
-    );
+  // Rota para consumir histórico GPS, aceita ?device=ID
+  app.get('/gps-history', async (req, res) => {
+    try {
+      const devId = req.query.device;
+      if (!devId) {
+        return res.status(400).json({ error: 'Falta o parâmetro device' });
+      }
 
-    // Inverte para ordem cronológica (do mais antigo ao mais novo)
-    const ordered = rows.reverse();
+      // Busca os 1000 pontos mais recentes (ORDER BY DESC)
+      const rows = await queryGps(
+        `SELECT latitude, longitude, datahora_recebido
+           FROM gps_history
+          WHERE fk_device = ?
+          ORDER BY datahora_recebido DESC
+          LIMIT 1000`,
+        [devId]
+      );
 
-    console.log(`>> [SERVER] Dados GPS consumidos para device ${devId}:`, ordered.length, 'pontos');
-    res.json(ordered);
-  } catch (err) {
-    console.error('>> [SERVER] Erro ao buscar histórico GPS:', err);
-    res.status(500).json({ error: 'Erro ao buscar histórico GPS' });
-  }
-});
+      // Inverte para ordem cronológica (do mais antigo ao mais novo)
+      const ordered = rows.reverse();
+
+      console.log(`>> [SERVER] Dados GPS consumidos para device ${devId}:`, ordered.length, 'pontos');
+      res.json(ordered);
+    } catch (err) {
+      console.error('>> [SERVER] Erro ao buscar histórico GPS:', err);
+      res.status(500).json({ error: 'Erro ao buscar histórico GPS' });
+    }
+  });
+} else {
+  console.warn('>> [SERVER] GPS desabilitado (variáveis GSP_DB_* não configuradas).');
+  app.get('/gps-history', (req, res) => res.status(503).json({ error: 'GPS desabilitado' }));
+}
 
 
 
@@ -6618,6 +6633,9 @@ app.get(
   '/mapa-gps',
   isAuthenticated,
   (req, res) => {
+    if (!GPS_ENABLED) {
+      return res.status(503).send('GPS desabilitado');
+    }
     console.log(`>> [SERVER] GET /mapa-gps por user=${req.user.id}`);
     res.render('gps-history', {
       layout: 'layout-gps',      // usa views/layout-gps.ejs
@@ -6633,6 +6651,7 @@ app.get(
 // suposição: você já tem a queryGps(id) que retorna o último ponto do device
 // Função que traz, em uma única query, o último ponto de cada device
 async function getLatestPositions() {
+  if (!GPS_ENABLED) return [];
   return queryGps(
     `SELECT
        g.fk_device   AS deviceId,
@@ -6654,6 +6673,7 @@ io.on('connection', socket => {
   console.log('>> [SERVER] Cliente conectado via Socket.IO');
 
   socket.on('subscribeToDevice', async devId => {
+    if (!GPS_ENABLED) return;
     socket.join(devId);
     console.log(`>> [SERVER] Cliente inscrito para device ${devId}`);
 
@@ -6678,6 +6698,7 @@ io.on('connection', socket => {
 
 // broadcast em lote a cada 1s, usando UMA ÚNICA query para TODOS os devices
 setInterval(async () => {
+  if (!GPS_ENABLED) return;
   const latestPoints = await getLatestPositions();
   // para cada ponto retornado, emite na sala correspondente
   for (const pt of latestPoints) {
@@ -6781,6 +6802,9 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 
 app.get('/trips-history', isAuthenticated, async (req, res) => {
   try {
+    if (!GPS_ENABLED) {
+      return res.status(503).json({ error: 'GPS desabilitado' });
+    }
     const rows = await queryGps(`
       SELECT latitude, longitude, datahora_recebido AS ts
       FROM gps_history
