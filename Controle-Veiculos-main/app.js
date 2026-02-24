@@ -85,6 +85,11 @@ if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
 
+// Se a pasta '.sessions' não existir, cria ela
+if (!fs.existsSync('.sessions')) {
+  fs.mkdirSync('.sessions');
+}
+
 // Parse MYSQL_URL para o pool principal também
 const appMysqlUrl = process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL;
 let poolConfig = {};
