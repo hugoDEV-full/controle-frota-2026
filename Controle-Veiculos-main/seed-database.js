@@ -91,18 +91,20 @@ async function seedDatabase() {
       )
     `);
     
-    // Tabela veiculos
+    // Tabela veículos
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS veiculos (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        placa VARCHAR(20) NOT NULL UNIQUE,
         nome VARCHAR(255) NOT NULL,
-        placa VARCHAR(20) UNIQUE NOT NULL,
-        km INT DEFAULT 0,
-        ultimaTrocaOleo INT DEFAULT 0,
-        emUsoPor VARCHAR(255),
         modelo VARCHAR(255),
+        marca VARCHAR(255),
         ano INT,
         cor VARCHAR(100),
+        tipo VARCHAR(100),
+        capacidade INT,
+        status ENUM('Ativo', 'Manutenção', 'Inativo') DEFAULT 'Ativo',
+        device_id VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -205,7 +207,8 @@ async function seedDatabase() {
         tipo VARCHAR(50) DEFAULT 'info',
         lida BOOLEAN DEFAULT FALSE,
         data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        usuario_id INT
+        usuario_id INT,
+        user_id INT
       )
     `);
 
@@ -218,6 +221,16 @@ async function seedDatabase() {
         longitude DECIMAL(10, 7) NOT NULL,
         datahora_recebido TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY idx_gps_device_time (fk_device, datahora_recebido)
+      )
+    `);
+
+    // Tabela geofences
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS geofences (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        geom POLYGON NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     
@@ -256,23 +269,24 @@ async function seedDatabase() {
     // 2) Inserir veículos de exemplo
     console.log('🚗 Inserindo veículos de exemplo...');
     const veiculos = [
-      ['Fiesta', 'ABC-1234', 2020, 45000, 35000],
-      ['Onix', 'DEF-5678', 2021, 32000, 22000],
-      ['Palio', 'GHI-9012', 2019, 58000, 48000],
-      ['Corolla', 'JKL-3456', 2022, 15000, 5000],
-      ['HB20', 'MNO-7890', 2020, 42000, 32000]
+      ['Fiesta', 'ABC-1234', 2020, 45000, 35000, 'DEVICE001'],
+      ['Onix', 'DEF-5678', 2021, 32000, 22000, 'DEVICE002'],
+      ['Palio', 'GHI-9012', 2019, 58000, 48000, 'DEVICE003'],
+      ['Corolla', 'JKL-3456', 2022, 15000, 5000, 'DEVICE004'],
+      ['HB20', 'MNO-7890', 2020, 42000, 32000, 'DEVICE005']
     ];
 
-    for (const [nome, placa, ano, km, ultimaTrocaOleo] of veiculos) {
+    for (const [nome, placa, ano, km, ultimaTrocaOleo, device_id] of veiculos) {
       await connection.execute(`
-        INSERT INTO veiculos (nome, placa, ano, km, ultimaTrocaOleo, created_at) 
-        VALUES (?, ?, ?, ?, ?, NOW())
+        INSERT INTO veiculos (nome, placa, ano, km, ultimaTrocaOleo, device_id, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
         ON DUPLICATE KEY UPDATE 
           nome = VALUES(nome), 
           ano = VALUES(ano), 
           km = VALUES(km), 
-          ultimaTrocaOleo = VALUES(ultimaTrocaOleo)
-      `, [nome, placa, ano, km, ultimaTrocaOleo]);
+          ultimaTrocaOleo = VALUES(ultimaTrocaOleo),
+          device_id = VALUES(device_id)
+      `, [nome, placa, ano, km, ultimaTrocaOleo, device_id]);
     }
 
     // 3) Inserir motoristas de exemplo
@@ -331,10 +345,24 @@ async function seedDatabase() {
     
     await connection.execute(`
       INSERT INTO multas (uso_id, veiculo_id, data, multa, created_at) 
-      VALUES (3, 3, '2024-01-17', 'Avanço de sinal', NOW())
+      VALUES (3, 3, '2024-01-17', 'Avançar sinal vermelho', NOW())
     `);
-
-    // 6) Inserir manutenções de exemplo
+    
+    // 6) Inserir geofences de exemplo
+    console.log('🗺️ Inserindo geofences de exemplo...');
+    await connection.execute(`
+      INSERT INTO geofences (nome, geom, created_at) 
+      VALUES ('Sede Empresa', ST_GeomFromText('POLYGON((-46.654 -23.549, -46.652 -23.549, -46.652 -23.547, -46.654 -23.547, -46.654 -23.549))'), NOW())
+    `);
+    
+    await connection.execute(`
+      INSERT INTO geofences (nome, geom, created_at) 
+      VALUES ('Área de Estacionamento', ST_GeomFromText('POLYGON((-46.650 -23.550, -46.648 -23.550, -46.648 -23.548, -46.650 -23.548, -46.650 -23.550))'), NOW())
+    `);
+    
+    console.log('✅ Carga inicial concluída com sucesso!');
+    
+    // 7) Inserir manutenções de exemplo
     console.log('🔧 Inserindo manutenções de exemplo...');
     const manutencoes = [
       [1, '2024-01-20', 'Troca de óleo', 150.00, 'Concluída', 'Troca de óleo e filtro'],
