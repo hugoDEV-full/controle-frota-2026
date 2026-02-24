@@ -249,6 +249,26 @@ async function seedDatabase() {
       }
     }
     
+    // Adicionar marca na tabela veiculos se não existir
+    try {
+      await connection.execute(`ALTER TABLE veiculos ADD COLUMN marca VARCHAR(255)`);
+      console.log('✅ Coluna marca adicionada à tabela veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna marca já existe em veiculos');
+      }
+    }
+    
+    // Adicionar dispositivo na tabela veiculos se não existir
+    try {
+      await connection.execute(`ALTER TABLE veiculos ADD COLUMN dispositivo VARCHAR(100)`);
+      console.log('✅ Coluna dispositivo adicionada à tabela veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna dispositivo já existe em veiculos');
+      }
+    }
+    
     // Adicionar user_id na tabela notificacoes se não existir
     try {
       await connection.execute(`ALTER TABLE notificacoes ADD COLUMN user_id INT`);
@@ -292,24 +312,26 @@ async function seedDatabase() {
     // 2) Inserir veículos de exemplo
     console.log('🚗 Inserindo veículos de exemplo...');
     const veiculos = [
-      ['Fiesta', 'ABC-1234', 2020, 45000, 35000, 'DEVICE001'],
-      ['Onix', 'DEF-5678', 2021, 32000, 22000, 'DEVICE002'],
-      ['Palio', 'GHI-9012', 2019, 58000, 48000, 'DEVICE003'],
-      ['Corolla', 'JKL-3456', 2022, 15000, 5000, 'DEVICE004'],
-      ['HB20', 'MNO-7890', 2020, 42000, 32000, 'DEVICE005']
+      ['Fiesta', 'ABC-1234', 2020, 45000, 35000, 'DEVICE001', 'Ford', 'DISP001'],
+      ['Onix', 'DEF-5678', 2021, 32000, 22000, 'DEVICE002', 'Chevrolet', 'DISP002'],
+      ['Palio', 'GHI-9012', 2019, 58000, 48000, 'DEVICE003', 'Fiat', 'DISP003'],
+      ['Corolla', 'JKL-3456', 2022, 15000, 5000, 'DEVICE004', 'Toyota', 'DISP004'],
+      ['HB20', 'MNO-7890', 2020, 42000, 32000, 'DEVICE005', 'Hyundai', 'DISP005']
     ];
 
-    for (const [nome, placa, ano, km, ultimaTrocaOleo, device_id] of veiculos) {
+    for (const [nome, placa, ano, km, ultimaTrocaOleo, device_id, marca, dispositivo] of veiculos) {
       await connection.execute(`
-        INSERT INTO veiculos (nome, placa, ano, km, ultimaTrocaOleo, device_id, created_at) 
-        VALUES (?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO veiculos (nome, placa, ano, km, ultimaTrocaOleo, device_id, marca, dispositivo, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ON DUPLICATE KEY UPDATE 
           nome = VALUES(nome), 
           ano = VALUES(ano), 
           km = VALUES(km), 
           ultimaTrocaOleo = VALUES(ultimaTrocaOleo),
-          device_id = COALESCE(VALUES(device_id), device_id)
-      `, [nome, placa, ano, km, ultimaTrocaOleo, device_id]);
+          device_id = COALESCE(VALUES(device_id), device_id),
+          marca = COALESCE(VALUES(marca), marca),
+          dispositivo = COALESCE(VALUES(dispositivo), dispositivo)
+      `, [nome, placa, ano, km, ultimaTrocaOleo, device_id, marca, dispositivo]);
     }
     
     // Atualizar veículos existentes sem device_id
@@ -317,6 +339,20 @@ async function seedDatabase() {
       UPDATE veiculos 
       SET device_id = CONCAT('DEVICE', LPAD(id, 3, '0')) 
       WHERE device_id IS NULL OR device_id = ''
+    `);
+    
+    // Atualizar veículos existentes sem marca
+    await connection.execute(`
+      UPDATE veiculos 
+      SET marca = 'Sem Marca' 
+      WHERE marca IS NULL OR marca = ''
+    `);
+    
+    // Atualizar veículos existentes sem dispositivo
+    await connection.execute(`
+      UPDATE veiculos 
+      SET dispositivo = CONCAT('DISP', LPAD(id, 3, '0')) 
+      WHERE dispositivo IS NULL OR dispositivo = ''
     `);
 
     // 3) Inserir motoristas de exemplo
