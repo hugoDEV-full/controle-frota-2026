@@ -91,9 +91,10 @@ async function seedDatabase() {
       )
     `);
     
-    // Tabela veículos
+    // Recriar tabela veículos com todas as colunas necessárias
+    await connection.execute(`DROP TABLE IF EXISTS veiculos`);
     await connection.execute(`
-      CREATE TABLE IF NOT EXISTS veiculos (
+      CREATE TABLE veiculos (
         id INT AUTO_INCREMENT PRIMARY KEY,
         placa VARCHAR(20) NOT NULL UNIQUE,
         nome VARCHAR(255) NOT NULL,
@@ -105,6 +106,7 @@ async function seedDatabase() {
         capacidade INT,
         status ENUM('Ativo', 'Manutenção', 'Inativo') DEFAULT 'Ativo',
         device_id VARCHAR(100),
+        dispositivo VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -239,35 +241,7 @@ async function seedDatabase() {
     // Adicionar colunas que podem faltar em tabelas existentes
     console.log('🔧 Verificando colunas que faltam...');
     
-    // Adicionar device_id na tabela veiculos se não existir
-    try {
-      await connection.execute(`ALTER TABLE veiculos ADD COLUMN device_id VARCHAR(100)`);
-      console.log('✅ Coluna device_id adicionada à tabela veiculos');
-    } catch (err) {
-      if (err.code !== 'ER_DUP_FIELDNAME') {
-        console.log('ℹ️ Coluna device_id já existe em veiculos');
-      }
-    }
-    
-    // Adicionar marca na tabela veiculos se não existir
-    try {
-      await connection.execute(`ALTER TABLE veiculos ADD COLUMN marca VARCHAR(255)`);
-      console.log('✅ Coluna marca adicionada à tabela veiculos');
-    } catch (err) {
-      if (err.code !== 'ER_DUP_FIELDNAME') {
-        console.log('ℹ️ Coluna marca já existe em veiculos');
-      }
-    }
-    
-    // Adicionar dispositivo na tabela veiculos se não existir
-    try {
-      await connection.execute(`ALTER TABLE veiculos ADD COLUMN dispositivo VARCHAR(100)`);
-      console.log('✅ Coluna dispositivo adicionada à tabela veiculos');
-    } catch (err) {
-      if (err.code !== 'ER_DUP_FIELDNAME') {
-        console.log('ℹ️ Coluna dispositivo já existe em veiculos');
-      }
-    }
+    // Tabela veículos foi recriada com todas as colunas necessárias
     
     // Adicionar user_id na tabela notificacoes se não existir
     try {
