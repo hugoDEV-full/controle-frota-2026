@@ -38,8 +38,8 @@ const https = require('https');
 
 const app = express();
 
-// Confiar no proxy do Railway para rate limit funcionar corretamente
-app.set('trust proxy', true);
+// Confiar apenas no proxy do Railway (1 hop) para rate limit funcionar corretamente
+app.set('trust proxy', 1);
 
 let server;
 
