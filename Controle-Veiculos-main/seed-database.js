@@ -238,6 +238,26 @@ async function seedDatabase() {
       )
     `);
 
+    // Tabela abastecimentos
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS abastecimentos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        data_hora DATETIME NOT NULL,
+        placa VARCHAR(20) NOT NULL,
+        posto VARCHAR(255),
+        tipo_combustivel VARCHAR(100),
+        litros DECIMAL(10,2),
+        preco_litro DECIMAL(10,2),
+        preco_total DECIMAL(10,2),
+        km_atual INT,
+        condutor VARCHAR(255),
+        criado_por VARCHAR(255),
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        veiculo_id INT,
+        FOREIGN KEY (veiculo_id) REFERENCES veiculos(id)
+      )
+    `);
+
     // Tabela geofences
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS geofences (
@@ -477,11 +497,68 @@ async function seedDatabase() {
     
     // Inserir dados de exemplo na tabela devices
     console.log('📱 Inserindo devices de exemplo...');
-    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE001', 'Device Fiesta', NOW())`);
-    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE002', 'Device Onix', NOW())`);
-    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE003', 'Device Palio', NOW())`);
-    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE004', 'Device Corolla', NOW())`);
-    await connection.execute(`INSERT INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE005', 'Device HB20', NOW())`);
+    await connection.execute(`INSERT IGNORE INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE001', 'Device Fiesta', NOW())`);
+    await connection.execute(`INSERT IGNORE INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE002', 'Device Onix', NOW())`);
+    await connection.execute(`INSERT IGNORE INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE003', 'Device Palio', NOW())`);
+    await connection.execute(`INSERT IGNORE INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE004', 'Device Corolla', NOW())`);
+    await connection.execute(`INSERT IGNORE INTO devices (dev_id, dev_name, created_at) VALUES ('DEVICE005', 'Device HB20', NOW())`);
+    
+    // Inserir dados de exemplo na tabela abastecimentos
+    console.log('⛽ Inserindo abastecimentos de exemplo...');
+    const abastecimentos = [
+      {
+        data_hora: '2024-01-15 18:00:00',
+        placa: 'ABC-1234',
+        posto: 'Posto Shell Centro',
+        tipo_combustivel: 'Gasolina',
+        litros: 45.50,
+        preco_litro: 5.89,
+        preco_total: 267.90,
+        km_atual: 45050,
+        condutor: 'João Silva',
+        criado_por: 'admin',
+        veiculo_id: 1
+      },
+      {
+        data_hora: '2024-01-16 19:00:00',
+        placa: 'DEF-5678',
+        posto: 'Posto Ipiranga Norte',
+        tipo_combustivel: 'Etanol',
+        litros: 38.20,
+        preco_litro: 4.75,
+        preco_total: 181.45,
+        km_atual: 32075,
+        condutor: 'Maria Santos',
+        criado_por: 'admin',
+        veiculo_id: 2
+      },
+      {
+        data_hora: '2024-01-17 17:00:00',
+        placa: 'GHI-9012',
+        posto: 'Posto Petrobras Sul',
+        tipo_combustivel: 'Diesel',
+        litros: 52.80,
+        preco_litro: 5.45,
+        preco_total: 287.76,
+        km_atual: 58030,
+        condutor: 'Carlos Oliveira',
+        criado_por: 'admin',
+        veiculo_id: 3
+      }
+    ];
+
+    for (const abast of abastecimentos) {
+      await connection.execute(`
+        INSERT INTO abastecimentos (
+          data_hora, placa, posto, tipo_combustivel, litros, preco_litro, 
+          preco_total, km_atual, condutor, criado_por, veiculo_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        abast.data_hora, abast.placa, abast.posto, abast.tipo_combustivel,
+        abast.litros, abast.preco_litro, abast.preco_total, abast.km_atual,
+        abast.condutor, abast.criado_por, abast.veiculo_id
+      ]);
+    }
     
     // Inserir dados de uso com coordenadas GPS simuladas
     console.log('🚗 Inserindo usos com coordenadas GPS...');
