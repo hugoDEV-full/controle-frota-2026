@@ -6575,6 +6575,7 @@ if (GPS_ENABLED) {
   // === CONFIGURAÇÃO GPS usando as variáveis *_DEV ===
   poolGps = mysql.createPool({
     host: process.env.GSP_DB_HOST,
+    port: process.env.GSP_DB_PORT ? Number(process.env.GSP_DB_PORT) : undefined,
     user: process.env.GSP_DB_USER,
     password: process.env.GSP_DB_PASSWORD,
     database: process.env.GSP_DB_NAME,
