@@ -31,6 +31,8 @@
   "description": "Este sistema tem o objetivo de gerenciar os veiculos da INOVA.",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Hugo Leonardo @huguinhodev",
