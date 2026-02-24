@@ -208,6 +208,18 @@ async function seedDatabase() {
         usuario_id INT
       )
     `);
+
+    // Tabela gps_history (GPS no mesmo banco)
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS gps_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        fk_device VARCHAR(100) NOT NULL,
+        latitude DECIMAL(10, 7) NOT NULL,
+        longitude DECIMAL(10, 7) NOT NULL,
+        datahora_recebido TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_gps_device_time (fk_device, datahora_recebido)
+      )
+    `);
     
     console.log('✅ Tabelas criadas com sucesso!');
     
