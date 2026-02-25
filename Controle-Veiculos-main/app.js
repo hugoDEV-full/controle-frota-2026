@@ -6659,40 +6659,39 @@ if (GPS_ENABLED) {
     conn.release();
   });
 } else {
-
-  // Rota para consumir histórico GPS, aceita ?device=ID
-  app.get('/gps-history', async (req, res) => {
-    try {
-      const devId = req.query.device;
-      if (!devId) {
-        return res.status(400).json({ error: 'Falta o parâmetro device' });
-      }
-
-      // Busca os 1000 pontos mais recentes (ORDER BY DESC)
-      const rows = await queryGps(
-        `SELECT latitude, longitude, datahora_recebido
-           FROM gps_history
-          WHERE fk_device = ?
-          ORDER BY datahora_recebido DESC
-          LIMIT 1000`,
-        [devId]
-      );
-
-      // Inverte para ordem cronológica (do mais antigo ao mais novo)
-      const ordered = rows.reverse();
-
-      console.log(`>> [SERVER] Dados GPS consumidos para device ${devId}:`, ordered.length, 'pontos');
-      res.json(ordered);
-    } catch (err) {
-      console.error('>> [SERVER] Erro ao buscar histórico GPS:', err);
-      res.status(500).json({ error: 'Erro ao buscar histórico GPS' });
-    }
-  });
-} else {
   console.log('>> [SERVER] GPS desabilitado, usando banco principal como fallback');
   // Fallback: usar o banco principal
   queryGps = util.promisify(db.query).bind(db);
 }
+
+// Rota para consumir histórico GPS, aceita ?device=ID
+app.get('/gps-history', async (req, res) => {
+  try {
+    const devId = req.query.device;
+    if (!devId) {
+      return res.status(400).json({ error: 'Falta o parâmetro device' });
+    }
+
+    // Busca os 1000 pontos mais recentes (ORDER BY DESC)
+    const rows = await queryGps(
+      `SELECT latitude, longitude, datahora_recebido
+         FROM gps_history
+        WHERE fk_device = ?
+        ORDER BY datahora_recebido DESC
+        LIMIT 1000`,
+      [devId]
+    );
+
+    // Inverte para ordem cronológica (do mais antigo ao mais novo)
+    const ordered = rows.reverse();
+
+    console.log(`>> [SERVER] Dados GPS consumidos para device ${devId}:`, ordered.length, 'pontos');
+    res.json(ordered);
+  } catch (err) {
+    console.error('>> [SERVER] Erro ao buscar histórico GPS:', err);
+    res.status(500).json({ error: 'Erro ao buscar histórico GPS' });
+  }
+});
 
 // Rota para exibir o mapa com layout próprio
 app.get(
