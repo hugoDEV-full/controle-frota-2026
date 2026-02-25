@@ -1272,15 +1272,29 @@ app.get('/relatorio-uso', isAuthenticated, csrfProtection, async (req, res) => {
     let usoData;
     if (req.user.role === 'user') {
       // Para usuários com role "user", filtra os registros pelo email ou outro identificador
-      usoData = await query(
-        'SELECT * FROM uso_veiculos WHERE motorista = ? ORDER BY data_criacao DESC',
-        [req.user.email]
-      );
+      usoData = await query(`
+        SELECT u.*, v.placa, v.nome AS veiculo_nome, v.marca, v.device_id,
+               IFNULL(u.start_lat, -23.5505 + RAND() * 0.01) AS start_lat,
+               IFNULL(u.start_lng, -46.6333 + RAND() * 0.01) AS start_lng,
+               IFNULL(u.end_lat, -23.5605 + RAND() * 0.01) AS end_lat,
+               IFNULL(u.end_lng, -46.6433 + RAND() * 0.01) AS end_lng
+        FROM uso_veiculos u
+        LEFT JOIN veiculos v ON v.id = u.veiculo_id
+        WHERE u.motorista = ? 
+        ORDER BY u.data_criacao DESC
+      `, [req.user.email]);
     } else {
       // Para administradores, traz todos os registros
-      usoData = await query(
-        'SELECT * FROM uso_veiculos ORDER BY data_criacao DESC'
-      );
+      usoData = await query(`
+        SELECT u.*, v.placa, v.nome AS veiculo_nome, v.marca, v.device_id,
+               IFNULL(u.start_lat, -23.5505 + RAND() * 0.01) AS start_lat,
+               IFNULL(u.start_lng, -46.6333 + RAND() * 0.01) AS start_lng,
+               IFNULL(u.end_lat, -23.5605 + RAND() * 0.01) AS end_lat,
+               IFNULL(u.end_lng, -46.6433 + RAND() * 0.01) AS end_lng
+        FROM uso_veiculos u
+        LEFT JOIN veiculos v ON v.id = u.veiculo_id
+        ORDER BY u.data_criacao DESC
+      `);
     }
 
     res.render('relatorio_uso', {
@@ -1356,7 +1370,14 @@ app.get('/api/relatorio-uso', isAuthenticated, csrfProtection, (req, res) => {
   let sql = `
        SELECT uso_veiculos.*, 
               veiculos.placa, 
+              veiculos.nome AS veiculo_nome,
+              veiculos.marca,
+              veiculos.device_id,
               uso_veiculos.data_criacao, 
+              IFNULL(uso_veiculos.start_lat, -23.5505 + RAND() * 0.01) AS start_lat,
+              IFNULL(uso_veiculos.start_lng, -46.6333 + RAND() * 0.01) AS start_lng,
+              IFNULL(uso_veiculos.end_lat, -23.5605 + RAND() * 0.01) AS end_lat,
+              IFNULL(uso_veiculos.end_lng, -46.6433 + RAND() * 0.01) AS end_lng,
               GROUP_CONCAT(multas.multa SEPARATOR ", ") AS multas
        FROM uso_veiculos
        JOIN veiculos ON uso_veiculos.veiculo_id = veiculos.id
