@@ -7144,7 +7144,7 @@ app.get('/viagensComUso', isAuthenticated, async (req, res) => {
 
     // 1) Buscar veículos (com deviceId) do banco de FROTA
     const [veiculos] = await db.promise().query(`
-      SELECT id AS veiculoId, placa, dispositivo AS deviceId
+      SELECT id AS veiculoId, placa, device_id AS deviceId
       FROM veiculos
       ORDER BY placa
     `);
@@ -7170,7 +7170,11 @@ app.get('/viagensComUso', isAuthenticated, async (req, res) => {
         u.km_inicial        AS kmInicial,
         u.km_final          AS kmFinal,
         u.data_hora_inicial AS inicio,
-        u.data_hora_final   AS fim
+        u.data_hora_final   AS fim,
+        u.start_lat         AS startLat,
+        u.start_lng         AS startLng,
+        u.end_lat           AS endLat,
+        u.end_lng           AS endLng
       FROM uso_veiculos u
       JOIN veiculos v ON v.id = u.veiculo_id
       WHERE ${where.join(' AND ')}
@@ -7183,17 +7187,33 @@ app.get('/viagensComUso', isAuthenticated, async (req, res) => {
 
     for (const uso of usos) {
       const veiculo = veiculos.find(v => v.veiculoId === uso.veiculoId);
-      if (!veiculo || !veiculo.deviceId) continue;
+      if (!veiculo) continue;
 
-      const devId = veiculo.deviceId;
+      let pontos = [];
+      
+      // Tentar buscar pontos GPS se tiver device_id
+      if (veiculo.deviceId) {
+        const devId = veiculo.deviceId;
+        try {
+          pontos = await queryGps(`
+            SELECT latitude, longitude, datahora_recebido AS timestamp
+            FROM gps_history
+            WHERE fk_device = ?
+              AND datahora_recebido BETWEEN ? AND ?
+            ORDER BY datahora_recebido ASC
+          `, [devId, uso.inicio, uso.fim]);
+        } catch (err) {
+          console.warn('Erro ao buscar GPS:', err.message);
+        }
+      }
 
-      const pontos = await queryGps(`
-        SELECT latitude, longitude, datahora_recebido AS timestamp
-        FROM gps_history
-        WHERE fk_device = ?
-          AND datahora_recebido BETWEEN ? AND ?
-        ORDER BY datahora_recebido ASC
-      `, [devId, uso.inicio, uso.fim]);
+      // Se não tiver pontos GPS suficientes, usar coordenadas start/end do uso
+      if (pontos.length < 2 && uso.startLat && uso.startLng && uso.endLat && uso.endLng) {
+        pontos = [
+          { latitude: uso.startLat, longitude: uso.startLng, timestamp: uso.inicio },
+          { latitude: uso.endLat, longitude: uso.endLng, timestamp: uso.fim }
+        ];
+      }
 
       if (pontos.length < 2) continue;
 

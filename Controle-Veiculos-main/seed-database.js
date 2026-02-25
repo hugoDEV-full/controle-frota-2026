@@ -427,11 +427,11 @@ async function seedDatabase() {
       WHERE marca IS NULL OR marca = ''
     `);
     
-    // Atualizar veículos existentes sem dispositivo
+    // Atualizar veículos existentes sem device_id
     await connection.execute(`
       UPDATE veiculos 
-      SET dispositivo = CONCAT('DISP', LPAD(id, 3, '0')) 
-      WHERE dispositivo IS NULL OR dispositivo = ''
+      SET device_id = CONCAT('DEVICE', LPAD(id, 3, '0')) 
+      WHERE device_id IS NULL OR device_id = ''
     `);
 
     // 3) Inserir motoristas de exemplo
