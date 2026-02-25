@@ -56,11 +56,11 @@
 
     // Dados dos veículos para simulação
     const vehicles = [
-      { id: 'DEVICE001', name: 'Fiesta (ABC-1234)', color: '#ff0000', lat: -23.5505, lng: -46.6333, speed: 0.0001, direction: 1 },
-      { id: 'DEVICE002', name: 'Onix (DEF-5678)', color: '#00ff00', lat: -23.5480, lng: -46.6310, speed: 0.00015, direction: -1 },
-      { id: 'DEVICE003', name: 'Palio (GHI-9012)', color: '#0000ff', lat: -23.5520, lng: -46.6340, speed: 0.00012, direction: 1 },
-      { id: 'DEVICE004', name: 'Corolla (JKL-3456)', color: '#ff00ff', lat: -23.5490, lng: -46.6320, speed: 0.00008, direction: -1 },
-      { id: 'DEVICE005', name: 'HB20 (MNO-7890)', color: '#00ffff', lat: -23.5510, lng: -46.6330, speed: 0.00011, direction: 1 }
+      { id: 'DEVICE001', name: 'Fiesta (ABC-1234)', color: '#ff0000', lat: -23.5505, lng: -46.6333, speed: 0.00002, direction: 1, targetLat: null, targetLng: null },
+      { id: 'DEVICE002', name: 'Onix (DEF-5678)', color: '#00ff00', lat: -23.5480, lng: -46.6310, speed: 0.000025, direction: -1, targetLat: null, targetLng: null },
+      { id: 'DEVICE003', name: 'Palio (GHI-9012)', color: '#0000ff', lat: -23.5520, lng: -46.6340, speed: 0.000022, direction: 1, targetLat: null, targetLng: null },
+      { id: 'DEVICE004', name: 'Corolla (JKL-3456)', color: '#ff00ff', lat: -23.5490, lng: -46.6320, speed: 0.000018, direction: -1, targetLat: null, targetLng: null },
+      { id: 'DEVICE005', name: 'HB20 (MNO-7890)', color: '#00ffff', lat: -23.5510, lng: -46.6330, speed: 0.000020, direction: 1, targetLat: null, targetLng: null }
     ];
 
     let markers = {};
@@ -103,30 +103,103 @@
     // Criar interface de status dos veículos
     function updateVehicleStatus() {
       const statusContainer = document.getElementById('vehicleStatus');
-      statusContainer.innerHTML = vehicles.map(vehicle => `
-        <div class="col-md-6 col-lg-4 mb-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body">
-              <div class="d-flex align-items-center">
-                <div style="background-color: ${vehicle.color}; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px;">
-                  ${vehicleIcons[vehicle.id]}
+      statusContainer.innerHTML = vehicles.map(vehicle => {
+        const isMoving = vehicle.targetLat && vehicle.targetLng;
+        const statusBadge = isMoving ? 'bg-success' : 'bg-warning';
+        const statusText = isMoving ? 'Em Movimento' : 'Parado';
+        const statusIcon = isMoving ? '●' : '⏸️';
+        
+        // Encontrar destino mais próximo
+        let destinationName = 'N/A';
+        if (vehicle.targetLat && vehicle.targetLng) {
+          let minDistance = Infinity;
+          destinations.forEach(dest => {
+            const distance = calculateDistance(vehicle.lat, vehicle.lng, dest.lat, dest.lng);
+            if (distance < minDistance) {
+              minDistance = distance;
+              destinationName = dest.name;
+            }
+          });
+        }
+        
+        return `
+          <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card border-0 shadow-sm">
+              <div class="card-body">
+                <div class="d-flex align-items-center">
+                  <div style="background-color: ${vehicle.color}; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px;">
+                    ${vehicleIcons[vehicle.id]}
+                  </div>
+                  <div>
+                    <h6 class="mb-1">${vehicle.name}</h6>
+                    <small class="text-muted">Device: ${vehicle.id}</small>
+                  </div>
                 </div>
-                <div>
-                  <h6 class="mb-1">${vehicle.name}</h6>
-                  <small class="text-muted">Device: ${vehicle.id}</small>
+                <div class="mt-2">
+                  <span class="badge ${statusBadge}">${statusIcon} ${statusText}</span>
+                  <small class="text-muted ms-2">Vel: ${(vehicle.speed * 100000).toFixed(1)} km/h</small>
                 </div>
-              </div>
-              <div class="mt-2">
-                <span class="badge bg-success">● Em Movimento</span>
-                <small class="text-muted ms-2">Vel: ${(vehicle.speed * 100000).toFixed(1)} km/h</small>
-              </div>
-              <div class="mt-1">
-                <small class="text-muted">Coord: ${vehicle.lat.toFixed(4)}, ${vehicle.lng.toFixed(4)}</small>
+                <div class="mt-1">
+                  <small class="text-muted">Coord: ${vehicle.lat.toFixed(4)}, ${vehicle.lng.toFixed(4)}</small>
+                </div>
+                ${isMoving ? `<div class="mt-1"><small class="text-info"><strong>Destino:</strong> ${destinationName}</small></div>` : ''}
               </div>
             </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+    }
+
+    // Destinos aleatórios em São Paulo
+    const destinations = [
+      { lat: -23.5505, lng: -46.6333, name: "Centro" },
+      { lat: -23.5614, lng: -46.6559, name: "Pinheiros" },
+      { lat: -23.5689, lng: -46.6848, name: "Vila Madalena" },
+      { lat: -23.5874, lng: -46.6576, name: "Itaim Bibi" },
+      { lat: -23.5980, lng: -46.6771, name: "Moema" },
+      { lat: -23.6229, lng: -46.6963, name: "Ibirapuera" },
+      { lat: -23.5020, lng: -46.6090, name: "Tatuapé" },
+      { lat: -23.5436, lng: -46.5920, name: "Bela Vista" },
+      { lat: -23.5713, lng: -46.6427, name: "Consolação" },
+      { lat: -23.5329, lng: -46.6395, name: "Sé" }
+    ];
+
+    // Função para calcular distância entre dois pontos
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      return Math.sqrt(Math.pow(lat2 - lat1, 2) + Math.pow(lng2 - lng1, 2));
+    }
+
+    // Função para mover veículo suavemente em direção ao alvo
+    function moveVehicle(vehicle) {
+      // Se não tiver alvo, escolher um novo destino
+      if (!vehicle.targetLat || !vehicle.targetLng) {
+        const destination = destinations[Math.floor(Math.random() * destinations.length)];
+        vehicle.targetLat = destination.lat + (Math.random() - 0.5) * 0.01;
+        vehicle.targetLng = destination.lng + (Math.random() - 0.5) * 0.01;
+        console.log(`>> [GPS] ${vehicle.name} indo para ${destination.name}`);
+      }
+
+      // Calcular distância até o alvo
+      const distance = calculateDistance(vehicle.lat, vehicle.lng, vehicle.targetLat, vehicle.targetLng);
+
+      // Se chegou perto do destino, escolher novo
+      if (distance < 0.001) {
+        vehicle.targetLat = null;
+        vehicle.targetLng = null;
+        return;
+      }
+
+      // Mover suavemente em direção ao alvo
+      const angle = Math.atan2(vehicle.targetLng - vehicle.lng, vehicle.targetLat - vehicle.lat);
+      const stepLat = Math.cos(angle) * vehicle.speed;
+      const stepLng = Math.sin(angle) * vehicle.speed;
+
+      vehicle.lat += stepLat;
+      vehicle.lng += stepLng;
+
+      // Adicionar pequena variação para movimento mais natural
+      vehicle.lat += (Math.random() - 0.5) * 0.00001;
+      vehicle.lng += (Math.random() - 0.5) * 0.00001;
     }
 
     // Simular movimento dos veículos
@@ -134,35 +207,39 @@
       if (!simulationActive) return;
 
       vehicles.forEach(vehicle => {
-        // Atualizar posição
-        vehicle.lat += vehicle.speed * vehicle.direction;
-        vehicle.lng += vehicle.speed * vehicle.direction * 0.8;
-
-        // Mudar direção aleatoriamente
-        if (Math.random() < 0.05) {
-          vehicle.direction *= -1;
-        }
+        // Mover veículo suavemente
+        moveVehicle(vehicle);
 
         // Manter dentro da área de São Paulo
-        if (vehicle.lat < -23.60 || vehicle.lat > -23.50) {
-          vehicle.direction *= -1;
+        if (vehicle.lat < -23.65 || vehicle.lat > -23.45) {
+          vehicle.lat = -23.55 + (Math.random() - 0.5) * 0.05;
+          vehicle.targetLat = null;
+          vehicle.targetLng = null;
         }
-        if (vehicle.lng < -46.70 || vehicle.lng > -46.60) {
-          vehicle.direction *= -1;
-        }
-
-        // Adicionar à rota
-        routes[vehicle.id].push([vehicle.lat, vehicle.lng]);
-        if (routes[vehicle.id].length > 50) {
-          routes[vehicle.id].shift(); // Manter apenas últimos 50 pontos
+        if (vehicle.lng < -46.75 || vehicle.lng > -46.55) {
+          vehicle.lng = -46.63 + (Math.random() - 0.5) * 0.05;
+          vehicle.targetLat = null;
+          vehicle.targetLng = null;
         }
 
-        // Atualizar marcador
+        // Adicionar à rota (com menos frequência)
+        if (Math.random() < 0.3) { // 30% de chance de adicionar ponto
+          routes[vehicle.id].push([vehicle.lat, vehicle.lng]);
+          if (routes[vehicle.id].length > 30) { // Menos pontos na rota
+            routes[vehicle.id].shift();
+          }
+        }
+
+        // Atualizar marcador com animação suave
         const marker = markers[vehicle.id];
-        marker.setLatLng([vehicle.lat, vehicle.lng]);
+        const currentPos = marker.getLatLng();
+        const newPos = L.latLng(vehicle.lat, vehicle.lng);
+        
+        // Animação suave
+        marker.setLatLng(newPos);
 
-        // Desenhar rota
-        if (routes[vehicle.id].length > 1) {
+        // Desenhar rota (com menos frequência)
+        if (routes[vehicle.id].length > 1 && Math.random() < 0.2) { // 20% de chance
           // Remover rota anterior se existir
           if (window[`route_${vehicle.id}`]) {
             map.removeLayer(window[`route_${vehicle.id}`]);
@@ -171,29 +248,37 @@
           const polyline = L.polyline(routes[vehicle.id], {
             color: vehicle.color,
             weight: 3,
-            opacity: 0.7
+            opacity: 0.6
           }).addTo(map);
 
           window[`route_${vehicle.id}`] = polyline;
         }
 
-        // Atualizar popup
-        marker.setPopupContent(`
-          <strong>${vehicle.name}</strong><br>
-          Device: ${vehicle.id}<br>
-          Status: <span class="badge bg-success">Em Movimento</span><br>
-          Velocidade: ${(vehicle.speed * 100000).toFixed(1)} km/h<br>
-          Última atualização: ${new Date().toLocaleTimeString()}
-        `);
+        // Atualizar popup (com menos frequência)
+        if (Math.random() < 0.1) { // 10% de chance
+          const speed = (vehicle.speed * 100000).toFixed(1);
+          const status = vehicle.targetLat ? 'Em Movimento' : 'Parado';
+          const badgeClass = vehicle.targetLat ? 'bg-success' : 'bg-warning';
+          
+          marker.setPopupContent(`
+            <strong>${vehicle.name}</strong><br>
+            Device: ${vehicle.id}<br>
+            Status: <span class="badge ${badgeClass}">${status}</span><br>
+            Velocidade: ${speed} km/h<br>
+            Última atualização: ${new Date().toLocaleTimeString()}
+          `);
+        }
       });
 
-      // Atualizar timestamp
-      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-      updateVehicleStatus();
+      // Atualizar timestamp (com menos frequência)
+      if (Math.random() < 0.5) { // 50% de chance
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        updateVehicleStatus();
+      }
     }
 
-    // Iniciar simulação
-    simulationInterval = setInterval(simulateMovement, 2000); // Atualizar a cada 2 segundos
+    // Iniciar simulação com intervalo maior
+    simulationInterval = setInterval(simulateMovement, 3000); // Atualizar a cada 3 segundos
 
     // Controles da simulação
     document.getElementById('toggleSimulation').addEventListener('click', function() {
