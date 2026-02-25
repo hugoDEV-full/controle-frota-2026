@@ -1,52 +1,231 @@
 <div class="container mt-4">
-  <h1>Mapa de Localização GPS</h1>
-  <div id="map" class="border rounded" style="height: 600px;"></div>
+  <div class="row mb-3">
+    <div class="col-12">
+      <h1>🗺️ Mapa GPS em Tempo Real - Simulação</h1>
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="badge bg-success me-2">● Simulação Ativa</span>
+          <span class="badge bg-info">Atualização: <span id="lastUpdate">--:--:--</span></span>
+        </div>
+        <div>
+          <button id="toggleSimulation" class="btn btn-primary btn-sm">
+            ⏸️ Pausar Simulação
+          </button>
+          <button id="clearRoutes" class="btn btn-secondary btn-sm">
+            🗑️ Limpar Rotas
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-12">
+      <div id="map" class="border rounded" style="height: 600px;"></div>
+    </div>
+  </div>
+  
+  <div class="row mt-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>🚗 Status dos Veículos</h5>
+        </div>
+        <div class="card-body">
+          <div id="vehicleStatus" class="row">
+            <!-- Status dos veículos será inserido aqui -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('>> [CLIENT] DOM ready, iniciando mapa');
+    console.log('>> [GPS] Iniciando mapa com simulação em tempo real');
 
+    // Inicializar mapa
     const map = L.map('map').setView([-23.55, -46.63], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
-    console.log('>> [CLIENT] Mapa Leaflet inicializado');
 
-    fetch('/gps-history')
-      .then(res => {
-        console.log('>> [CLIENT] /gps-history status:', res.status);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        console.log('>> [CLIENT] Dados recebidos do histórico:', data);
-        data.forEach(pt => {
-          L.marker([pt.latitude, pt.longitude])
-            .addTo(map)
-            .bindPopup(new Date(pt.datahora_recebido).toLocaleString());
-        });
-      })
-      .catch(err => console.error('>> [CLIENT] Erro ao buscar histórico GPS:', err));
+    // Dados dos veículos para simulação
+    const vehicles = [
+      { id: 'DEVICE001', name: 'Fiesta (ABC-1234)', color: '#ff0000', lat: -23.5505, lng: -46.6333, speed: 0.0001, direction: 1 },
+      { id: 'DEVICE002', name: 'Onix (DEF-5678)', color: '#00ff00', lat: -23.5480, lng: -46.6310, speed: 0.00015, direction: -1 },
+      { id: 'DEVICE003', name: 'Palio (GHI-9012)', color: '#0000ff', lat: -23.5520, lng: -46.6340, speed: 0.00012, direction: 1 },
+      { id: 'DEVICE004', name: 'Corolla (JKL-3456)', color: '#ff00ff', lat: -23.5490, lng: -46.6320, speed: 0.00008, direction: -1 },
+      { id: 'DEVICE005', name: 'HB20 (MNO-7890)', color: '#00ffff', lat: -23.5510, lng: -46.6330, speed: 0.00011, direction: 1 }
+    ];
 
-  const io = new Server(server, {
-  cors: {
-    origin: ["https://frota.inova.in"],  // só seu domínio
-    methods: ["GET","POST"],
-    credentials: true
-  }
-});
+    let markers = {};
+    let routes = {};
+    let simulationActive = true;
+    let simulationInterval;
 
+    // Ícones customizados para cada veículo
+    const vehicleIcons = {
+      'DEVICE001': '🚗',
+      'DEVICE002': '🚙', 
+      'DEVICE003': '🚕',
+      'DEVICE004': '🚐',
+      'DEVICE005': '🚓'
+    };
 
-    socket.on('connect', () => {
-      console.log('>> [CLIENT] Conectado via Socket.IO');
+    // Criar marcadores iniciais
+    vehicles.forEach(vehicle => {
+      const marker = L.marker([vehicle.lat, vehicle.lng], {
+        icon: L.divIcon({
+          html: `<div style="background-color: ${vehicle.color}; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${vehicleIcons[vehicle.id]}</div>`,
+          className: 'vehicle-marker',
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <strong>${vehicle.name}</strong><br>
+        Device: ${vehicle.id}<br>
+        Status: <span class="badge bg-success">Em Movimento</span><br>
+        Velocidade: ${(vehicle.speed * 100000).toFixed(1)} km/h<br>
+        Última atualização: <span id="time-${vehicle.id}">--:--:--</span>
+      `);
+
+      markers[vehicle.id] = marker;
+      routes[vehicle.id] = [];
     });
-    socket.on('locationUpdate', pt => {
-      console.log('>> [CLIENT] locationUpdate recebido:', pt);
-      L.marker([pt.latitude, pt.longitude])
-        .addTo(map)
-        .bindPopup(`Nova posição: ${new Date().toLocaleTimeString()}`)
-        .openPopup();
+
+    // Criar interface de status dos veículos
+    function updateVehicleStatus() {
+      const statusContainer = document.getElementById('vehicleStatus');
+      statusContainer.innerHTML = vehicles.map(vehicle => `
+        <div class="col-md-6 col-lg-4 mb-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div style="background-color: ${vehicle.color}; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px;">
+                  ${vehicleIcons[vehicle.id]}
+                </div>
+                <div>
+                  <h6 class="mb-1">${vehicle.name}</h6>
+                  <small class="text-muted">Device: ${vehicle.id}</small>
+                </div>
+              </div>
+              <div class="mt-2">
+                <span class="badge bg-success">● Em Movimento</span>
+                <small class="text-muted ms-2">Vel: ${(vehicle.speed * 100000).toFixed(1)} km/h</small>
+              </div>
+              <div class="mt-1">
+                <small class="text-muted">Coord: ${vehicle.lat.toFixed(4)}, ${vehicle.lng.toFixed(4)}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Simular movimento dos veículos
+    function simulateMovement() {
+      if (!simulationActive) return;
+
+      vehicles.forEach(vehicle => {
+        // Atualizar posição
+        vehicle.lat += vehicle.speed * vehicle.direction;
+        vehicle.lng += vehicle.speed * vehicle.direction * 0.8;
+
+        // Mudar direção aleatoriamente
+        if (Math.random() < 0.05) {
+          vehicle.direction *= -1;
+        }
+
+        // Manter dentro da área de São Paulo
+        if (vehicle.lat < -23.60 || vehicle.lat > -23.50) {
+          vehicle.direction *= -1;
+        }
+        if (vehicle.lng < -46.70 || vehicle.lng > -46.60) {
+          vehicle.direction *= -1;
+        }
+
+        // Adicionar à rota
+        routes[vehicle.id].push([vehicle.lat, vehicle.lng]);
+        if (routes[vehicle.id].length > 50) {
+          routes[vehicle.id].shift(); // Manter apenas últimos 50 pontos
+        }
+
+        // Atualizar marcador
+        const marker = markers[vehicle.id];
+        marker.setLatLng([vehicle.lat, vehicle.lng]);
+
+        // Desenhar rota
+        if (routes[vehicle.id].length > 1) {
+          // Remover rota anterior se existir
+          if (window[`route_${vehicle.id}`]) {
+            map.removeLayer(window[`route_${vehicle.id}`]);
+          }
+
+          const polyline = L.polyline(routes[vehicle.id], {
+            color: vehicle.color,
+            weight: 3,
+            opacity: 0.7
+          }).addTo(map);
+
+          window[`route_${vehicle.id}`] = polyline;
+        }
+
+        // Atualizar popup
+        marker.setPopupContent(`
+          <strong>${vehicle.name}</strong><br>
+          Device: ${vehicle.id}<br>
+          Status: <span class="badge bg-success">Em Movimento</span><br>
+          Velocidade: ${(vehicle.speed * 100000).toFixed(1)} km/h<br>
+          Última atualização: ${new Date().toLocaleTimeString()}
+        `);
+      });
+
+      // Atualizar timestamp
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+      updateVehicleStatus();
+    }
+
+    // Iniciar simulação
+    simulationInterval = setInterval(simulateMovement, 2000); // Atualizar a cada 2 segundos
+
+    // Controles da simulação
+    document.getElementById('toggleSimulation').addEventListener('click', function() {
+      simulationActive = !simulationActive;
+      if (simulationActive) {
+        this.innerHTML = '⏸️ Pausar Simulação';
+        this.className = 'btn btn-primary btn-sm';
+      } else {
+        this.innerHTML = '▶️ Iniciar Simulação';
+        this.className = 'btn btn-success btn-sm';
+      }
     });
+
+    document.getElementById('clearRoutes').addEventListener('click', function() {
+      // Limpar todas as rotas
+      Object.keys(window).forEach(key => {
+        if (key.startsWith('route_')) {
+          map.removeLayer(window[key]);
+          delete window[key];
+        }
+      });
+      
+      // Resetar arrays de rotas
+      Object.keys(routes).forEach(key => {
+        routes[key] = [];
+      });
+    });
+
+    // Inicializar status
+    updateVehicleStatus();
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+    console.log('>> [GPS] Simulação em tempo real iniciada com', vehicles.length, 'veículos');
   });
 </script>
