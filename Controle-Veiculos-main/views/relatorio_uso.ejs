@@ -37,6 +37,7 @@
 
         <div class="mb-3">
           <button id="deleteSelected" class="btn btn-danger"><i class="bi bi-trash me-1" aria-hidden="true"></i>Excluir Selecionados</button>
+          <button id="testMap" class="btn btn-info ms-2"><i class="bi bi-map me-1" aria-hidden="true"></i>Testar Mapa</button>
         </div>
 
         <div class="table-responsive">
@@ -153,6 +154,13 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
+    // Verificar se o Leaflet foi carregado
+    if (typeof L === 'undefined') {
+      console.error('>> [RELATORIO] Leaflet não foi carregado! Verifique a conexão.');
+    } else {
+      console.log('>> [RELATORIO] Leaflet carregado com sucesso:', L.version);
+    }
+
     // Função para atualizar a imagem do modal
     function updateModalImage(imgSrc) {
       document.getElementById('modalImage').src = imgSrc;
@@ -160,8 +168,26 @@
 
     // Função para criar mapa com rota
     function createRouteMap(mapId, startLat, startLng, endLat, endLng) {
+      console.log('>> [RELATORIO] createRouteMap chamado:', {mapId, startLat, startLng, endLat, endLng});
+      
+      // Verificar se o Leaflet está disponível
+      if (typeof L === 'undefined') {
+        console.error('>> [RELATORIO] Leaflet não está carregado!');
+        return;
+      }
+      
+      // Verificar se o elemento do mapa existe
+      const mapElement = document.getElementById(mapId);
+      if (!mapElement) {
+        console.error('>> [RELATORIO] Elemento do mapa não encontrado:', mapId);
+        return;
+      }
+      
+      console.log('>> [RELATORIO] Elemento do mapa encontrado:', mapElement);
+      
       // Se o mapa já existe, destrua-o primeiro
       if (window[mapId]) {
+        console.log('>> [RELATORIO] Removendo mapa existente:', mapId);
         window[mapId].remove();
       }
 
@@ -169,7 +195,11 @@
       const centerLat = (startLat + endLat) / 2;
       const centerLng = (startLng + endLng) / 2;
       
-      const map = L.map(mapId).setView([centerLat, centerLng], 13);
+      console.log('>> [RELATORIO] Criando mapa em:', [centerLat, centerLng]);
+      
+      try {
+        const map = L.map(mapId).setView([centerLat, centerLng], 13);
+        console.log('>> [RELATORIO] Mapa Leaflet criado com sucesso');
 
       // Adicionar tile layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -220,6 +250,11 @@
 
       // Salvar referência do mapa
       window[mapId] = map;
+      console.log('>> [RELATORIO] Mapa salvo em window[' + mapId + ']');
+      
+      } catch (error) {
+        console.error('>> [RELATORIO] Erro ao criar mapa:', error);
+      }
     }
 
     $(document).ready(function () {
@@ -478,6 +513,24 @@
             alert('Erro ao excluir registros.');
           }
         });
+      });
+
+      // Botão de teste do mapa
+      $('#testMap').on('click', function () {
+        console.log('>> [RELATORIO] Botão de teste clicado');
+        
+        // Criar um mapa de teste
+        const testMapId = 'test_map_' + Date.now();
+        const testDiv = $('<div id="' + testMapId + '" style="height: 300px; width: 100%; border: 2px solid #007bff; margin: 10px 0;"></div>');
+        
+        // Inserir após a tabela
+        $('.table-responsive').after(testDiv);
+        
+        // Criar mapa após um pequeno delay
+        setTimeout(() => {
+          console.log('>> [RELATORIO] Criando mapa de teste:', testMapId);
+          createRouteMap(testMapId, -23.5505, -46.6333, -23.5605, -46.6433);
+        }, 100);
       });
 
       // Inicializar mapas quando os collapsibles forem abertos
