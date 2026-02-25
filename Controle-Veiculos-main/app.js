@@ -8376,7 +8376,7 @@ app.get('/api/mapa-usos/ultimos', isAuthenticated, async (req, res) => {
 app.get('/abastecimento/novo', isAuthenticated, csrfProtection, async (req, res) => {
   try {
     const [veiculos] = await db.promise().query(
-      `SELECT id, nome, placa, nome_marca, nome_modelo
+      `SELECT id, nome, placa, marca, modelo
        FROM veiculos
        ORDER BY nome IS NULL, nome, id DESC`
     );

@@ -348,6 +348,16 @@ async function seedDatabase() {
       }
     }
     
+    // Adicionar criado_em na tabela auditoria se não existir
+    try {
+      await connection.execute(`ALTER TABLE auditoria ADD COLUMN criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+      console.log('✅ Coluna criado_em adicionada à tabela auditoria');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna criado_em já existe em auditoria');
+      }
+    }
+    
     // 1) Criar usuário admin com bcrypt
     console.log('👤 Criando usuários admin...');
     const hashedPassword = await bcrypt.hash('Hugo2026*', 10);
