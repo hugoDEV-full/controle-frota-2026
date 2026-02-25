@@ -659,8 +659,8 @@ async function seedDatabase() {
       ]);
     }
 
-    // Inserir MASSIVA quantidade de dados GPS (10,000+ pontos)
-    console.log('📍 Inserindo MASSIVA quantidade de dados GPS history (10,000+ pontos)...');
+    // Inserir MASSIVA quantidade de dados GPS (2025-2030 - 5 ANOS)
+    console.log('📍 Inserindo MASSIVA quantidade de dados GPS history (2025-2030 - 5 ANOS)...');
     
     // Função para gerar coordenadas entre dois pontos
     function generateRoute(startLat, startLng, endLat, endLng, steps, startTime, intervalMinutes) {
@@ -679,155 +679,230 @@ async function seedDatabase() {
       return route;
     }
 
-    // Gerar múltiplos dias de rotas para cada veículo
+    // Função para gerar destinos aleatórios em São Paulo
+    function generateRandomDestination(baseLat, baseLng) {
+      const destinations = [
+        { lat: -23.5505, lng: -46.6333, name: "Centro" },
+        { lat: -23.5614, lng: -46.6559, name: "Pinheiros" },
+        { lat: -23.5689, lng: -46.6848, name: "Vila Madalena" },
+        { lat: -23.5874, lng: -46.6576, name: "Itaim Bibi" },
+        { lat: -23.5980, lng: -46.6771, name: "Moema" },
+        { lat: -23.6229, lng: -46.6963, name: "Ibirapuera" },
+        { lat: -23.5020, lng: -46.6090, name: "Tatuapé" },
+        { lat: -23.5436, lng: -46.5920, name: "Bela Vista" },
+        { lat: -23.5713, lng: -46.6427, name: "Consolação" },
+        { lat: -23.5329, lng: -46.6395, name: "Sé" },
+        { lat: -23.5488, lng: -46.6388, name: "República" },
+        { lat: -23.5630, lng: -46.6529, name: "Jardins" },
+        { lat: -23.5899, lng: -46.6815, name: "Chácara Santo Antônio" },
+        { lat: -23.6185, lng: -46.7040, name: "Brooklin" },
+        { lat: -23.5330, lng: -46.6250, name: "Brás" }
+      ];
+      
+      return destinations[Math.floor(Math.random() * destinations.length)];
+    }
+
+    // Gerar dados para 5 anos (2025-2030)
     const allMassiveRoutes = [];
-    const baseDate = new Date('2024-01-15');
+    const startDate = new Date('2025-01-01');
+    const endDate = new Date('2030-12-31');
     
     // Rotas base para cada veículo
     const baseRoutes = [
-      { device: 'DEVICE001', startLat: -23.5505, startLng: -46.6333, endLat: -23.5605, endLng: -46.6433 },
-      { device: 'DEVICE002', startLat: -23.5480, startLng: -46.6310, endLat: -23.5670, endLng: -46.6500 },
-      { device: 'DEVICE003', startLat: -23.5520, startLng: -46.6340, endLat: -23.5690, endLng: -46.6510 },
-      { device: 'DEVICE004', startLat: -23.5490, startLng: -46.6320, endLat: -23.5625, endLng: -46.6455 },
-      { device: 'DEVICE005', startLat: -23.5510, startLng: -46.6330, endLat: -23.5680, endLng: -46.6500 }
+      { device: 'DEVICE001', name: 'Fiesta', baseLat: -23.5505, baseLng: -46.6333 },
+      { device: 'DEVICE002', name: 'Onix', baseLat: -23.5480, baseLng: -46.6310 },
+      { device: 'DEVICE003', name: 'Palio', baseLat: -23.5520, baseLng: -46.6340 },
+      { device: 'DEVICE004', name: 'Corolla', baseLat: -23.5490, baseLng: -46.6320 },
+      { device: 'DEVICE005', name: 'HB20', baseLat: -23.5510, baseLng: -46.6330 }
     ];
 
-    // Gerar 30 dias de rotas para cada veículo
-    for (let day = 0; day < 30; day++) {
-      const currentDate = new Date(baseDate);
+    // Calcular dias totais
+    const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+    console.log(`📍 Gerando dados para ${totalDays} dias (${totalDays/365:.1f} anos)...`);
+
+    let totalPoints = 0;
+
+    // Gerar dados para cada dia
+    for (let day = 0; day < totalDays; day++) {
+      const currentDate = new Date(startDate);
       currentDate.setDate(currentDate.getDate() + day);
       
-      for (const route of baseRoutes) {
-        // Rota de ida (manhã)
-        const morningStart = new Date(currentDate);
-        morningStart.setHours(7, 30, 0, 0);
-        
-        const morningRoute = generateRoute(
-          route.startLat, route.startLng,
-          route.endLat, route.endLng,
-          60, // 60 pontos por rota
-          morningStart,
-          5 // 5 minutos entre pontos
-        );
-        
-        // Rota de volta (tarde)
-        const afternoonStart = new Date(currentDate);
-        afternoonStart.setHours(16, 0, 0, 0);
-        
-        const afternoonRoute = generateRoute(
-          route.endLat, route.endLng,
-          route.startLat, route.startLng,
-          60,
-          afternoonStart,
-          5
-        );
-        
-        // Adicionar rotas ao array total
-        allMassiveRoutes.push(...morningRoute.map(p => ({
-          fk_device: route.device,
-          latitude: p.lat,
-          longitude: p.lng,
-          datahora_recebido: p.time
-        })));
-        
-        allMassiveRoutes.push(...afternoonRoute.map(p => ({
-          fk_device: route.device,
-          latitude: p.lat,
-          longitude: p.lng,
-          datahora_recebido: p.time
-        })));
-        
-        // Adicionar pontos aleatórios durante o dia (simulando movimento)
-        for (let hour = 12; hour <= 15; hour++) {
-          const randomTime = new Date(currentDate);
-          randomTime.setHours(hour, Math.floor(Math.random() * 60), 0, 0);
-          
-          const randomLat = route.startLat + (Math.random() - 0.5) * 0.02;
-          const randomLng = route.startLng + (Math.random() - 0.5) * 0.02;
-          
-          allMassiveRoutes.push({
-            fk_device: route.device,
-            latitude: randomLat,
-            longitude: randomLng,
-            datahora_recebido: randomTime.toISOString().slice(0, 19).replace('T', ' ')
-          });
-        }
-      }
-    }
-
-    // Adicionar rotas especiais de fim de semana
-    for (let weekend = 0; weekend < 8; weekend++) {
-      const weekendDate = new Date(baseDate);
-      weekendDate.setDate(weekendDate.getDate() + weekend * 7 + 6); // Sábado
+      // Pular alguns dias aleatoriamente para simular dias sem uso
+      if (Math.random() < 0.1) continue; // 10% dos dias sem uso
+      
+      const dayOfWeek = currentDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       
       for (const route of baseRoutes) {
-        // Rotas de fim de semana mais longas
-        const weekendStart = new Date(weekendDate);
-        weekendStart.setHours(9, 0, 0, 0);
+        // Simular padrões de uso diferentes para cada dia
+        const usagePattern = Math.random();
         
-        const weekendRoute = generateRoute(
-          route.startLat, route.startLng,
-          route.endLat + (Math.random() - 0.5) * 0.01,
-          route.endLng + (Math.random() - 0.5) * 0.01,
-          80, // Mais pontos
-          weekendStart,
-          3 // Intervalos menores
-        );
-        
-        allMassiveRoutes.push(...weekendRoute.map(p => ({
-          fk_device: route.device,
-          latitude: p.lat,
-          longitude: p.lng,
-          datahora_recebido: p.time
-        })));
-      }
-    }
-
-    // Adicionar pontos noturnos (simulando estacionamento)
-    for (let night = 0; night < 30; night++) {
-      const nightDate = new Date(baseDate);
-      nightDate.setDate(nightDate.getDate() + night);
-      
-      for (const route of baseRoutes) {
-        const nightTime = new Date(nightDate);
-        nightTime.setHours(22, 0, 0, 0);
-        
-        // Pontos noturnos próximos ao início
-        for (let i = 0; i < 5; i++) {
-          const nightPoint = new Date(nightTime);
-          nightPoint.setHours(22 + i, 0, 0, 0);
+        if (isWeekend) {
+          // Fim de semana: uso mais esporádico e horários diferentes
+          if (usagePattern < 0.3) {
+            // 30% de chance de uso no fim de semana
+            const weekendStart = new Date(currentDate);
+            weekendStart.setHours(9 + Math.floor(Math.random() * 3), Math.floor(Math.random() * 60), 0, 0);
+            
+            const destination = generateRandomDestination(route.baseLat, route.baseLng);
+            const weekendRoute = generateRoute(
+              route.baseLat, route.baseLng,
+              destination.lat, destination.lng,
+              40 + Math.floor(Math.random() * 40), // 40-80 pontos
+              weekendStart,
+              3 + Math.random() * 2 // 3-5 minutos entre pontos
+            );
+            
+            allMassiveRoutes.push(...weekendRoute.map(p => ({
+              fk_device: route.device,
+              latitude: p.lat,
+              longitude: p.lng,
+              datahora_recebido: p.time
+            })));
+            
+            totalPoints += weekendRoute.length;
+          }
+        } else {
+          // Dia de semana: uso regular com horários de trabalho
           
-          allMassiveRoutes.push({
-            fk_device: route.device,
-            latitude: route.startLat + (Math.random() - 0.5) * 0.005,
-            longitude: route.startLng + (Math.random() - 0.5) * 0.005,
-            datahora_recebido: nightPoint.toISOString().slice(0, 19).replace('T', ' ')
-          });
+          // Rota de ida (manhã)
+          if (usagePattern < 0.8) { // 80% de chance de ir trabalhar
+            const morningStart = new Date(currentDate);
+            morningStart.setHours(7 + Math.floor(Math.random() * 1), 30 + Math.floor(Math.random() * 30), 0, 0);
+            
+            const destination = generateRandomDestination(route.baseLat, route.baseLng);
+            const morningRoute = generateRoute(
+              route.baseLat, route.baseLng,
+              destination.lat, destination.lng,
+              30 + Math.floor(Math.random() * 30), // 30-60 pontos
+              morningStart,
+              2 + Math.random() * 3 // 2-5 minutos entre pontos
+            );
+            
+            allMassiveRoutes.push(...morningRoute.map(p => ({
+              fk_device: route.device,
+              latitude: p.lat,
+              longitude: p.lng,
+              datahora_recebido: p.time
+            })));
+            
+            totalPoints += morningRoute.length;
+          }
+          
+          // Rota de volta (tarde)
+          if (usagePattern < 0.7) { // 70% de chance de voltar
+            const afternoonStart = new Date(currentDate);
+            afternoonStart.setHours(16 + Math.floor(Math.random() * 2), Math.floor(Math.random() * 60), 0, 0);
+            
+            const destination = generateRandomDestination(route.baseLat, route.baseLng);
+            const afternoonRoute = generateRoute(
+              destination.lat, destination.lng,
+              route.baseLat, route.baseLng,
+              30 + Math.floor(Math.random() * 30),
+              afternoonStart,
+              2 + Math.random() * 3
+            );
+            
+            allMassiveRoutes.push(...afternoonRoute.map(p => ({
+              fk_device: route.device,
+              latitude: p.lat,
+              longitude: p.lng,
+              datahora_recebido: p.time
+            })));
+            
+            totalPoints += afternoonRoute.length;
+          }
+          
+          // Atividades extras durante o dia (20% de chance)
+          if (Math.random() < 0.2) {
+            const extraStart = new Date(currentDate);
+            extraStart.setHours(12 + Math.floor(Math.random() * 4), Math.floor(Math.random() * 60), 0, 0);
+            
+            const destination1 = generateRandomDestination(route.baseLat, route.baseLng);
+            const destination2 = generateRandomDestination(route.baseLat, route.baseLng);
+            
+            const extraRoute = generateRoute(
+              destination1.lat, destination1.lng,
+              destination2.lat, destination2.lng,
+              20 + Math.floor(Math.random() * 20),
+              extraStart,
+              1 + Math.random() * 2
+            );
+            
+            allMassiveRoutes.push(...extraRoute.map(p => ({
+              fk_device: route.device,
+              latitude: p.lat,
+              longitude: p.lng,
+              datahora_recebido: p.time
+            })));
+            
+            totalPoints += extraRoute.length;
+          }
+        }
+        
+        // Adicionar pontos aleatórios durante o dia (simulando paradas)
+        if (Math.random() < 0.3) {
+          for (let hour = 10; hour <= 20; hour += 2) {
+            if (Math.random() < 0.1) {
+              const randomTime = new Date(currentDate);
+              randomTime.setHours(hour, Math.floor(Math.random() * 60), 0, 0);
+              
+              const randomLat = route.baseLat + (Math.random() - 0.5) * 0.03;
+              const randomLng = route.baseLng + (Math.random() - 0.5) * 0.03;
+              
+              allMassiveRoutes.push({
+                fk_device: route.device,
+                latitude: randomLat,
+                longitude: randomLng,
+                datahora_recebido: randomTime.toISOString().slice(0, 19).replace('T', ' ')
+              });
+              
+              totalPoints++;
+            }
+          }
         }
       }
+      
+      // Progresso a cada 100 dias
+      if (day % 100 === 0) {
+        console.log(`   Progresso: ${day}/${totalDays} dias (${(day/totalDays*100).toFixed(1)}%) - ${totalPoints} pontos gerados...`);
+      }
     }
 
-    // Embaralhar e ordenar por data
+    // Ordenar por data
     allMassiveRoutes.sort((a, b) => new Date(a.datahora_recebido) - new Date(b.datahora_recebido));
 
-    console.log(`📍 Inserindo ${allMassiveRoutes.length} pontos GPS massivos...`);
+    console.log(`📍 Total gerado: ${allMassiveRoutes.length.toLocaleString('pt-BR')} pontos GPS de 2025-2030`);
+    console.log(`📍 Média: ${(allMassiveRoutes.length / totalDays).toFixed(0)} pontos por dia`);
+    console.log(`📍 Inserindo pontos no banco de dados...`);
     
     // Inserir em lotes para melhor performance
-    const batchSize = 100;
+    const batchSize = 500; // Lotes maiores para melhor performance
+    let insertedCount = 0;
+    
     for (let i = 0; i < allMassiveRoutes.length; i += batchSize) {
       const batch = allMassiveRoutes.slice(i, i + batchSize);
       const values = batch.map(gps => [gps.fk_device, gps.latitude, gps.longitude, gps.datahora_recebido]);
       
-      await connection.execute(`
-        INSERT INTO gps_history (fk_device, latitude, longitude, datahora_recebido)
-        VALUES ${values.map(() => '(?, ?, ?, ?)').join(',')}
-      `, values.flat());
-      
-      // Progresso
-      if ((i + batchSize) % 1000 === 0) {
-        console.log(`   Progresso: ${Math.min(i + batchSize, allMassiveRoutes.length)}/${allMassiveRoutes.length} pontos inseridos...`);
+      try {
+        await connection.execute(`
+          INSERT INTO gps_history (fk_device, latitude, longitude, datahora_recebido)
+          VALUES ${values.map(() => '(?, ?, ?, ?)').join(',')}
+        `, values.flat());
+        
+        insertedCount += batch.length;
+        
+        // Progresso a cada 10.000 pontos
+        if (insertedCount % 10000 === 0) {
+          console.log(`   Inseridos: ${insertedCount.toLocaleString('pt-BR')}/${allMassiveRoutes.length.toLocaleString('pt-BR')} pontos (${(insertedCount/allMassiveRoutes.length*100).toFixed(1)}%)`);
+        }
+      } catch (error) {
+        console.error(`Erro ao inserir lote ${i}-${i+batchSize}:`, error.message);
+        // Continuar mesmo com erro no lote
       }
     }
+    
+    console.log(`✅ Inserção concluída: ${insertedCount.toLocaleString('pt-BR')} pontos GPS de 2025-2030`);
     
     console.log('✅ Carga inicial concluída com sucesso!');
     
