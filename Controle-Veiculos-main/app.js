@@ -6650,11 +6650,19 @@ if (GPS_ENABLED) {
   poolGps.getConnection((err, conn) => {
     if (err) {
       console.error('>> [SERVER] Falha ao conectar no DB GPS:', err.stack);
+      console.log('>> [SERVER] Usando banco principal como fallback para GPS');
+      // Fallback: usar o banco principal
+      queryGps = util.promisify(db.query).bind(db);
       return;
     }
     console.log('>> [SERVER] Conexão ao DB GPS OK');
     conn.release();
   });
+} else {
+  console.log('>> [SERVER] GPS desabilitado, usando banco principal como fallback');
+  // Fallback: usar o banco principal
+  queryGps = util.promisify(db.query).bind(db);
+}
 
   // Rota para consumir histórico GPS, aceita ?device=ID
   app.get('/gps-history', async (req, res) => {
@@ -7195,6 +7203,7 @@ app.get('/viagensComUso', isAuthenticated, async (req, res) => {
       if (veiculo.deviceId) {
         const devId = veiculo.deviceId;
         try {
+          console.log(`>> [GPS] Buscando pontos para device ${devId} entre ${uso.inicio} e ${uso.fim}`);
           pontos = await queryGps(`
             SELECT latitude, longitude, datahora_recebido AS timestamp
             FROM gps_history
@@ -7202,20 +7211,34 @@ app.get('/viagensComUso', isAuthenticated, async (req, res) => {
               AND datahora_recebido BETWEEN ? AND ?
             ORDER BY datahora_recebido ASC
           `, [devId, uso.inicio, uso.fim]);
+          console.log(`>> [GPS] Encontrados ${pontos.length} pontos para ${devId}`);
         } catch (err) {
-          console.warn('Erro ao buscar GPS:', err.message);
+          console.warn('>> [GPS] Erro ao buscar GPS:', err.message);
+          console.log('>> [GPS] Usando coordenadas start/end como fallback');
         }
+      } else {
+        console.log(`>> [GPS] Veículo ${uso.placa} não tem device_id, usando start/end`);
       }
 
       // Se não tiver pontos GPS suficientes, usar coordenadas start/end do uso
-      if (pontos.length < 2 && uso.startLat && uso.startLng && uso.endLat && uso.endLng) {
-        pontos = [
-          { latitude: uso.startLat, longitude: uso.startLng, timestamp: uso.inicio },
-          { latitude: uso.endLat, longitude: uso.endLng, timestamp: uso.fim }
-        ];
+      if (pontos.length < 2) {
+        console.log(`>> [GPS] Pontos GPS insuficientes (${pontos.length})`);
+        if (uso.startLat && uso.startLng && uso.endLat && uso.endLng) {
+          console.log(`>> [GPS] Usando coordenadas start/end: (${uso.startLat}, ${uso.startLng}) → (${uso.endLat}, ${uso.endLng})`);
+          pontos = [
+            { latitude: uso.startLat, longitude: uso.startLng, timestamp: uso.inicio },
+            { latitude: uso.endLat, longitude: uso.endLng, timestamp: uso.fim }
+          ];
+        } else {
+          console.log(`>> [GPS] Coordenadas start/end não encontradas para uso ${uso.usoId}`);
+          console.log(`>> [GPS] startLat: ${uso.startLat}, startLng: ${uso.startLng}, endLat: ${uso.endLat}, endLng: ${uso.endLng}`);
+        }
       }
 
-      if (pontos.length < 2) continue;
+      if (pontos.length < 2) {
+        console.log(`>> [GPS] Pulando uso ${uso.usoId} - sem pontos suficientes`);
+        continue;
+      }
 
       // Cálculo de distância
       let totalDist = 0;
