@@ -491,11 +491,16 @@
           return data.id == usoId;
         }).data();
         
+        console.log('>> [RELATORIO] Collapsible aberto para uso:', usoId, 'dados:', rowData);
+        
         if (rowData && rowData.start_lat && rowData.start_lng && rowData.end_lat && rowData.end_lng) {
           // Pequeno delay para garantir que o container esteja visível
           setTimeout(() => {
+            console.log('>> [RELATORIO] Criando mapa para uso:', usoId);
             createRouteMap(mapId, rowData.start_lat, rowData.start_lng, rowData.end_lat, rowData.end_lng);
-          }, 100);
+          }, 200);
+        } else {
+          console.log('>> [RELATORIO] Dados insuficientes para mapa:', rowData);
         }
       });
     });
