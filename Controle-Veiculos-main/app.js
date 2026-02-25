@@ -6659,10 +6659,6 @@ if (GPS_ENABLED) {
     conn.release();
   });
 } else {
-  console.log('>> [SERVER] GPS desabilitado, usando banco principal como fallback');
-  // Fallback: usar o banco principal
-  queryGps = util.promisify(db.query).bind(db);
-}
 
   // Rota para consumir histórico GPS, aceita ?device=ID
   app.get('/gps-history', async (req, res) => {
@@ -6693,11 +6689,10 @@ if (GPS_ENABLED) {
     }
   });
 } else {
-  console.warn('>> [SERVER] GPS desabilitado (variáveis GSP_DB_* não configuradas).');
-  app.get('/gps-history', (req, res) => res.status(503).json({ error: 'GPS desabilitado' }));
+  console.log('>> [SERVER] GPS desabilitado, usando banco principal como fallback');
+  // Fallback: usar o banco principal
+  queryGps = util.promisify(db.query).bind(db);
 }
-
-
 
 // Rota para exibir o mapa com layout próprio
 app.get(
