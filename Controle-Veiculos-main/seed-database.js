@@ -659,215 +659,174 @@ async function seedDatabase() {
       ]);
     }
 
-    // Inserir massa enorme de dados simulados no GPS history
-    console.log('📍 Inserindo massa enorme de dados GPS history simulados...');
+    // Inserir MASSIVA quantidade de dados GPS (10,000+ pontos)
+    console.log('📍 Inserindo MASSIVA quantidade de dados GPS history (10,000+ pontos)...');
     
-    // DEVICE001 - Fiesta (percurso detalhado São Paulo Centro -> Paulista)
-    const device001Route = [
-      // Saída da empresa (centro)
-      { lat: -23.5505, lng: -46.6333, time: '2024-01-15 08:00:00' },
-      { lat: -23.5510, lng: -46.6338, time: '2024-01-15 08:05:00' },
-      { lat: -23.5515, lng: -46.6343, time: '2024-01-15 08:10:00' },
-      { lat: -23.5520, lng: -46.6348, time: '2024-01-15 08:15:00' },
-      { lat: -23.5525, lng: -46.6353, time: '2024-01-15 08:20:00' },
-      { lat: -23.5530, lng: -46.6358, time: '2024-01-15 08:25:00' },
-      { lat: -23.5535, lng: -46.6363, time: '2024-01-15 08:30:00' },
-      { lat: -23.5540, lng: -46.6368, time: '2024-01-15 08:35:00' },
-      { lat: -23.5545, lng: -46.6373, time: '2024-01-15 08:40:00' },
-      { lat: -23.5550, lng: -46.6378, time: '2024-01-15 08:45:00' },
-      // Subida para Paulista
-      { lat: -23.5555, lng: -46.6383, time: '2024-01-15 09:00:00' },
-      { lat: -23.5560, lng: -46.6388, time: '2024-01-15 09:15:00' },
-      { lat: -23.5565, lng: -46.6393, time: '2024-01-15 09:30:00' },
-      { lat: -23.5570, lng: -46.6398, time: '2024-01-15 09:45:00' },
-      { lat: -23.5575, lng: -46.6403, time: '2024-01-15 10:00:00' },
-      { lat: -23.5580, lng: -46.6408, time: '2024-01-15 10:15:00' },
-      { lat: -23.5585, lng: -46.6413, time: '2024-01-15 10:30:00' },
-      { lat: -23.5590, lng: -46.6418, time: '2024-01-15 10:45:00' },
-      { lat: -23.5595, lng: -46.6423, time: '2024-01-15 11:00:00' },
-      { lat: -23.5600, lng: -46.6428, time: '2024-01-15 11:15:00' },
-      // Chegada ao cliente
-      { lat: -23.5605, lng: -46.6433, time: '2024-01-15 11:30:00' },
-      // Permanência no cliente
-      { lat: -23.5605, lng: -46.6433, time: '2024-01-15 14:00:00' },
-      { lat: -23.5605, lng: -46.6433, time: '2024-01-15 16:00:00' },
-      // Retorno
-      { lat: -23.5600, lng: -46.6428, time: '2024-01-15 16:15:00' },
-      { lat: -23.5595, lng: -46.6423, time: '2024-01-15 16:30:00' },
-      { lat: -23.5590, lng: -46.6418, time: '2024-01-15 16:45:00' },
-      { lat: -23.5585, lng: -46.6413, time: '2024-01-15 17:00:00' },
-      { lat: -23.5580, lng: -46.6408, time: '2024-01-15 17:15:00' },
-      { lat: -23.5575, lng: -46.6403, time: '2024-01-15 17:30:00' }
+    // Função para gerar coordenadas entre dois pontos
+    function generateRoute(startLat, startLng, endLat, endLng, steps, startTime, intervalMinutes) {
+      const route = [];
+      for (let i = 0; i <= steps; i++) {
+        const progress = i / steps;
+        const lat = startLat + (endLat - startLat) * progress;
+        const lng = startLng + (endLng - startLng) * progress;
+        const time = new Date(startTime.getTime() + i * intervalMinutes * 60000);
+        route.push({
+          lat: lat + (Math.random() - 0.5) * 0.001, // Pequena variação
+          lng: lng + (Math.random() - 0.5) * 0.001,
+          time: time.toISOString().slice(0, 19).replace('T', ' ')
+        });
+      }
+      return route;
+    }
+
+    // Gerar múltiplos dias de rotas para cada veículo
+    const allMassiveRoutes = [];
+    const baseDate = new Date('2024-01-15');
+    
+    // Rotas base para cada veículo
+    const baseRoutes = [
+      { device: 'DEVICE001', startLat: -23.5505, startLng: -46.6333, endLat: -23.5605, endLng: -46.6433 },
+      { device: 'DEVICE002', startLat: -23.5480, startLng: -46.6310, endLat: -23.5670, endLng: -46.6500 },
+      { device: 'DEVICE003', startLat: -23.5520, startLng: -46.6340, endLat: -23.5690, endLng: -46.6510 },
+      { device: 'DEVICE004', startLat: -23.5490, startLng: -46.6320, endLat: -23.5625, endLng: -46.6455 },
+      { device: 'DEVICE005', startLat: -23.5510, startLng: -46.6330, endLat: -23.5680, endLng: -46.6500 }
     ];
 
-    // DEVICE002 - Onix (percurso Zona Norte)
-    const device002Route = [
-      { lat: -23.5480, lng: -46.6310, time: '2024-01-16 09:15:00' },
-      { lat: -23.5485, lng: -46.6315, time: '2024-01-16 09:30:00' },
-      { lat: -23.5490, lng: -46.6320, time: '2024-01-16 09:45:00' },
-      { lat: -23.5495, lng: -46.6325, time: '2024-01-16 10:00:00' },
-      { lat: -23.5500, lng: -46.6330, time: '2024-01-16 10:15:00' },
-      { lat: -23.5505, lng: -46.6335, time: '2024-01-16 10:30:00' },
-      { lat: -23.5510, lng: -46.6340, time: '2024-01-16 10:45:00' },
-      { lat: -23.5515, lng: -46.6345, time: '2024-01-16 11:00:00' },
-      { lat: -23.5520, lng: -46.6350, time: '2024-01-16 11:15:00' },
-      { lat: -23.5525, lng: -46.6355, time: '2024-01-16 11:30:00' },
-      { lat: -23.5530, lng: -46.6360, time: '2024-01-16 11:45:00' },
-      { lat: -23.5535, lng: -46.6365, time: '2024-01-16 12:00:00' },
-      { lat: -23.5540, lng: -46.6370, time: '2024-01-16 12:15:00' },
-      { lat: -23.5545, lng: -46.6375, time: '2024-01-16 12:30:00' },
-      { lat: -23.5550, lng: -46.6380, time: '2024-01-16 12:45:00' },
-      { lat: -23.5555, lng: -46.6385, time: '2024-01-16 13:00:00' },
-      { lat: -23.5560, lng: -46.6390, time: '2024-01-16 13:15:00' },
-      { lat: -23.5565, lng: -46.6395, time: '2024-01-16 13:30:00' },
-      { lat: -23.5570, lng: -46.6400, time: '2024-01-16 13:45:00' },
-      { lat: -23.5575, lng: -46.6405, time: '2024-01-16 14:00:00' },
-      { lat: -23.5580, lng: -46.6410, time: '2024-01-16 14:15:00' },
-      { lat: -23.5585, lng: -46.6415, time: '2024-01-16 14:30:00' },
-      { lat: -23.5590, lng: -46.6420, time: '2024-01-16 14:45:00' },
-      { lat: -23.5595, lng: -46.6425, time: '2024-01-16 15:00:00' },
-      { lat: -23.5600, lng: -46.6430, time: '2024-01-16 15:15:00' },
-      { lat: -23.5605, lng: -46.6435, time: '2024-01-16 15:30:00' },
-      { lat: -23.5610, lng: -46.6440, time: '2024-01-16 15:45:00' },
-      { lat: -23.5615, lng: -46.6445, time: '2024-01-16 16:00:00' },
-      { lat: -23.5620, lng: -46.6450, time: '2024-01-16 16:15:00' },
-      { lat: -23.5625, lng: -46.6455, time: '2024-01-16 16:30:00' },
-      { lat: -23.5630, lng: -46.6460, time: '2024-01-16 16:45:00' },
-      { lat: -23.5635, lng: -46.6465, time: '2024-01-16 17:00:00' },
-      { lat: -23.5640, lng: -46.6470, time: '2024-01-16 17:15:00' },
-      { lat: -23.5645, lng: -46.6475, time: '2024-01-16 17:30:00' },
-      { lat: -23.5650, lng: -46.6480, time: '2024-01-16 17:45:00' },
-      { lat: -23.5655, lng: -46.6485, time: '2024-01-16 18:00:00' },
-      { lat: -23.5660, lng: -46.6490, time: '2024-01-16 18:15:00' },
-      { lat: -23.5665, lng: -46.6495, time: '2024-01-16 18:30:00' },
-      { lat: -23.5670, lng: -46.6500, time: '2024-01-16 18:45:00' }
-    ];
+    // Gerar 30 dias de rotas para cada veículo
+    for (let day = 0; day < 30; day++) {
+      const currentDate = new Date(baseDate);
+      currentDate.setDate(currentDate.getDate() + day);
+      
+      for (const route of baseRoutes) {
+        // Rota de ida (manhã)
+        const morningStart = new Date(currentDate);
+        morningStart.setHours(7, 30, 0, 0);
+        
+        const morningRoute = generateRoute(
+          route.startLat, route.startLng,
+          route.endLat, route.endLng,
+          60, // 60 pontos por rota
+          morningStart,
+          5 // 5 minutos entre pontos
+        );
+        
+        // Rota de volta (tarde)
+        const afternoonStart = new Date(currentDate);
+        afternoonStart.setHours(16, 0, 0, 0);
+        
+        const afternoonRoute = generateRoute(
+          route.endLat, route.endLng,
+          route.startLat, route.startLng,
+          60,
+          afternoonStart,
+          5
+        );
+        
+        // Adicionar rotas ao array total
+        allMassiveRoutes.push(...morningRoute.map(p => ({
+          fk_device: route.device,
+          latitude: p.lat,
+          longitude: p.lng,
+          datahora_recebido: p.time
+        })));
+        
+        allMassiveRoutes.push(...afternoonRoute.map(p => ({
+          fk_device: route.device,
+          latitude: p.lat,
+          longitude: p.lng,
+          datahora_recebido: p.time
+        })));
+        
+        // Adicionar pontos aleatórios durante o dia (simulando movimento)
+        for (let hour = 12; hour <= 15; hour++) {
+          const randomTime = new Date(currentDate);
+          randomTime.setHours(hour, Math.floor(Math.random() * 60), 0, 0);
+          
+          const randomLat = route.startLat + (Math.random() - 0.5) * 0.02;
+          const randomLng = route.startLng + (Math.random() - 0.5) * 0.02;
+          
+          allMassiveRoutes.push({
+            fk_device: route.device,
+            latitude: randomLat,
+            longitude: randomLng,
+            datahora_recebido: randomTime.toISOString().slice(0, 19).replace('T', ' ')
+          });
+        }
+      }
+    }
 
-    // DEVICE003 - Palio (percurso Zona Sul)
-    const device003Route = [
-      { lat: -23.5520, lng: -46.6340, time: '2024-01-17 07:30:00' },
-      { lat: -23.5525, lng: -46.6345, time: '2024-01-17 07:45:00' },
-      { lat: -23.5530, lng: -46.6350, time: '2024-01-17 08:00:00' },
-      { lat: -23.5535, lng: -46.6355, time: '2024-01-17 08:15:00' },
-      { lat: -23.5540, lng: -46.6360, time: '2024-01-17 08:30:00' },
-      { lat: -23.5545, lng: -46.6365, time: '2024-01-17 08:45:00' },
-      { lat: -23.5550, lng: -46.6370, time: '2024-01-17 09:00:00' },
-      { lat: -23.5555, lng: -46.6375, time: '2024-01-17 09:15:00' },
-      { lat: -23.5560, lng: -46.6380, time: '2024-01-17 09:30:00' },
-      { lat: -23.5565, lng: -46.6385, time: '2024-01-17 09:45:00' },
-      { lat: -23.5570, lng: -46.6390, time: '2024-01-17 10:00:00' },
-      { lat: -23.5575, lng: -46.6395, time: '2024-01-17 10:15:00' },
-      { lat: -23.5580, lng: -46.6400, time: '2024-01-17 10:30:00' },
-      { lat: -23.5585, lng: -46.6405, time: '2024-01-17 10:45:00' },
-      { lat: -23.5590, lng: -46.6410, time: '2024-01-17 11:00:00' },
-      { lat: -23.5595, lng: -46.6415, time: '2024-01-17 11:15:00' },
-      { lat: -23.5600, lng: -46.6420, time: '2024-01-17 11:30:00' },
-      { lat: -23.5605, lng: -46.6425, time: '2024-01-17 11:45:00' },
-      { lat: -23.5610, lng: -46.6430, time: '2024-01-17 12:00:00' },
-      { lat: -23.5615, lng: -46.6435, time: '2024-01-17 12:15:00' },
-      { lat: -23.5620, lng: -46.6440, time: '2024-01-17 12:30:00' },
-      { lat: -23.5625, lng: -46.6445, time: '2024-01-17 12:45:00' },
-      { lat: -23.5630, lng: -46.6450, time: '2024-01-17 13:00:00' },
-      { lat: -23.5635, lng: -46.6455, time: '2024-01-17 13:15:00' },
-      { lat: -23.5640, lng: -46.6460, time: '2024-01-17 13:30:00' },
-      { lat: -23.5645, lng: -46.6465, time: '2024-01-17 13:45:00' },
-      { lat: -23.5650, lng: -46.6470, time: '2024-01-17 14:00:00' },
-      { lat: -23.5655, lng: -46.6475, time: '2024-01-17 14:15:00' },
-      { lat: -23.5660, lng: -46.6480, time: '2024-01-17 14:30:00' },
-      { lat: -23.5665, lng: -46.6485, time: '2024-01-17 14:45:00' },
-      { lat: -23.5670, lng: -46.6490, time: '2024-01-17 15:00:00' },
-      { lat: -23.5675, lng: -46.6495, time: '2024-01-17 15:15:00' },
-      { lat: -23.5680, lng: -46.6500, time: '2024-01-17 15:30:00' },
-      { lat: -23.5685, lng: -46.6505, time: '2024-01-17 15:45:00' },
-      { lat: -23.5690, lng: -46.6510, time: '2024-01-17 16:00:00' }
-    ];
+    // Adicionar rotas especiais de fim de semana
+    for (let weekend = 0; weekend < 8; weekend++) {
+      const weekendDate = new Date(baseDate);
+      weekendDate.setDate(weekendDate.getDate() + weekend * 7 + 6); // Sábado
+      
+      for (const route of baseRoutes) {
+        // Rotas de fim de semana mais longas
+        const weekendStart = new Date(weekendDate);
+        weekendStart.setHours(9, 0, 0, 0);
+        
+        const weekendRoute = generateRoute(
+          route.startLat, route.startLng,
+          route.endLat + (Math.random() - 0.5) * 0.01,
+          route.endLng + (Math.random() - 0.5) * 0.01,
+          80, // Mais pontos
+          weekendStart,
+          3 // Intervalos menores
+        );
+        
+        allMassiveRoutes.push(...weekendRoute.map(p => ({
+          fk_device: route.device,
+          latitude: p.lat,
+          longitude: p.lng,
+          datahora_recebido: p.time
+        })));
+      }
+    }
 
-    // DEVICE004 - Corolla (percurso Leste-Oeste)
-    const device004Route = [
-      { lat: -23.5490, lng: -46.6320, time: '2024-01-18 10:00:00' },
-      { lat: -23.5495, lng: -46.6325, time: '2024-01-18 10:10:00' },
-      { lat: -23.5500, lng: -46.6330, time: '2024-01-18 10:20:00' },
-      { lat: -23.5505, lng: -46.6335, time: '2024-01-18 10:30:00' },
-      { lat: -23.5510, lng: -46.6340, time: '2024-01-18 10:40:00' },
-      { lat: -23.5515, lng: -46.6345, time: '2024-01-18 10:50:00' },
-      { lat: -23.5520, lng: -46.6350, time: '2024-01-18 11:00:00' },
-      { lat: -23.5525, lng: -46.6355, time: '2024-01-18 11:10:00' },
-      { lat: -23.5530, lng: -46.6360, time: '2024-01-18 11:20:00' },
-      { lat: -23.5535, lng: -46.6365, time: '2024-01-18 11:30:00' },
-      { lat: -23.5540, lng: -46.6370, time: '2024-01-18 11:40:00' },
-      { lat: -23.5545, lng: -46.6375, time: '2024-01-18 11:50:00' },
-      { lat: -23.5550, lng: -46.6380, time: '2024-01-18 12:00:00' },
-      { lat: -23.5555, lng: -46.6385, time: '2024-01-18 12:10:00' },
-      { lat: -23.5560, lng: -46.6390, time: '2024-01-18 12:20:00' },
-      { lat: -23.5565, lng: -46.6395, time: '2024-01-18 12:30:00' },
-      { lat: -23.5570, lng: -46.6400, time: '2024-01-18 12:40:00' },
-      { lat: -23.5575, lng: -46.6405, time: '2024-01-18 12:50:00' },
-      { lat: -23.5580, lng: -46.6410, time: '2024-01-18 13:00:00' },
-      { lat: -23.5585, lng: -46.6415, time: '2024-01-18 13:10:00' },
-      { lat: -23.5590, lng: -46.6420, time: '2024-01-18 13:20:00' },
-      { lat: -23.5595, lng: -46.6425, time: '2024-01-18 13:30:00' },
-      { lat: -23.5600, lng: -46.6430, time: '2024-01-18 13:40:00' },
-      { lat: -23.5605, lng: -46.6435, time: '2024-01-18 13:50:00' },
-      { lat: -23.5610, lng: -46.6440, time: '2024-01-18 14:00:00' },
-      { lat: -23.5615, lng: -46.6445, time: '2024-01-18 14:10:00' },
-      { lat: -23.5620, lng: -46.6450, time: '2024-01-18 14:20:00' },
-      { lat: -23.5625, lng: -46.6455, time: '2024-01-18 14:30:00' }
-    ];
+    // Adicionar pontos noturnos (simulando estacionamento)
+    for (let night = 0; night < 30; night++) {
+      const nightDate = new Date(baseDate);
+      nightDate.setDate(nightDate.getDate() + night);
+      
+      for (const route of baseRoutes) {
+        const nightTime = new Date(nightDate);
+        nightTime.setHours(22, 0, 0, 0);
+        
+        // Pontos noturnos próximos ao início
+        for (let i = 0; i < 5; i++) {
+          const nightPoint = new Date(nightTime);
+          nightPoint.setHours(22 + i, 0, 0, 0);
+          
+          allMassiveRoutes.push({
+            fk_device: route.device,
+            latitude: route.startLat + (Math.random() - 0.5) * 0.005,
+            longitude: route.startLng + (Math.random() - 0.5) * 0.005,
+            datahora_recebido: nightPoint.toISOString().slice(0, 19).replace('T', ' ')
+          });
+        }
+      }
+    }
 
-    // DEVICE005 - HB20 (percurso circular)
-    const device005Route = [
-      { lat: -23.5510, lng: -46.6330, time: '2024-01-19 08:45:00' },
-      { lat: -23.5515, lng: -46.6335, time: '2024-01-19 09:00:00' },
-      { lat: -23.5520, lng: -46.6340, time: '2024-01-19 09:15:00' },
-      { lat: -23.5525, lng: -46.6345, time: '2024-01-19 09:30:00' },
-      { lat: -23.5530, lng: -46.6350, time: '2024-01-19 09:45:00' },
-      { lat: -23.5535, lng: -46.6355, time: '2024-01-19 10:00:00' },
-      { lat: -23.5540, lng: -46.6360, time: '2024-01-19 10:15:00' },
-      { lat: -23.5545, lng: -46.6365, time: '2024-01-19 10:30:00' },
-      { lat: -23.5550, lng: -46.6370, time: '2024-01-19 10:45:00' },
-      { lat: -23.5555, lng: -46.6375, time: '2024-01-19 11:00:00' },
-      { lat: -23.5560, lng: -46.6380, time: '2024-01-19 11:15:00' },
-      { lat: -23.5565, lng: -46.6385, time: '2024-01-19 11:30:00' },
-      { lat: -23.5570, lng: -46.6390, time: '2024-01-19 11:45:00' },
-      { lat: -23.5575, lng: -46.6395, time: '2024-01-19 12:00:00' },
-      { lat: -23.5580, lng: -46.6400, time: '2024-01-19 12:15:00' },
-      { lat: -23.5585, lng: -46.6405, time: '2024-01-19 12:30:00' },
-      { lat: -23.5590, lng: -46.6410, time: '2024-01-19 12:45:00' },
-      { lat: -23.5595, lng: -46.6415, time: '2024-01-19 13:00:00' },
-      { lat: -23.5600, lng: -46.6420, time: '2024-01-19 13:15:00' },
-      { lat: -23.5605, lng: -46.6425, time: '2024-01-19 13:30:00' },
-      { lat: -23.5610, lng: -46.6430, time: '2024-01-19 13:45:00' },
-      { lat: -23.5615, lng: -46.6435, time: '2024-01-19 14:00:00' },
-      { lat: -23.5620, lng: -46.6440, time: '2024-01-19 14:15:00' },
-      { lat: -23.5625, lng: -46.6445, time: '2024-01-19 14:30:00' },
-      { lat: -23.5630, lng: -46.6450, time: '2024-01-19 14:45:00' },
-      { lat: -23.5635, lng: -46.6455, time: '2024-01-19 15:00:00' },
-      { lat: -23.5640, lng: -46.6460, time: '2024-01-19 15:15:00' },
-      { lat: -23.5645, lng: -46.6465, time: '2024-01-19 15:30:00' },
-      { lat: -23.5650, lng: -46.6470, time: '2024-01-19 15:45:00' },
-      { lat: -23.5655, lng: -46.6475, time: '2024-01-19 16:00:00' },
-      { lat: -23.5660, lng: -46.6480, time: '2024-01-19 16:15:00' },
-      { lat: -23.5665, lng: -46.6485, time: '2024-01-19 16:30:00' },
-      { lat: -23.5670, lng: -46.6490, time: '2024-01-19 16:45:00' },
-      { lat: -23.5675, lng: -46.6495, time: '2024-01-19 17:00:00' },
-      { lat: -23.5680, lng: -46.6500, time: '2024-01-19 17:15:00' }
-    ];
+    // Embaralhar e ordenar por data
+    allMassiveRoutes.sort((a, b) => new Date(a.datahora_recebido) - new Date(b.datahora_recebido));
 
-    // Inserir todas as rotas
-    const allRoutes = [
-      ...device001Route.map(p => ({ fk_device: 'DEVICE001', latitude: p.lat, longitude: p.lng, datahora_recebido: p.time })),
-      ...device002Route.map(p => ({ fk_device: 'DEVICE002', latitude: p.lat, longitude: p.lng, datahora_recebido: p.time })),
-      ...device003Route.map(p => ({ fk_device: 'DEVICE003', latitude: p.lat, longitude: p.lng, datahora_recebido: p.time })),
-      ...device004Route.map(p => ({ fk_device: 'DEVICE004', latitude: p.lat, longitude: p.lng, datahora_recebido: p.time })),
-      ...device005Route.map(p => ({ fk_device: 'DEVICE005', latitude: p.lat, longitude: p.lng, datahora_recebido: p.time }))
-    ];
-
-    console.log(`📍 Inserindo ${allRoutes.length} pontos GPS...`);
-    for (const gps of allRoutes) {
+    console.log(`📍 Inserindo ${allMassiveRoutes.length} pontos GPS massivos...`);
+    
+    // Inserir em lotes para melhor performance
+    const batchSize = 100;
+    for (let i = 0; i < allMassiveRoutes.length; i += batchSize) {
+      const batch = allMassiveRoutes.slice(i, i + batchSize);
+      const values = batch.map(gps => [gps.fk_device, gps.latitude, gps.longitude, gps.datahora_recebido]);
+      
       await connection.execute(`
         INSERT INTO gps_history (fk_device, latitude, longitude, datahora_recebido)
-        VALUES (?, ?, ?, ?)
-      `, [gps.fk_device, gps.latitude, gps.longitude, gps.datahora_recebido]);
+        VALUES ${values.map(() => '(?, ?, ?, ?)').join(',')}
+      `, values.flat());
+      
+      // Progresso
+      if ((i + batchSize) % 1000 === 0) {
+        console.log(`   Progresso: ${Math.min(i + batchSize, allMassiveRoutes.length)}/${allMassiveRoutes.length} pontos inseridos...`);
+      }
     }
     
     console.log('✅ Carga inicial concluída com sucesso!');
