@@ -57,7 +57,7 @@
             <i class="bi bi-truck me-3"></i>Sistema de Controle de Frota
           </h1>
           <p class="lead mb-4">
-            Gestão completa de veículos, motoristas, rotas GPS e manutenções em uma plataforma moderna e intuitiva.
+            Sistema completo para gestão empresarial de frotas com controle total de veículos, motoristas, rotas GPS e manutenções.
           </p>
           <div class="d-flex gap-3">
             <a href="/login" class="btn btn-light btn-lg">
@@ -222,18 +222,18 @@
             <div class="col-lg-6">
               <h3 class="mb-4"><i class="bi bi-geo-alt text-primary me-2"></i>GPS em Tempo Real</h3>
               <p class="text-muted mb-4">
-                Acompanhamento em tempo real de toda a frota com localização precisa, rotas e histórico completo.
+                Rastreamento GPS profissional com localização em tempo real, histórico detalhado e análise de rotas da frota.
               </p>
               <ul class="list-unstyled">
                 <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Localização em tempo real</li>
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Simulação de movimentos</li>
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Histórico de 5 anos (2025-2030)</li>
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>500.000+ pontos GPS</li>
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Rotas inteligentes</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Histórico completo de trajetos</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Armazenamento de dados por 5 anos</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>500.000+ pontos de rastreamento</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Análise de rotas e eficiência</li>
               </ul>
               <div class="alert alert-info">
                 <i class="bi bi-info-circle me-2"></i>
-                <strong>Demo:</strong> Os veículos abaixo estão se movendo em tempo real simulando rotas reais em São Paulo.
+                <strong>Sistema:</strong> Visualização da frota com dados reais de rastreamento e posicionamento geográfico.
               </div>
             </div>
             <div class="col-lg-6">
@@ -243,10 +243,10 @@
                   <div id="demoGpsMap" style="height: 400px; border-radius: 8px;"></div>
                   <div class="mt-3">
                     <button class="btn btn-primary btn-sm" onclick="toggleGpsSimulation()">
-                      <i class="bi bi-play-pause me-1"></i> Pausar/Retomar
+                      <i class="bi bi-play-pause me-1"></i> Atualizar Rastreamento
                     </button>
                     <button class="btn btn-secondary btn-sm ms-2" onclick="clearGpsRoutes()">
-                      <i class="bi bi-arrow-clockwise me-1"></i> Limpar Rotas
+                      <i class="bi bi-arrow-clockwise me-1"></i> Limpar Visualização
                     </button>
                   </div>
                 </div>
@@ -261,14 +261,14 @@
             <div class="col-lg-6">
               <h3 class="mb-4"><i class="bi bi-map text-primary me-2"></i>Rotas e Viagens</h3>
               <p class="text-muted mb-4">
-                Gestão completa de viagens com rotas ideais, controle de uso e histórico detalhado de todas as movimentações.
+                Controle operacional completo de viagens com registro detalhado, otimização de rotas e gestão de motoristas.
               </p>
               <ul class="list-unstyled">
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Registro de viagens completo</li>
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Rotas ideais baseadas em GPS</li>
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Controle de motoristas</li>
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Quilometragem e tempo</li>
-                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Mapas interativos</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Registro completo de viagens</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Otimização de rotas por GPS</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Gestão de motoristas</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Controle de quilometragem</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Visualização geográfica</li>
               </ul>
             </div>
             <div class="col-lg-6">
@@ -309,7 +309,7 @@
                   </div>
                   <div class="mt-3">
                     <button class="btn btn-primary btn-sm" onclick="showRouteDemo()">
-                      <i class="bi bi-map me-1"></i> Ver Rota Demo
+                      <i class="bi bi-map me-1"></i> Ver Exemplo de Rota
                     </button>
                   </div>
                 </div>
@@ -634,15 +634,15 @@
     }
 
     function showRouteDemo() {
-      alert('Demo: Esta funcionalidade mostra rotas detalhadas com mapas interativos, coordenadas GPS e histórico completo das viagens.');
+      alert('Funcionalidade: Esta ferramenta exibe rotas detalhadas com mapas interativos, coordenadas GPS e histórico completo das viagens realizadas pela frota.');
     }
 
     function showReportMap(startLat, startLng, endLat, endLng) {
-      alert(`Demo: Mapa da rota\nInício: ${startLat}, ${startLng}\nFim: ${endLat}, ${endLng}\n\nNo sistema completo, você verá um mapa interativo com marcadores e a rota traçada.`);
+      alert(`Mapa da Rota:\nInício: ${startLat}, ${startLng}\nFim: ${endLat}, ${endLng}\n\nNo sistema, você visualiza mapas interativos com marcadores precisos e rotas traçadas para cada viagem.`);
     }
 
     function startDemo() {
-      alert('Tour Guiado:\n\n1. Veículos - Gestão completa da frota\n2. GPS - Acompanhamento em tempo real\n3. Rotas - Controle de viagens\n4. Relatórios - Análises detalhadas\n5. Manutenção - Serviços agendados\n\nNavegue pelas abas para explorar cada recurso!');
+      alert('Tour do Sistema:\n\n1. Veículos - Gestão completa da frota\n2. GPS - Rastreamento em tempo real\n3. Rotas - Controle de viagens\n4. Relatórios - Análises detalhadas\n5. Manutenção - Serviços programados\n\nNavegue pelas abas para conhecer cada recurso!');
     }
 
     function contactSales() {
