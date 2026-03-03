@@ -834,6 +834,16 @@ app.use(passport.session());
 
 // Rota de demonstração pública
 app.get('/demo', (req, res) => {
+  console.log('>> [DEMO] Acessando página de demonstração');
+  res.render('demo', {
+    title: 'Demonstração - Sistema de Controle de Frota',
+    layout: false // Layout customizado sem autenticação
+  });
+});
+
+// Rota alternativa para demonstração
+app.get('/demonstracao', (req, res) => {
+  console.log('>> [DEMO] Acessando página de demonstração (rota alternativa)');
   res.render('demo', {
     title: 'Demonstração - Sistema de Controle de Frota',
     layout: false // Layout customizado sem autenticação
