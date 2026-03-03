@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demonstração do Sistema - Controle de Frota</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <!-- DataTables CSS -->
+  <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  
+  <style>
+    .hero-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4rem 0;
+    }
+    .feature-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      height: 100%;
+    }
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .demo-map {
+      height: 400px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .stats-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+    }
+    .demo-section {
+      padding: 4rem 0;
+    }
+    .nav-pills .nav-link.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+  </style>
+</head>
+<body>
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-6">
+          <h1 class="display-4 fw-bold mb-4">
+            <i class="bi bi-truck me-3"></i>Sistema de Controle de Frota
+          </h1>
+          <p class="lead mb-4">
+            Gestão completa de veículos, motoristas, rotas GPS e manutenções em uma plataforma moderna e intuitiva.
+          </p>
+          <div class="d-flex gap-3">
+            <a href="/login" class="btn btn-light btn-lg">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Acessar Sistema
+            </a>
+            <button class="btn btn-outline-light btn-lg" onclick="startDemo()">
+              <i class="bi bi-play-circle me-2"></i>Iniciar Tour
+            </button>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="demo-map" id="heroMap"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="demo-section bg-light">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-md-3">
+          <div class="stats-card text-center">
+            <h2 class="display-6 fw-bold">5</h2>
+            <p class="mb-0">Veículos Ativos</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card text-center">
+            <h2 class="display-6 fw-bold">500K+</h2>
+            <p class="mb-0">Pontos GPS</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card text-center">
+            <h2 class="display-6 fw-bold">1.8K</h2>
+            <p class="mb-0">Usos Registrados</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stats-card text-center">
+            <h2 class="display-6 fw-bold">98%</h2>
+            <p class="mb-0">Eficiência</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="demo-section">
+    <div class="container">
+      <div class="text-center mb-5">
+        <h2 class="display-5 fw-bold">Recursos Principais</h2>
+        <p class="lead text-muted">Conheça todas as funcionalidades do nosso sistema</p>
+      </div>
+      
+      <!-- Navigation Tabs -->
+      <ul class="nav nav-pills justify-content-center mb-5" id="demoTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="vehicles-tab" data-bs-toggle="tab" data-bs-target="#vehicles" type="button">
+            <i class="bi bi-truck me-2"></i>Veículos
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="gps-tab" data-bs-toggle="tab" data-bs-target="#gps" type="button">
+            <i class="bi bi-geo-alt me-2"></i>GPS em Tempo Real
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="routes-tab" data-bs-toggle="tab" data-bs-target="#routes" type="button">
+            <i class="bi bi-map me-2"></i>Rotas e Viagens
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button">
+            <i class="bi bi-graph-up me-2"></i>Relatórios
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button">
+            <i class="bi bi-wrench me-2"></i>Manutenção
+          </button>
+        </li>
+      </ul>
+
+      <!-- Tab Content -->
+      <div class="tab-content" id="demoTabsContent">
+        <!-- Vehicles Tab -->
+        <div class="tab-pane fade show active" id="vehicles" role="tabpanel">
+          <div class="row">
+            <div class="col-lg-6">
+              <h3 class="mb-4"><i class="bi bi-truck text-primary me-2"></i>Gestão de Veículos</h3>
+              <p class="text-muted mb-4">
+                Controle completo da frota com informações detalhadas, status em tempo real e histórico de manutenções.
+              </p>
+              <ul class="list-unstyled">
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Cadastro completo de veículos</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Status de disponibilidade em tempo real</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Histórico de uso e quilometragem</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Documentação e vencimentos</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Integração com dispositivos GPS</li>
+              </ul>
+            </div>
+            <div class="col-lg-6">
+              <div class="card shadow">
+                <div class="card-body">
+                  <h5 class="card-title">Frota Atual</h5>
+                  <div class="table-responsive">
+                    <table class="table table-hover" id="vehiclesTable">
+                      <thead>
+                        <tr>
+                          <th>Placa</th>
+                          <th>Veículo</th>
+                          <th>Status</th>
+                          <th>KM</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>ABC-1234</strong></td>
+                          <td>Fiesta</td>
+                          <td><span class="badge bg-success">Disponível</span></td>
+                          <td>45.230</td>
+                        </tr>
+                        <tr>
+                          <td><strong>DEF-5678</strong></td>
+                          <td>Onix</td>
+                          <td><span class="badge bg-warning">Em Uso</span></td>
+                          <td>32.150</td>
+                        </tr>
+                        <tr>
+                          <td><strong>GHI-9012</strong></td>
+                          <td>Palio</td>
+                          <td><span class="badge bg-success">Disponível</span></td>
+                          <td>67.890</td>
+                        </tr>
+                        <tr>
+                          <td><strong>JKL-3456</strong></td>
+                          <td>Corolla</td>
+                          <td><span class="badge bg-danger">Manutenção</span></td>
+                          <td>89.450</td>
+                        </tr>
+                        <tr>
+                          <td><strong>MNO-7890</strong></td>
+                          <td>HB20</td>
+                          <td><span class="badge bg-success">Disponível</span></td>
+                          <td>23.670</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GPS Tab -->
+        <div class="tab-pane fade" id="gps" role="tabpanel">
+          <div class="row">
+            <div class="col-lg-6">
+              <h3 class="mb-4"><i class="bi bi-geo-alt text-primary me-2"></i>GPS em Tempo Real</h3>
+              <p class="text-muted mb-4">
+                Acompanhamento em tempo real de toda a frota com localização precisa, rotas e histórico completo.
+              </p>
+              <ul class="list-unstyled">
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Localização em tempo real</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Simulação de movimentos</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Histórico de 5 anos (2025-2030)</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>500.000+ pontos GPS</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Rotas inteligentes</li>
+              </ul>
+              <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Demo:</strong> Os veículos abaixo estão se movendo em tempo real simulando rotas reais em São Paulo.
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="card shadow">
+                <div class="card-body">
+                  <h5 class="card-title">Localização em Tempo Real</h5>
+                  <div id="demoGpsMap" style="height: 400px; border-radius: 8px;"></div>
+                  <div class="mt-3">
+                    <button class="btn btn-primary btn-sm" onclick="toggleGpsSimulation()">
+                      <i class="bi bi-play-pause me-1"></i> Pausar/Retomar
+                    </button>
+                    <button class="btn btn-secondary btn-sm ms-2" onclick="clearGpsRoutes()">
+                      <i class="bi bi-arrow-clockwise me-1"></i> Limpar Rotas
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Routes Tab -->
+        <div class="tab-pane fade" id="routes" role="tabpanel">
+          <div class="row">
+            <div class="col-lg-6">
+              <h3 class="mb-4"><i class="bi bi-map text-primary me-2"></i>Rotas e Viagens</h3>
+              <p class="text-muted mb-4">
+                Gestão completa de viagens com rotas ideais, controle de uso e histórico detalhado de todas as movimentações.
+              </p>
+              <ul class="list-unstyled">
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Registro de viagens completo</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Rotas ideais baseadas em GPS</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Controle de motoristas</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Quilometragem e tempo</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Mapas interativos</li>
+              </ul>
+            </div>
+            <div class="col-lg-6">
+              <div class="card shadow">
+                <div class="card-body">
+                  <h5 class="card-title">Viagens Recentes</h5>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Veículo</th>
+                          <th>Motorista</th>
+                          <th>Início</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>ABC-1234</td>
+                          <td>João Silva</td>
+                          <td>08:30</td>
+                          <td><span class="badge bg-success">Concluída</span></td>
+                        </tr>
+                        <tr>
+                          <td>DEF-5678</td>
+                          <td>Maria Santos</td>
+                          <td>14:15</td>
+                          <td><span class="badge bg-warning">Em Andamento</span></td>
+                        </tr>
+                        <tr>
+                          <td>GHI-9012</td>
+                          <td>Carlos Oliveira</td>
+                          <td>09:00</td>
+                          <td><span class="badge bg-success">Concluída</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="mt-3">
+                    <button class="btn btn-primary btn-sm" onclick="showRouteDemo()">
+                      <i class="bi bi-map me-1"></i> Ver Rota Demo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div class="tab-pane fade" id="reports" role="tabpanel">
+          <div class="row">
+            <div class="col-lg-6">
+              <h3 class="mb-4"><i class="bi bi-graph-up text-primary me-2"></i>Relatórios e Analytics</h3>
+              <p class="text-muted mb-4">
+                Relatórios detalhados com gráficos interativos, exportação de dados e insights para tomada de decisão.
+              </p>
+              <ul class="list-unstyled">
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Relatórios de uso por veículo</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Análise de consumo</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Custos operacionais</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Performance de motoristas</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Exportação PDF/Excel</li>
+              </ul>
+            </div>
+            <div class="col-lg-6">
+              <div class="card shadow">
+                <div class="card-body">
+                  <h5 class="card-title">Relatório de Uso - Demo</h5>
+                  <div class="table-responsive">
+                    <table class="table table-sm" id="reportsTable">
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Veículo</th>
+                          <th>KM</th>
+                          <th>Mapa</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>25/02/2026</td>
+                          <td>ABC-1234</td>
+                          <td>45 km</td>
+                          <td><button class="btn btn-sm btn-outline-primary" onclick="showReportMap(-23.5505, -46.6333, -23.5605, -46.6433)"><i class="bi bi-map"></i></button></td>
+                        </tr>
+                        <tr>
+                          <td>25/02/2026</td>
+                          <td>DEF-5678</td>
+                          <td>32 km</td>
+                          <td><button class="btn btn-sm btn-outline-primary" onclick="showReportMap(-23.5480, -46.6310, -23.5670, -46.6500)"><i class="bi bi-map"></i></button></td>
+                        </tr>
+                        <tr>
+                          <td>24/02/2026</td>
+                          <td>GHI-9012</td>
+                          <td>67 km</td>
+                          <td><button class="btn btn-sm btn-outline-primary" onclick="showReportMap(-23.5520, -46.6340, -23.5690, -46.6510)"><i class="bi bi-map"></i></button></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Maintenance Tab -->
+        <div class="tab-pane fade" id="maintenance" role="tabpanel">
+          <div class="row">
+            <div class="col-lg-6">
+              <h3 class="mb-4"><i class="bi bi-wrench text-primary me-2"></i>Manutenção e Serviços</h3>
+              <p class="text-muted mb-4">
+                Controle completo de manutenções programadas, serviços realizados e alertas automáticos de vencimento.
+              </p>
+              <ul class="list-unstyled">
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Agendamento de manutenções</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Alertas automáticos</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Histórico de serviços</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Controle de custos</li>
+                <li class="mb-3"><i class="bi bi-check-circle text-success me-2"></i>Integração com oficinas</li>
+              </ul>
+            </div>
+            <div class="col-lg-6">
+              <div class="card shadow">
+                <div class="card-body">
+                  <h5 class="card-title">Próximas Manutenções</h5>
+                  <div class="list-group">
+                    <div class="list-group-item">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                          <h6 class="mb-1">ABC-1234 - Fiesta</h6>
+                          <small class="text-muted">Troca de óleo</small>
+                        </div>
+                        <span class="badge bg-warning">Em 500 km</span>
+                      </div>
+                    </div>
+                    <div class="list-group-item">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                          <h6 class="mb-1">DEF-5678 - Onix</h6>
+                          <small class="text-muted">Revisão geral</small>
+                        </div>
+                        <span class="badge bg-danger">Atrasada</span>
+                      </div>
+                    </div>
+                    <div class="list-group-item">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                          <h6 class="mb-1">GHI-9012 - Palio</h6>
+                          <small class="text-muted">Troca de pneus</small>
+                        </div>
+                        <span class="badge bg-success">Em dia</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="demo-section bg-primary text-white">
+    <div class="container text-center">
+      <h2 class="display-5 fw-bold mb-4">Pronto para transformar sua gestão?</h2>
+      <p class="lead mb-4">
+        Experimente todos os recursos na prática. Cadastre-se e comece a usar hoje mesmo!
+      </p>
+      <div class="d-flex gap-3 justify-content-center">
+        <a href="/login" class="btn btn-light btn-lg">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Acessar Sistema Completo
+        </a>
+        <button class="btn btn-outline-light btn-lg" onclick="contactSales()">
+          <i class="bi bi-telephone me-2"></i>Falar com Vendas
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-dark text-white py-4">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6">
+          <h5><i class="bi bi-truck me-2"></i>Controle de Frota</h5>
+          <p class="text-muted">Sistema moderno e completo para gestão de frotas</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <p class="text-muted mb-0">© 2026 Controle de Frota. Todos os direitos reservados.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // Initialize DataTables
+    $(document).ready(function() {
+      $('#vehiclesTable').DataTable({
+        pageLength: 5,
+        language: {
+          search: "Buscar:",
+          lengthMenu: "Mostrar _MENU_ registros",
+          info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+          paginate: {
+            first: "Primeiro",
+            last: "Último",
+            next: "Próximo",
+            previous: "Anterior"
+          }
+        }
+      });
+
+      $('#reportsTable').DataTable({
+        pageLength: 5,
+        searching: false,
+        paging: false,
+        info: false
+      });
+    });
+
+    // Initialize Hero Map
+    let heroMap, gpsMap;
+    let gpsSimulation = true;
+    let gpsVehicles = [];
+    let gpsMarkers = {};
+    let gpsRoutes = {};
+
+    // Initialize maps when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeHeroMap();
+      initializeGpsMap();
+    });
+
+    function initializeHeroMap() {
+      heroMap = L.map('heroMap').setView([-23.55, -46.63], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(heroMap);
+
+      // Add sample markers
+      const locations = [
+        {lat: -23.5505, lng: -46.6333, name: "Fiesta - ABC-1234"},
+        {lat: -23.5480, lng: -46.6310, name: "Onix - DEF-5678"},
+        {lat: -23.5520, lng: -46.6340, name: "Palio - GHI-9012"}
+      ];
+
+      locations.forEach(loc => {
+        L.marker([loc.lat, loc.lng])
+          .addTo(heroMap)
+          .bindPopup(loc.name);
+      });
+    }
+
+    function initializeGpsMap() {
+      gpsMap = L.map('demoGpsMap').setView([-23.55, -46.63], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(gpsMap);
+
+      // Initialize demo vehicles
+      gpsVehicles = [
+        { id: 'DEMO001', name: 'Fiesta', lat: -23.5505, lng: -46.6333, color: '#ff0000', speed: 0.00002, direction: 1 },
+        { id: 'DEMO002', name: 'Onix', lat: -23.5480, lng: -46.6310, color: '#00ff00', speed: 0.000025, direction: -1 },
+        { id: 'DEMO003', name: 'Palio', lat: -23.5520, lng: -46.6340, color: '#0000ff', speed: 0.000022, direction: 1 }
+      ];
+
+      // Create markers
+      gpsVehicles.forEach(vehicle => {
+        const marker = L.marker([vehicle.lat, vehicle.lng], {
+          icon: L.divIcon({
+            html: `<div style="background-color: ${vehicle.color}; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white;">🚗</div>`,
+            className: 'demo-vehicle-marker',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+          })
+        }).addTo(gpsMap);
+
+        marker.bindPopup(`<strong>${vehicle.name}</strong><br>Velocidade: ${(vehicle.speed * 100000).toFixed(1)} km/h`);
+        gpsMarkers[vehicle.id] = marker;
+        gpsRoutes[vehicle.id] = [];
+      });
+
+      // Start simulation
+      startGpsSimulation();
+    }
+
+    function startGpsSimulation() {
+      setInterval(() => {
+        if (!gpsSimulation) return;
+
+        gpsVehicles.forEach(vehicle => {
+          // Update position
+          vehicle.lat += vehicle.speed * vehicle.direction;
+          vehicle.lng += vehicle.speed * vehicle.direction * 0.8;
+
+          // Change direction randomly
+          if (Math.random() < 0.05) {
+            vehicle.direction *= -1;
+          }
+
+          // Keep within bounds
+          if (vehicle.lat < -23.60 || vehicle.lat > -23.50) {
+            vehicle.direction *= -1;
+          }
+          if (vehicle.lng < -46.70 || vehicle.lng > -46.60) {
+            vehicle.direction *= -1;
+          }
+
+          // Update marker
+          const marker = gpsMarkers[vehicle.id];
+          marker.setLatLng([vehicle.lat, vehicle.lng]);
+
+          // Add to route
+          gpsRoutes[vehicle.id].push([vehicle.lat, vehicle.lng]);
+          if (gpsRoutes[vehicle.id].length > 20) {
+            gpsRoutes[vehicle.id].shift();
+          }
+
+          // Draw route
+          if (gpsRoutes[vehicle.id].length > 1) {
+            if (window[`demoRoute_${vehicle.id}`]) {
+              gpsMap.removeLayer(window[`demoRoute_${vehicle.id}`]);
+            }
+
+            const polyline = L.polyline(gpsRoutes[vehicle.id], {
+              color: vehicle.color,
+              weight: 3,
+              opacity: 0.7
+            }).addTo(gpsMap);
+
+            window[`demoRoute_${vehicle.id}`] = polyline;
+          }
+        });
+      }, 3000);
+    }
+
+    function toggleGpsSimulation() {
+      gpsSimulation = !gpsSimulation;
+    }
+
+    function clearGpsRoutes() {
+      Object.keys(window).forEach(key => {
+        if (key.startsWith('demoRoute_')) {
+          gpsMap.removeLayer(window[key]);
+          delete window[key];
+        }
+      });
+      
+      Object.keys(gpsRoutes).forEach(key => {
+        gpsRoutes[key] = [];
+      });
+    }
+
+    function showRouteDemo() {
+      alert('Demo: Esta funcionalidade mostra rotas detalhadas com mapas interativos, coordenadas GPS e histórico completo das viagens.');
+    }
+
+    function showReportMap(startLat, startLng, endLat, endLng) {
+      alert(`Demo: Mapa da rota\nInício: ${startLat}, ${startLng}\nFim: ${endLat}, ${endLng}\n\nNo sistema completo, você verá um mapa interativo com marcadores e a rota traçada.`);
+    }
+
+    function startDemo() {
+      alert('Tour Guiado:\n\n1. Veículos - Gestão completa da frota\n2. GPS - Acompanhamento em tempo real\n3. Rotas - Controle de viagens\n4. Relatórios - Análises detalhadas\n5. Manutenção - Serviços agendados\n\nNavegue pelas abas para explorar cada recurso!');
+    }
+
+    function contactSales() {
+      alert('Contato de Vendas:\n\n📧 E-mail: vendas@controlefrota.com\n📞 Telefone: (11) 3000-0000\n💬 WhatsApp: (11) 90000-0000\n\nHorário: Seg-Sex, 8h-18h');
+    }
+  </script>
+</body>
+</html>

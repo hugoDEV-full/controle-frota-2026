@@ -832,6 +832,14 @@ app.use(passport.session());
 //const util = require('util');
 //const query = util.promisify(db.query).bind(db);
 
+// Rota de demonstração pública
+app.get('/demo', (req, res) => {
+  res.render('demo', {
+    title: 'Demonstração - Sistema de Controle de Frota',
+    layout: false // Layout customizado sem autenticação
+  });
+});
+
 app.get('/', isAuthenticated, csrfProtection, async (req, res) => {
   try {
     // Consultas para motoristas (contagem e dados)
