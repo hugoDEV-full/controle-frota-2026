@@ -718,7 +718,7 @@ async function seedDatabase() {
 
     // Calcular dias totais
     const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-    console.log(`📍 Gerando dados para ${totalDays} dias (${totalDays/365:.1f} anos)...`);
+    console.log(`📍 Gerando dados para ${totalDays} dias (${(totalDays/365).toFixed(1)} anos)...`);
 
     let totalPoints = 0;
 
