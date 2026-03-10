@@ -92,10 +92,14 @@
             suporte a 200+ veículos com roteamento inteligente e monitoramento de qualidade.
           </p>
           <div class="d-flex gap-3">
-            <button class="btn btn-light btn-lg" onclick="openSoftphone()">
+            <button class="btn btn-light btn-lg" onclick="openSoftphone()" 
+                    data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                    title="Abrir interface completa do softphone WebRTC com SIP.js">
               <i class="bi bi-telephone me-2"></i>Abrir Softphone
             </button>
-            <button class="btn btn-outline-light btn-lg" onclick="showSipStatus()">
+            <button class="btn btn-outline-light btn-lg" onclick="showSipStatus()" 
+                    data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                    title="Ver status detalhado do sistema SIP, trunks e extensões">
               <i class="bi bi-activity me-2"></i>Status SIP
             </button>
           </div>
@@ -113,7 +117,8 @@
     <!-- SIP Status Overview -->
     <div class="row mb-4">
       <div class="col-md-3">
-        <div class="card text-center">
+        <div class="card text-center" data-bs-toggle="tooltip" data-bs-placement="top" 
+             title="SIP Trunks conectados: Principal, Backup, Emergência e Frota">
           <div class="card-body">
             <h3 class="status-online"><i class="bi bi-telephone-fill"></i></h3>
             <h5>Trunks Ativos</h5>
@@ -122,7 +127,8 @@
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card text-center">
+        <div class="card text-center" data-bs-toggle="tooltip" data-bs-placement="top" 
+             title="Chamadas ativas incluindo softphone, veículos e central">
           <div class="card-body">
             <h3 class="status-busy"><i class="bi bi-telephone-fill"></i></h3>
             <h5>Chamadas em Andamento</h5>
@@ -131,7 +137,8 @@
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card text-center">
+        <div class="card text-center" data-bs-toggle="tooltip" data-bs-placement="top" 
+             title="Extensões SIP registradas: Central, Frota (2001-2999), SAMU (3001-3999)">
           <div class="card-body">
             <h3 class="status-online"><i class="bi bi-person-check"></i></h3>
             <h5>Extensões Registradas</h5>
@@ -140,7 +147,8 @@
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card text-center">
+        <div class="card text-center" data-bs-toggle="tooltip" data-bs-placement="top" 
+             title="Taxa de sucesso de chamadas baseada em MOS e completude">
           <div class="card-body">
             <h3 class="text-success"><i class="bi bi-speedometer2"></i></h3>
             <h5>Taxa de Sucesso</h5>
@@ -154,44 +162,66 @@
     <div class="row mb-4">
       <div class="col-lg-6">
         <div class="softphone-container">
-          <h4 class="mb-3"><i class="bi bi-telephone me-2"></i>Softphone Web</h4>
+          <h4 class="mb-3"><i class="bi bi-telephone me-2"></i>Softphone WebRTC</h4>
           
           <div class="text-center mb-3">
             <input type="text" class="form-control form-control-lg text-center" 
-                   id="phoneNumber" placeholder="Digite o número" maxlength="15">
+                   id="phoneNumber" placeholder="Digite o número (ex: 2001, 1001)" maxlength="15"
+                   data-bs-toggle="tooltip" data-bs-placement="top" 
+                   title="Digite o número da extensão: 1001 (Central), 2001 (Veículo), 3001 (SAMU)">
           </div>
           
           <div class="text-center mb-3">
             <div class="d-inline-block">
-              <button class="btn btn-primary dial-button" onclick="dialDigit('1')">1</button>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('2')">2</button>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('3')">3</button><br>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('4')">4</button>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('5')">5</button>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('6')">6</button><br>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('7')">7</button>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('8')">8</button>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('9')">9</button><br>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('*')">*</button>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('0')">0</button>
-              <button class="btn btn-primary dial-button" onclick="dialDigit('#')">#</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('1')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 1">1</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('2')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 2">2</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('3')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 3">3</button><br>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('4')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 4">4</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('5')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 5">5</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('6')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 6">6</button><br>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('7')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 7">7</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('8')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 8">8</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('9')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 9">9</button><br>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('*')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar * (asterisco)">*</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('0')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar 0">0</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('#')" 
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Digitar # (hash)">#</button>
             </div>
           </div>
           
           <div class="text-center">
-            <button class="btn btn-success btn-lg me-2" onclick="makeCall()">
+            <button class="btn btn-success btn-lg me-2" onclick="makeCall()" 
+                    data-bs-toggle="tooltip" data-bs-placement="top" 
+                    title="Fazer chamada SIP via WebRTC para o número digitado">
               <i class="bi bi-telephone-fill"></i> Ligar
             </button>
-            <button class="btn btn-danger btn-lg me-2" onclick="endCall()">
+            <button class="btn btn-danger btn-lg me-2" onclick="endCall()" 
+                    data-bs-toggle="tooltip" data-bs-placement="top" 
+                    title="Encerrar chamada ativa">
               <i class="bi bi-telephone-x"></i> Desligar
             </button>
-            <button class="btn btn-secondary btn-lg" onclick="clearNumber()">
+            <button class="btn btn-secondary btn-lg" onclick="clearNumber()" 
+                    data-bs-toggle="tooltip" data-bs-placement="top" 
+                    title="Limpar número digitado">
               <i class="bi bi-backspace"></i> Limpar
             </button>
           </div>
           
           <div class="mt-3 text-center">
-            <small class="text-muted">Status: <span id="callStatus" class="status-offline">Desconectado</span></small>
+            <small class="text-muted">Status: <span id="callStatus" class="status-offline" 
+                  data-bs-toggle="tooltip" data-bs-placement="top" 
+                  title="Status da conexão SIP: Desconectado, Conectando, Em chamada">Desconectado</span></small>
           </div>
         </div>
       </div>
@@ -200,8 +230,10 @@
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Chamadas Ativas</h5>
-            <span class="wave-animation"></span>
-            <small>8 chamadas</small>
+            <span class="wave-animation" data-bs-toggle="tooltip" data-bs-placement="top" 
+                  title="Chamadas em tempo real via SIP e WebRTC"></span>
+            <small data-bs-toggle="tooltip" data-bs-placement="top" 
+                  title="Total de chamadas ativas no momento">8 chamadas</small>
           </div>
           <div class="card-body">
             <div class="table-responsive">
@@ -262,54 +294,65 @@
       <div class="col-lg-6">
         <div class="card">
           <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-router me-2"></i>SIP Trunks Configurados</h5>
+            <h5 class="mb-0" data-bs-toggle="tooltip" data-bs-placement="top" 
+                title="SIP Trunks para conexão com operadoras e sistemas externos">
+              <i class="bi bi-router me-2"></i>SIP Trunks Configurados
+            </h5>
           </div>
           <div class="card-body">
             <div class="row">
               <div class="col-md-6 mb-3">
-                <div class="sip-trunk-card card p-3">
+                <div class="sip-trunk-card card p-3" data-bs-toggle="tooltip" data-bs-placement="top" 
+                     title="Trunk principal para chamadas locais e DDD (0XXX)">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <h6 class="mb-1">Trunk Principal</h6>
                       <small class="text-muted">sip.operadora.com.br</small>
                     </div>
-                    <span class="status-online"><i class="bi bi-circle-fill"></i></span>
+                    <span class="status-online" data-bs-toggle="tooltip" data-bs-placement="top" 
+                          title="Online e operacional"><i class="bi bi-circle-fill"></i></span>
                   </div>
                   <small>Canais: 23/50</small>
                 </div>
               </div>
               <div class="col-md-6 mb-3">
-                <div class="sip-trunk-card card p-3">
+                <div class="sip-trunk-card card p-3" data-bs-toggle="tooltip" data-bs-placement="top" 
+                     title="Trunk de redundância automática se principal falhar">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <h6 class="mb-1">Trunk Backup</h6>
                       <small class="text-muted">sip.backup.com.br</small>
                     </div>
-                    <span class="status-online"><i class="bi bi-circle-fill"></i></span>
+                    <span class="status-online" data-bs-toggle="tooltip" data-bs-placement="top" 
+                          title="Online e em standby"><i class="bi bi-circle-fill"></i></span>
                   </div>
                   <small>Canais: 5/20</small>
                 </div>
               </div>
               <div class="col-md-6 mb-3">
-                <div class="sip-trunk-card card p-3">
+                <div class="sip-trunk-card card p-3" data-bs-toggle="tooltip" data-bs-placement="top" 
+                     title="Trunk dedicado para chamadas de emergência (190, SAMU)">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <h6 class="mb-1">Trunk Emergência</h6>
                       <small class="text-muted">sip.emergencia.com.br</small>
                     </div>
-                    <span class="status-busy"><i class="bi bi-circle-fill"></i></span>
+                    <span class="status-busy" data-bs-toggle="tooltip" data-bs-placement="top" 
+                          title="Ocupado - chamadas de emergência ativas"><i class="bi bi-circle-fill"></i></span>
                   </div>
                   <small>Canais: 8/10</small>
                 </div>
               </div>
               <div class="col-md-6 mb-3">
-                <div class="sip-trunk-card card p-3">
+                <div class="sip-trunk-card card p-3" data-bs-toggle="tooltip" data-bs-placement="top" 
+                     title="Trunk para comunicação com veículos da frota (2001-2999)">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <h6 class="mb-1">Trunk Frota</h6>
                       <small class="text-muted">sip.frota.com.br</small>
                     </div>
-                    <span class="status-online"><i class="bi bi-circle-fill"></i></span>
+                    <span class="status-online" data-bs-toggle="tooltip" data-bs-placement="top" 
+                          title="Online para comunicação veicular"><i class="bi bi-circle-fill"></i></span>
                   </div>
                   <small>Canais: 12/30</small>
                 </div>
@@ -557,7 +600,9 @@
                       <li>✅ Codec negotiation (G.711, Opus, G.729)</li>
                       <li>✅ SIP ALG detection e bypass</li>
                     </ul>
-                    <button class="btn btn-sm btn-warning" onclick="testOneWayAudio()">
+                    <button class="btn btn-sm btn-warning" onclick="testOneWayAudio()" 
+                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                        title="Testar microfone e alto-falante para detectar one way audio">
                       <i class="bi bi-play-circle"></i> Testar Áudio
                     </button>
                   </div>
@@ -585,7 +630,9 @@
                       <li>✅ Codec selection baseado em rede</li>
                       <li>✅ Redundância de trunks</li>
                     </ul>
-                    <button class="btn btn-sm btn-warning" onclick="testLatency()">
+                    <button class="btn btn-sm btn-warning" onclick="testLatency()" 
+                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                        title="Medir latência da rede e qualidade para chamadas VoIP">
                       <i class="bi bi-speedometer2"></i> Testar Latência
                     </button>
                   </div>
@@ -613,7 +660,9 @@
                       <li>✅ Auto-reconnection logic</li>
                       <li>✅ Fallback trunk switching</li>
                     </ul>
-                    <button class="btn btn-sm btn-warning" onclick="testCallStability()">
+                    <button class="btn btn-sm btn-warning" onclick="testCallStability()" 
+                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                        title="Testar estabilidade de chamadas longas e reconexão automática">
                       <i class="bi bi-arrow-repeat"></i> Testar Estabilidade
                     </button>
                   </div>
@@ -1004,6 +1053,12 @@
 
     // Initialize on page load
     $(document).ready(function() {
+      // Initialize all Bootstrap tooltips
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      });
+
       // Initialize DataTables
       $('#activeCallsTable').DataTable({
         pageLength: 10,
