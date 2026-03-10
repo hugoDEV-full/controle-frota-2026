@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comunicação VoIP - Sistema de Controle de Frota</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <!-- DataTables CSS -->
+  <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+  
+  <style>
+    .voip-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 3rem 0;
+      margin-bottom: 2rem;
+    }
+    .status-online { color: #28a745; }
+    .status-offline { color: #dc3545; }
+    .status-busy { color: #ffc107; }
+    .call-active { 
+      background: rgba(40, 167, 69, 0.1); 
+      border-left: 4px solid #28a745;
+    }
+    .sip-trunk-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-left: 4px solid #007bff;
+    }
+    .sip-trunk-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .softphone-container {
+      background: #f8f9fa;
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .dial-button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      margin: 5px;
+    }
+    .wave-animation {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #28a745;
+      animation: wave 1.5s infinite;
+    }
+    @keyframes wave {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/">
+        <i class="bi bi-truck me-2"></i>Controle de Frota
+      </a>
+      <div class="navbar-nav ms-auto">
+        <a class="nav-link" href="/"><i class="bi bi-house me-1"></i>Dashboard</a>
+        <a class="nav-link" href="/veiculos"><i class="bi bi-truck me-1"></i>Veículos</a>
+        <a class="nav-link active" href="/voip"><i class="bi bi-telephone me-1"></i>Comunicação VoIP</a>
+        <a class="nav-link" href="/relatorio-uso"><i class="bi bi-graph-up me-1"></i>Relatórios</a>
+        <a class="nav-link" href="/logout"><i class="bi bi-box-arrow-right me-1"></i>Sair</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- VoIP Hero Section -->
+  <section class="voip-section">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <h1 class="display-4 fw-bold mb-4">
+            <i class="bi bi-telephone-fill me-3"></i>Comunicação VoIP
+          </h1>
+          <p class="lead mb-4">
+            Sistema de telefonia SIP baseado em FreeSWITCH para comunicação em tempo real com frota, 
+            suporte a 200+ veículos com roteamento inteligente e monitoramento de qualidade.
+          </p>
+          <div class="d-flex gap-3">
+            <button class="btn btn-light btn-lg" onclick="openSoftphone()">
+              <i class="bi bi-telephone me-2"></i>Abrir Softphone
+            </button>
+            <button class="btn btn-outline-light btn-lg" onclick="showSipStatus()">
+              <i class="bi bi-activity me-2"></i>Status SIP
+            </button>
+          </div>
+        </div>
+        <div class="col-lg-4 text-center">
+          <div class="display-1">
+            <i class="bi bi-telephone-plus"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <!-- SIP Status Overview -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h3 class="status-online"><i class="bi bi-telephone-fill"></i></h3>
+            <h5>Trunks Ativos</h5>
+            <h2 class="mb-0">12</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h3 class="status-busy"><i class="bi bi-telephone-fill"></i></h3>
+            <h5>Chamadas em Andamento</h5>
+            <h2 class="mb-0">8</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h3 class="status-online"><i class="bi bi-person-check"></i></h3>
+            <h5>Extensões Registradas</h5>
+            <h2 class="mb-0">45</h2>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h3 class="text-success"><i class="bi bi-speedometer2"></i></h3>
+            <h5>Taxa de Sucesso</h5>
+            <h2 class="mb-0">98.5%</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Softphone and Active Calls -->
+    <div class="row mb-4">
+      <div class="col-lg-6">
+        <div class="softphone-container">
+          <h4 class="mb-3"><i class="bi bi-telephone me-2"></i>Softphone Web</h4>
+          
+          <div class="text-center mb-3">
+            <input type="text" class="form-control form-control-lg text-center" 
+                   id="phoneNumber" placeholder="Digite o número" maxlength="15">
+          </div>
+          
+          <div class="text-center mb-3">
+            <div class="d-inline-block">
+              <button class="btn btn-primary dial-button" onclick="dialDigit('1')">1</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('2')">2</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('3')">3</button><br>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('4')">4</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('5')">5</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('6')">6</button><br>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('7')">7</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('8')">8</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('9')">9</button><br>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('*')">*</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('0')">0</button>
+              <button class="btn btn-primary dial-button" onclick="dialDigit('#')">#</button>
+            </div>
+          </div>
+          
+          <div class="text-center">
+            <button class="btn btn-success btn-lg me-2" onclick="makeCall()">
+              <i class="bi bi-telephone-fill"></i> Ligar
+            </button>
+            <button class="btn btn-danger btn-lg me-2" onclick="endCall()">
+              <i class="bi bi-telephone-x"></i> Desligar
+            </button>
+            <button class="btn btn-secondary btn-lg" onclick="clearNumber()">
+              <i class="bi bi-backspace"></i> Limpar
+            </button>
+          </div>
+          
+          <div class="mt-3 text-center">
+            <small class="text-muted">Status: <span id="callStatus" class="status-offline">Desconectado</span></small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-activity me-2"></i>Chamadas Ativas</h5>
+            <span class="wave-animation"></span>
+            <small>8 chamadas</small>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm" id="activeCallsTable">
+                <thead>
+                  <tr>
+                    <th>Origem</th>
+                    <th>Destino</th>
+                    <th>Duração</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="call-active">
+                    <td><i class="bi bi-truck"></i> ABC-1234</td>
+                    <td>Central</td>
+                    <td>02:45</td>
+                    <td><span class="badge bg-success">Ativa</span></td>
+                    <td>
+                      <button class="btn btn-sm btn-danger" onclick="hangupCall(this)">
+                        <i class="bi bi-telephone-x"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr class="call-active">
+                    <td><i class="bi bi-truck"></i> DEF-5678</td>
+                    <td>Motorista</td>
+                    <td>01:23</td>
+                    <td><span class="badge bg-success">Ativa</span></td>
+                    <td>
+                      <button class="btn btn-sm btn-danger" onclick="hangupCall(this)">
+                        <i class="bi bi-telephone-x"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><i class="bi bi-truck"></i> GHI-9012</td>
+                    <td>Emergência</td>
+                    <td>00:15</td>
+                    <td><span class="badge bg-warning">Conectando</span></td>
+                    <td>
+                      <button class="btn btn-sm btn-danger" onclick="hangupCall(this)">
+                        <i class="bi bi-telephone-x"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIP Trunks and Extensions -->
+    <div class="row mb-4">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-router me-2"></i>SIP Trunks Configurados</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <div class="sip-trunk-card card p-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 class="mb-1">Trunk Principal</h6>
+                      <small class="text-muted">sip.operadora.com.br</small>
+                    </div>
+                    <span class="status-online"><i class="bi bi-circle-fill"></i></span>
+                  </div>
+                  <small>Canais: 23/50</small>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="sip-trunk-card card p-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 class="mb-1">Trunk Backup</h6>
+                      <small class="text-muted">sip.backup.com.br</small>
+                    </div>
+                    <span class="status-online"><i class="bi bi-circle-fill"></i></span>
+                  </div>
+                  <small>Canais: 5/20</small>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="sip-trunk-card card p-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 class="mb-1">Trunk Emergência</h6>
+                      <small class="text-muted">sip.emergencia.com.br</small>
+                    </div>
+                    <span class="status-busy"><i class="bi bi-circle-fill"></i></span>
+                  </div>
+                  <small>Canais: 8/10</small>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="sip-trunk-card card p-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 class="mb-1">Trunk Frota</h6>
+                      <small class="text-muted">sip.frota.com.br</small>
+                    </div>
+                    <span class="status-online"><i class="bi bi-circle-fill"></i></span>
+                  </div>
+                  <small>Canais: 12/30</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-people me-2"></i>Extensões Registradas</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm" id="extensionsTable">
+                <thead>
+                  <tr>
+                    <th>Extensão</th>
+                    <th>Usuário/Veículo</th>
+                    <th>Status</th>
+                    <th>IP</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>1001</strong></td>
+                    <td>Central - Operador 1</td>
+                    <td><span class="status-online"><i class="bi bi-circle-fill"></i></span></td>
+                    <td>192.168.1.100</td>
+                    <td>
+                      <button class="btn btn-sm btn-primary" onclick="callExtension('1001')">
+                        <i class="bi bi-telephone"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>2001</strong></td>
+                    <td>ABC-1234 - Fiesta</td>
+                    <td><span class="status-online"><i class="bi bi-circle-fill"></i></span></td>
+                    <td>192.168.1.201</td>
+                    <td>
+                      <button class="btn btn-sm btn-primary" onclick="callExtension('2001')">
+                        <i class="bi bi-telephone"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>2002</strong></td>
+                    <td>DEF-5678 - Onix</td>
+                    <td><span class="status-busy"><i class="bi bi-circle-fill"></i></span></td>
+                    <td>192.168.1.202</td>
+                    <td>
+                      <button class="btn btn-sm btn-primary" onclick="callExtension('2002')">
+                        <i class="bi bi-telephone"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>3001</strong></td>
+                    <td>SAMU - Ambulância 1</td>
+                    <td><span class="status-online"><i class="bi bi-circle-fill"></i></span></td>
+                    <td>192.168.1.301</td>
+                    <td>
+                      <button class="btn btn-sm btn-danger" onclick="emergencyCall('3001')">
+                        <i class="bi bi-telephone-fill"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dialplan and Routing -->
+    <div class="row mb-4">
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Regras de Roteamento (Dialplan)</h5>
+          </div>
+          <div class="card-body">
+            <div class="accordion" id="dialplanAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#rule1">
+                    <i class="bi bi-telephone-forward me-2"></i>
+                    <strong>0XXX</strong> - Chamadas Locais
+                  </button>
+                </h2>
+                <div id="rule1" class="accordion-collapse collapse show" data-bs-parent="#dialplanAccordion">
+                  <div class="accordion-body">
+                    <strong>Padrão:</strong> 0XXX#######<br>
+                    <strong>Roteamento:</strong> Trunk Principal → Trunk Backup<br>
+                    <strong>Timeout:</strong> 30 segundos<br>
+                    <strong>Gravação:</strong> Ativada
+                  </div>
+                </div>
+              </div>
+              
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rule2">
+                    <i class="bi bi-geo-alt me-2"></i>
+                    <strong>190</strong> - Emergência (Polícia)
+                  </button>
+                </h2>
+                <div id="rule2" class="accordion-collapse collapse" data-bs-parent="#dialplanAccordion">
+                  <div class="accordion-body">
+                    <strong>Padrão:</strong> 190<br>
+                    <strong>Roteamento:</strong> Trunk Emergência (prioridade máxima)<br>
+                    <strong>Timeout:</strong> Imediato<br>
+                    <strong>Gravação:</strong> Ativada + GPS
+                  </div>
+                </div>
+              </div>
+              
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rule3">
+                    <i class="bi bi-truck me-2"></i>
+                    <strong>2XXX</strong> - Frota de Veículos
+                  </button>
+                </h2>
+                <div id="rule3" class="accordion-collapse collapse" data-bs-parent="#dialplanAccordion">
+                  <div class="accordion-body">
+                    <strong>Padrão:</strong> 2XXX<br>
+                    <strong>Roteamento:</strong> Trunk Frota → Softphones<br>
+                    <strong>Timeout:</strong> 45 segundos<br>
+                    <strong>Gravação:</strong> Ativada + Localização
+                  </div>
+                </div>
+              </div>
+              
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rule4">
+                    <i class="bi bi-hospital me-2"></i>
+                    <strong>3XXX</strong> - SAMU e Emergência Médica
+                  </button>
+                </h2>
+                <div id="rule4" class="accordion-collapse collapse" data-bs-parent="#dialplanAccordion">
+                  <div class="accordion-body">
+                    <strong>Padrão:</strong> 3XXX<br>
+                    <strong>Roteamento:</strong> Trunk Emergência + Redundância<br>
+                    <strong>Timeout:</strong> 15 segundos<br>
+                    <strong>Gravação:</strong> Ativada + Prioridade máxima
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Métricas de Qualidade</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span>Qualidade de Áudio (MOS)</span>
+                <strong>4.2/5.0</strong>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-success" style="width: 84%"></div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span>Latência Média</span>
+                <strong>45ms</strong>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-success" style="width: 90%"></div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span>Taxa de Packet Loss</span>
+                <strong>0.8%</strong>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-warning" style="width: 92%"></div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span>Jitter</span>
+                <strong>2.3ms</strong>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-success" style="width: 95%"></div>
+              </div>
+            </div>
+            
+            <hr>
+            
+            <div class="text-center">
+              <h6>Status Geral do Sistema</h6>
+              <span class="badge bg-success fs-6">OPERACIONAL</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Call History and Logs -->
+    <div class="row">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Histórico de Chamadas</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm" id="callHistoryTable">
+                <thead>
+                  <tr>
+                    <th>Horário</th>
+                    <th>Origem</th>
+                    <th>Destino</th>
+                    <th>Duração</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>14:23:45</td>
+                    <td>ABC-1234</td>
+                    <td>Central</td>
+                    <td>05:23</td>
+                    <td><span class="badge bg-success">Concluída</span></td>
+                  </tr>
+                  <tr>
+                    <td>14:18:12</td>
+                    <td>Central</td>
+                    <td>DEF-5678</td>
+                    <td>02:45</td>
+                    <td><span class="badge bg-success">Concluída</span></td>
+                  </tr>
+                  <tr>
+                    <td>14:15:30</td>
+                    <td>SAMU-3001</td>
+                    <td>Emergência</td>
+                    <td>12:18</td>
+                    <td><span class="badge bg-success">Concluída</span></td>
+                  </tr>
+                  <tr>
+                    <td>14:10:15</td>
+                    <td>GHI-9012</td>
+                    <td>Central</td>
+                    <td>00:45</td>
+                    <td><span class="badge bg-danger">Falha</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-bug me-2"></i>Logs SIP (Recentes)</h5>
+          </div>
+          <div class="card-body">
+            <div class="log-container" style="height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; font-family: monospace; font-size: 0.85rem;">
+              <div class="text-success">[14:25:12] REGISTER sip:2001@frota.com.br - 200 OK</div>
+              <div class="text-info">[14:25:10] INVITE sip:1001@central.com.br - Ringing</div>
+              <div class="text-success">[14:25:08] 200 OK - Call established: 2001 -> 1001</div>
+              <div class="text-warning">[14:24:55] 408 Request Timeout - Trunk Backup ativado</div>
+              <div class="text-success">[14:24:52] BYE sip:2002@frota.com.br - Call ended</div>
+              <div class="text-info">[14:24:45] SUBSCRIBE - Presence update for extension 3001</div>
+              <div class="text-success">[14:24:30] REGISTER sip:3001@samu.com.br - 200 OK</div>
+              <div class="text-danger">[14:24:25] 503 Service Unavailable - Trunk Principal falhou</div>
+              <div class="text-success">[14:24:20] INVITE sip:190@emergencia.com.br - Connected</div>
+              <div class="text-info">[14:24:15] OPTIONS - Keep-alive sent to all trunks</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+  <script>
+    // Initialize DataTables
+    $(document).ready(function() {
+      $('#activeCallsTable').DataTable({
+        pageLength: 10,
+        searching: false,
+        paging: false,
+        info: false,
+        order: [[2, 'desc']]
+      });
+
+      $('#extensionsTable').DataTable({
+        pageLength: 10,
+        searching: true,
+        order: [[0, 'asc']]
+      });
+
+      $('#callHistoryTable').DataTable({
+        pageLength: 5,
+        searching: false,
+        order: [[0, 'desc']]
+      });
+    });
+
+    // Softphone functions
+    function dialDigit(digit) {
+      const phoneInput = document.getElementById('phoneNumber');
+      phoneInput.value += digit;
+    }
+
+    function clearNumber() {
+      document.getElementById('phoneNumber').value = '';
+    }
+
+    function makeCall() {
+      const number = document.getElementById('phoneNumber').value;
+      if (!number) {
+        alert('Digite um número para ligar');
+        return;
+      }
+
+      const status = document.getElementById('callStatus');
+      status.textContent = 'Conectando...';
+      status.className = 'status-busy';
+
+      // Simulate call connection
+      setTimeout(() => {
+        status.textContent = 'Chamando ' + number + '...';
+        setTimeout(() => {
+          status.textContent = 'Em chamada com ' + number;
+          status.className = 'status-online';
+          addActiveCall(number);
+        }, 2000);
+      }, 1000);
+    }
+
+    function endCall() {
+      const status = document.getElementById('callStatus');
+      status.textContent = 'Desconectado';
+      status.className = 'status-offline';
+      document.getElementById('phoneNumber').value = '';
+    }
+
+    function callExtension(extension) {
+      document.getElementById('phoneNumber').value = extension;
+      makeCall();
+    }
+
+    function emergencyCall(extension) {
+      if (confirm('Esta é uma chamada de emergência. Confirmar?')) {
+        document.getElementById('phoneNumber').value = extension;
+        makeCall();
+      }
+    }
+
+    function hangupCall(button) {
+      const row = button.closest('tr');
+      row.style.opacity = '0.5';
+      setTimeout(() => row.remove(), 1000);
+    }
+
+    function addActiveCall(number) {
+      // Add to active calls table
+      const table = $('#activeCallsTable').DataTable();
+      table.row.add([
+        '<i class="bi bi-telephone"></i> Softphone',
+        number,
+        '00:01',
+        '<span class="badge bg-success">Ativa</span>',
+        '<button class="btn btn-sm btn-danger" onclick="hangupCall(this)"><i class="bi bi-telephone-x"></i></button>'
+      ]).draw();
+    }
+
+    function openSoftphone() {
+      alert('Softphone Web: Interface SIP completa integrada com FreeSWITCH\n\nFuncionalidades:\n• Registro SIP\n• Chamadas de áudio\n• Transferência\n• Conferência\n• Gravação\n• DTMF');
+    }
+
+    function showSipStatus() {
+      alert('Status SIP do Sistema:\n\n✅ FreeSWITCH: Online\n✅ Trunks: 4/4 ativos\n✅ Extensões: 45 registradas\n📊 Chamadas/hora: 127\n🔧 Última atualização: ' + new Date().toLocaleTimeString());
+    }
+
+    // Simulate real-time updates
+    setInterval(() => {
+      // Update call duration
+      document.querySelectorAll('.call-active td:nth-child(3)').forEach(cell => {
+        const time = cell.textContent.split(':');
+        let minutes = parseInt(time[0]);
+        let seconds = parseInt(time[1]);
+        seconds++;
+        if (seconds >= 60) {
+          seconds = 0;
+          minutes++;
+        }
+        cell.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      });
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -850,6 +850,47 @@ app.get('/demonstracao', (req, res) => {
   });
 });
 
+// Rota VoIP - Sistema de Comunicação
+app.get('/voip', isAuthenticated, csrfProtection, async (req, res) => {
+  try {
+    console.log('>> [VOIP] Acessando sistema de comunicação VoIP');
+    
+    // Dados simulados do sistema VoIP baseado na experiência profissional
+    const voipData = {
+      trunks: [
+        { name: 'Trunk Principal', host: 'sip.operadora.com.br', status: 'online', channels: '23/50' },
+        { name: 'Trunk Backup', host: 'sip.backup.com.br', status: 'online', channels: '5/20' },
+        { name: 'Trunk Emergência', host: 'sip.emergencia.com.br', status: 'busy', channels: '8/10' },
+        { name: 'Trunk Frota', host: 'sip.frota.com.br', status: 'online', channels: '12/30' }
+      ],
+      extensions: [
+        { extension: '1001', user: 'Central - Operador 1', status: 'online', ip: '192.168.1.100' },
+        { extension: '2001', user: 'ABC-1234 - Fiesta', status: 'online', ip: '192.168.1.201' },
+        { extension: '2002', user: 'DEF-5678 - Onix', status: 'busy', ip: '192.168.1.202' },
+        { extension: '3001', user: 'SAMU - Ambulância 1', status: 'online', ip: '192.168.1.301' }
+      ],
+      metrics: {
+        mos: 4.2,
+        latency: 45,
+        packetLoss: 0.8,
+        jitter: 2.3,
+        successRate: 98.5
+      }
+    };
+    
+    res.render('voip', {
+      title: 'Comunicação VoIP - Sistema de Controle de Frota',
+      user: req.user,
+      csrfToken: req.csrfToken(),
+      voipData: voipData
+    });
+    
+  } catch (err) {
+    console.error('>> [VOIP] Erro ao acessar sistema VoIP:', err);
+    res.status(500).send('Erro ao carregar sistema VoIP');
+  }
+});
+
 app.get('/', isAuthenticated, csrfProtection, async (req, res) => {
   try {
     // Consultas para motoristas (contagem e dados)
