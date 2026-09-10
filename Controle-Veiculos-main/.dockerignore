@@ -1,0 +1,15 @@
+node_modules
+.git
+.sessions
+uploads
+uploads-
+backup
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+certs
+app copy.js

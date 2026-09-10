@@ -1,82 +1,169 @@
-# Sistema de Gerenciamento de Veículos
+# Sistema de Controle de Frota (Controle de Veículos)
 
-Esse sistema é um app de gerenciamento de frota feito em Node.js com Express e MySQL. Ele reúne várias features: autenticação com Passport, controle de sessões, upload de imagens, registro e gerenciamento de veículos, controle de multas, recuperação de senha, notificações em tempo real e muito mais. Cada usuário só vê o que tem permissão para ver, com autorização baseada em roles.
+Sistema web de gerenciamento de frota feito em **Node.js + Express + MySQL**, com autenticação, controle de uso de veículos, multas, reembolsos, manutenções, GPS em tempo real, módulo VoIP, notificações e auditoria.
 
 ---
 
 ## Tecnologias
 
-- **Node.js & Express**: Servidor e APIs REST.
-- **MySQL**: Banco de dados relacional.
-- **Passport**: Autenticação local com email e senha.
-- **Express-session**: Gerenciamento de sessões.
-- **Multer**: Upload de imagens.
-- **Socket.IO**: Notificações em tempo real.
-- **Nodemailer**: Envio de emails (reset de senha, alertas de manutenção).
-- **EJS**: Renderização das views.
-- **Bootstrap 5**: Layout responsivo e componentes.
+- **Node.js & Express** — servidor e rotas
+- **MySQL (mysql2)** — banco de dados relacional
+- **EJS + express-ejs-layouts** — views server-side
+- **Bootstrap 5 + bootstrap-icons** — interface responsiva
+- **Passport (Local Strategy)** — autenticação com email/senha
+- **express-session + session-file-store** — sessões persistentes
+- **csurf** — proteção CSRF nos formulários
+- **helmet** — headers de segurança HTTP
+- **express-rate-limit** — proteção contra força bruta no login
+- **Multer** — upload de imagens (com validação de tipo e tamanho)
+- **Socket.IO** — notificações em tempo real
+- **Nodemailer** — recuperação de senha e alertas por email
+- **Docker + docker-compose** — deploy em produção (app + MySQL + módulo GPS)
+
+---
+
+## Início rápido (um comando)
+
+### Windows
+
+```bat
+iniciar.bat dev     :: roda local com Node.js (desenvolvimento)
+iniciar.bat prod    :: sobe tudo com Docker (app + MySQL + GPS)
+```
+
+### Linux / macOS
+
+```bash
+chmod +x iniciar.sh
+./iniciar.sh dev    # desenvolvimento local
+./iniciar.sh prod   # produção com Docker
+```
+
+O inicializador verifica pré-requisitos (Node.js ou Docker), cria o `.env` a partir do `.env.example` se não existir, instala dependências e sobe o sistema.
+
+---
+
+## Rodando em desenvolvimento (local)
+
+Pré-requisitos: **Node.js 18+** e **MySQL 8** rodando localmente.
+
+1. Copie o `.env.example` para `.env` e preencha a senha do seu MySQL (`DB_PASSWORD`).
+2. Rode `iniciar.bat dev` (Windows) ou `./iniciar.sh dev`.
+3. Acesse `http://localhost:3000`.
+
+Na primeira execução, o sistema **cria as tabelas e os usuários automaticamente** (seed automático na inicialização). Também é possível rodar manualmente:
+
+```bash
+npm run seed     # carga inicial do banco
+npm start        # sobe o servidor
+```
+
+### Usuários criados pelo seed (troque as senhas em produção!)
+
+| Email | Senha | Perfil |
+|---|---|---|
+| hugo.leonardo.jobs@gmail.com | Hugo2026* | admin |
+| admin@frota.com | Hugo2026* | admin |
+| usuario@frota.com | Hugo2026* | user |
+
+### Página de demonstração
+
+Sem login, acesse `http://localhost:3000/demo` para uma vitrine pública das funcionalidades.
+
+---
+
+## Rodando em produção (Docker)
+
+Pré-requisitos: **Docker** com docker compose.
+
+1. Copie o `.env.example` para `.env` e configure com valores de produção (senhas fortes, `NODE_ENV=production`, `SECRET_SESSION` gerado com `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
+2. Coloque os certificados SSL na pasta `certs/` (`privkey.pem` e `fullchain.pem`) — o compose os monta em `/certs`.
+3. Rode `iniciar.bat prod` ou `./iniciar.sh prod`.
+
+Serviços sobem:
+
+| Serviço | Porta | Descrição |
+|---|---|---|
+| controleveiculos | 3070 (HTTPS) | Aplicação principal |
+| mysql_controleveiculos | 3367 → 3306 | Banco MySQL 8 (volume persistente) |
+| controle-veiculo-gps | 4999 | Módulo GPS (recebimento de posições) |
+
+Comandos úteis:
+
+```bash
+docker compose logs -f      # acompanhar logs
+docker compose down         # parar tudo
+docker compose up -d --build # rebuildar após mudanças
+```
+
+---
+
+## Variáveis de ambiente
+
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` | sim (local) | Conexão MySQL por variáveis individuais |
+| `MYSQL_URL` ou `MYSQL_PUBLIC_URL` | não | URL completa do banco (Railway/produção); tem prioridade sobre as individuais |
+| `SECRET_SESSION` | sim | Segredo da sessão (gere uma chave forte) |
+| `PORT` | não | Porta HTTP (padrão 3000) |
+| `NODE_ENV` | não | `development` ou `production` |
+| `HTTPS_ENABLED` | não | `true` para servir HTTPS com certificados |
+| `SSL_KEY_PATH` / `SSL_CERT_PATH` | se HTTPS | Caminhos dos certificados |
+| `EMAIL_USER` / `EMAIL_PASS` | recomendado | Envio de emails (use senha de app do Gmail) |
+| `NOTIFY_EMAIL` | não | Email que recebe alertas de manutenção |
+| `GPS_DB_*` | não | Banco separado para GPS; se vazio, usa o banco principal |
+
+---
+
+## Branches
+
+| Branch | Uso |
+|---|---|
+| `main` | Versão estável, roda local e em produção |
+| `dev-local` | Preparada para desenvolvimento local (Node + MySQL local) |
+| `prod-docker` | Preparada para produção com Docker |
+
+---
+
+## Segurança
+
+- Senhas com hash **bcrypt**
+- Proteção **CSRF** (csurf) nos formulários sensíveis
+- **Rate limiting** em `/login` e `/forgot-password` (100 tentativas / 15 min)
+- Headers de segurança via **helmet**
+- Uploads restritos a imagens, máx. **10 MB** por arquivo
+- Pasta `/uploads` só acessível **autenticado**
+- Sessões com cookie `httpOnly` e expiração de 30 min
+- Queries parametrizadas (sem concatenação de SQL com entrada do usuário)
+- **Auditoria**: todas as ações são registradas em banco
+- Variáveis sensíveis fora do git (`.env`, `.sessions/`, `uploads/` no `.gitignore`)
+
+Mais detalhes em `security.md`.
 
 ---
 
 ## Funcionalidades
 
-### Para Usuários Comuns
+### Para usuários comuns
 
-- **Login/Logout**: Entrar e sair usando email e senha.
-- **Recuperação de Senha**: Solicitar e resetar via email.
-- **Perfil**: Visualizar informações próprias e histórico de uso.
-- **Uso de Veículos**:
-  1. Iniciar Uso: informa motorista e km inicial.
-  2. Finalizar Uso: adiciona km final, fecha uso e envia foto do odômetro.
-- **Relatório de Uso**: Consulta paginada, com detalhes de multas e distâncias.
+- Login/logout e recuperação de senha por email
+- Iniciar uso de veículo (km inicial automático, verificações de integridade)
+- Finalizar uso (km final + foto do odômetro)
+- Relatórios de uso paginados
 
-### Para Administradores
+### Para administradores
 
-- **Registro de Veículos**: Adicionar, editar e remover veículos.
-- **Gerenciamento de Usos & Multas**: Editar/excluir registros de uso e infrações.
-- **Manutenção Preventiva**:
-  - Alertas quando veículo atinge limite de km (ex.: troca de óleo).
-  - Marcar manutenção como realizada.
-- **Controle Total**: Acesso a todos relatórios, telas e configurações.
-
-### Funcionalidades Extras
-
-- **Notificações Reativas**: Sistema monitora km e dispara alertas em tempo real via Socket.IO.
-- **Atualização de Localização via GPS**: Rota para receber latitude/longitude com CORS configurado.
-- **Comunicação em Tempo Real**: Notificações instantâneas sem reload.
+- CRUD de veículos, motoristas e usuários (perfis admin/user)
+- Gestão de multas, reembolsos e abastecimentos
+- Manutenções preventivas com alertas por km + manutenções manuais com anexos
+- Relatórios: uso, multas, consumo, violações, estatísticas avançadas
+- Avaliação FIPE (conserto viável)
+- **GPS**: mapa de usos, histórico de trajetos, geofences, últimas localizações
+- **VoIP**: módulo de comunicação com softphone WebRTC
+- Auditoria completa de ações
+- Notificações em tempo real (Socket.IO)
 
 ---
-
-## Como Executar
-
-1. Clone o repositório:
-   ```bash
-   git clone URL_DO_REPO.git
-   cd nome-do-projeto
-   ```
-2. Instale dependências:
-   ```bash
-   npm install
-   ```
-3. Configure variáveis de ambiente no `.env`:
-   ```env
-   DB_HOST=localhost
-   DB_USER=usuario
-   DB_PASS=senha
-   DB_NAME=nome_db
-   SESSION_SECRET=seusegredo
-   EMAIL_USER=seu@email.com
-   EMAIL_PASS=senha_email
-   ```
-4. Inicie o banco de dados (MySQL) e garanta que as tabelas existam.
-5. Rode o servidor:
-   ```bash
-   npm start
-   ```
-6. Acesse em `http://localhost:3000`.
-
----
-
 ## Tutorial de Uso do Sistema
 
 > **Localização**: `views/tutorial.ejs` ou diretamente aqui em Markdown.
@@ -103,7 +190,7 @@ Esse sistema é um app de gerenciamento de frota feito em Node.js com Express e 
 
 ### 1. Acessando o Sistema
 
-1. Abra o navegador e acesse `https://frota.inova.in`.
+1. Abra o navegador e acesse `http://localhost:3000`.
 2. Preencha email e senha.
 3. Clique em **Entrar**.
 4. Sucesso → Dashboard. Em caso de erro, tente novamente ou redefina a senha.

@@ -32,3 +32,13 @@
 
 17- HTTPS: Servidor configurado com TLS usando certificados em `/certs/fullchain.pem` e `/certs/privkey.pem`.
 
+18- Limite de upload: máximo de 10 MB por arquivo e somente tipos de imagem (PNG/JPG/GIF), evitando esgotamento de disco e upload de executáveis.
+
+19- `/uploads` autenticado: fotos de veículos, CNH e comprovantes só são servidas para usuários logados (`isAuthenticated` antes do `express.static`).
+
+20- APIs sensíveis autenticadas: rotas como `/ultimas-localizacoes` (dados de GPS) exigem login; rotas administrativas exigem `isAdmin`.
+
+21- Sessões fora do git: a pasta `.sessions/` (dados de usuários logados) está no `.gitignore`, assim como `.env`, `uploads/` e certificados.
+
+22- Falhas fail-safe: rotas críticas possuem tratamento de erro com resposta genérica ao cliente, sem expor stack trace.
+

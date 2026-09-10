@@ -6708,6 +6708,13 @@ if (mysqlUrl) {
   gpsPassword = url.password;
   gpsDatabase = url.pathname.substring(1);
   gpsPort = url.port || 3306;
+} else if (process.env.DB_HOST) {
+  // Fallback local: usa o banco principal para as tabelas de GPS
+  gpsHost = process.env.GPS_DB_HOST || process.env.DB_HOST;
+  gpsUser = process.env.GPS_DB_USER || process.env.DB_USER;
+  gpsPassword = process.env.GPS_DB_PASSWORD || process.env.DB_PASSWORD;
+  gpsDatabase = process.env.GPS_DB_NAME || process.env.DB_NAME;
+  gpsPort = process.env.GPS_DB_PORT || process.env.DB_PORT || 3306;
 }
 
 // Debug: mostrar o que será usado para GPS
