@@ -273,6 +273,25 @@ async function seedDatabase() {
     // Adicionar colunas que podem faltar em tabelas existentes
     console.log('🔧 Verificando colunas que faltam...');
     
+    // Adicionar colunas que faltam em usuarios
+    try {
+      await connection.execute(`ALTER TABLE usuarios ADD COLUMN nome VARCHAR(255) AFTER id`);
+      console.log('✅ Coluna nome adicionada à tabela usuarios');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna nome já existe em usuarios');
+      }
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE usuarios ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+      console.log('✅ Coluna created_at adicionada à tabela usuarios');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna created_at já existe em usuarios');
+      }
+    }
+    
     // Adicionar colunas que faltam em veiculos
     try {
       await connection.execute(`ALTER TABLE veiculos ADD COLUMN device_id VARCHAR(100)`);
