@@ -22,6 +22,15 @@ Sistema web de gerenciamento de frota feito em **Node.js + Express + MySQL**, co
 
 ---
 
+## Vídeo de apresentação
+
+Apresentação narrada (2min42s, Full HD) mostrando todas as telas e funcionalidades:
+
+- **Dentro do sistema**: página **Tutorial** (`/tutorial`) tem os botões Assistir/Baixar
+- **Direto**: [`public/video/apresentacao-controle-frota.mp4`](public/video/apresentacao-controle-frota.mp4)
+
+---
+
 ## Início rápido (um comando)
 
 ### Windows

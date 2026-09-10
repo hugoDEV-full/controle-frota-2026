@@ -40,3 +40,7 @@ certs/
 
 # uploads soltos versionados por engano
 uploads-/
+
+# artefatos de producao de video
+video-temp/
+/apresentacao-controle-frota.mp4
