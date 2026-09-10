@@ -294,6 +294,93 @@ async function seedDatabase() {
     
     // Adicionar colunas que faltam em veiculos
     try {
+      await connection.execute(`ALTER TABLE veiculos MODIFY COLUMN device_id VARCHAR(100)`);
+      console.log('✅ Coluna device_id ajustada para VARCHAR em veiculos');
+    } catch (err) {
+      console.log('ℹ️ Não foi possível ajustar device_id em veiculos:', err.code);
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE veiculos MODIFY COLUMN dispositivo VARCHAR(100)`);
+      console.log('✅ Coluna dispositivo ajustada para VARCHAR em veiculos');
+    } catch (err) {
+      console.log('ℹ️ Não foi possível ajustar dispositivo em veiculos:', err.code);
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE veiculos ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+      console.log('✅ Coluna created_at adicionada à tabela veiculos');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna created_at já existe em veiculos');
+      }
+    }
+    
+    // Adicionar colunas que faltam em notificacoes
+    try {
+      await connection.execute(`ALTER TABLE notificacoes ADD COLUMN criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+      console.log('✅ Coluna criado_em adicionada à tabela notificacoes');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna criado_em já existe em notificacoes');
+      }
+    }
+    
+    // Adicionar colunas que faltam em devices (GPS)
+    try {
+      await connection.execute(`ALTER TABLE devices ADD COLUMN dev_key VARCHAR(100)`);
+      console.log('✅ Coluna dev_key adicionada à tabela devices');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna dev_key já existe em devices');
+      }
+    }
+    
+    try {
+      await connection.execute(`ALTER TABLE devices ADD COLUMN dev_status TINYINT DEFAULT 1`);
+      console.log('✅ Coluna dev_status adicionada à tabela devices');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.log('ℹ️ Coluna dev_status já existe em devices');
+      }
+    }
+    
+    // Garantir colunas de timestamp em tabelas legadas
+    const colunasTimestamp = [
+      ['motoristas', 'created_at'],
+      ['multas', 'created_at'],
+      ['geofences', 'created_at'],
+      ['manutencoes', 'created_at'],
+      ['uso_veiculos', 'data_criacao'],
+      ['devices', 'dev_created']
+    ];
+    for (const [tabela, coluna] of colunasTimestamp) {
+      try {
+        await connection.execute(`ALTER TABLE \`${tabela}\` ADD COLUMN \`${coluna}\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+        console.log(`✅ Coluna ${coluna} adicionada à tabela ${tabela}`);
+      } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME') {
+          console.log(`ℹ️ Coluna ${coluna} em ${tabela}: ${err.code}`);
+        }
+      }
+    }
+    
+    // Colunas de texto que podem estar curtas em schemas antigos
+    const colunasTexto = [
+      ['uso_veiculos', 'finalidade', 'VARCHAR(500)'],
+      ['uso_veiculos', 'descricao', 'TEXT'],
+      ['auditoria', 'detalhes', 'TEXT']
+    ];
+    for (const [tabela, coluna, tipo] of colunasTexto) {
+      try {
+        await connection.execute(`ALTER TABLE \`${tabela}\` MODIFY COLUMN \`${coluna}\` ${tipo}`);
+        console.log(`✅ Coluna ${coluna} ajustada para ${tipo} em ${tabela}`);
+      } catch (err) {
+        console.log(`ℹ️ Não foi possível ajustar ${coluna} em ${tabela}: ${err.code}`);
+      }
+    }
+    
+    try {
       await connection.execute(`ALTER TABLE veiculos ADD COLUMN device_id VARCHAR(100)`);
       console.log('✅ Coluna device_id adicionada à tabela veiculos');
     } catch (err) {

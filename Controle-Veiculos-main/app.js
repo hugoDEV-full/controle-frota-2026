@@ -216,7 +216,7 @@ const upload = multer({
 });
 const uploadMultiple = multer({
   storage: storage,
-  limits: { fileSize: 1000 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -3541,7 +3541,7 @@ function getOrCreateDisplayName(db, lat, lng) {
 // Parser Multer para um único arquivo foto_km
 const uploadSingleFoto = multer({
   storage,
-  limits: { fileSize: 1000 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
       return cb(new Error('Só imagens são permitidas'), false);
@@ -3712,7 +3712,7 @@ app.post('/usar/:id', isAuthenticated, uploadSingleFoto, csrfProtection, (req, r
 
 const uploadOptionalFoto = multer({
   storage,
-  limits: { fileSize: 1000 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
       return cb(new Error('Só imagens são permitidas'), false);
@@ -7807,8 +7807,9 @@ app.get(
 ///////////////////////////////////////////mostrar todos os veiculos no  mapa /////////////////////
 
 // Exemplo em Node.js (ajuste à sua lógica)
-app.get('/ultimas-localizacoes', async (req, res) => {
-  const [rows] = await db.query(`
+app.get('/ultimas-localizacoes', isAuthenticated, async (req, res) => {
+  try {
+    const rows = await query(`
     SELECT d.dev_id, d.dev_name AS veiculoNome, d.dev_key,
            v.placa, v.modelo,
            h.latitude, h.longitude, h.datahora_recebido
@@ -7823,7 +7824,11 @@ app.get('/ultimas-localizacoes', async (req, res) => {
     WHERE d.dev_status = 1
   `);
 
-  res.json(rows);
+    res.json(rows);
+  } catch (err) {
+    console.error('Erro em /ultimas-localizacoes:', err);
+    res.status(500).json({ error: 'Erro ao buscar últimas localizações' });
+  }
 });
 
 ////////////////////////////////////////////relatorio velocidades

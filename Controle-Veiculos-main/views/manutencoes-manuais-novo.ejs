@@ -1,0 +1,90 @@
+<%
+// manutencoes-manuais-novo.ejs
+// Variáveis esperadas: manu (obj com defaults), veiculos (array), csrfToken, user
+const manuSafe = typeof manu !== 'undefined' && manu ? manu : { veiculo_id: '', tipo: '', descricao: '', km_agendado: '', data_agendada: '', status: 'pendente' };
+const veiculosList = typeof veiculos !== 'undefined' ? veiculos : [];
+
+function fmtDateInput(d) {
+  if (!d) return '';
+  if (typeof d === 'string') return d.substring(0, 10);
+  try { return d.toISOString().substring(0, 10); } catch (e) { return ''; }
+}
+%>
+
+<div class="container-fluid my-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Nova Manutenção Manual</h5>
+            <small class="text-muted">Cadastre uma manutenção agendada para qualquer veículo</small>
+          </div>
+          <div>
+            <a href="/manutencoes-manuais" class="btn btn-sm btn-outline-secondary">Voltar</a>
+          </div>
+        </div>
+
+        <form action="/manutencoes-manuais/novo" method="post" class="card-body">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <div class="mb-3">
+            <label for="veiculo_id" class="form-label">Veículo <span class="text-danger">*</span></label>
+            <select id="veiculo_id" name="veiculo_id" class="form-select" required>
+              <option value="">Selecione um veículo...</option>
+              <% veiculosList.forEach(v => { %>
+                <option value="<%= v.id %>" <%= Number(manuSafe.veiculo_id) === Number(v.id) ? 'selected' : '' %>>
+                  <%= v.nome %> <%= v.placa ? '(' + v.placa + ')' : '' %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="tipo" class="form-label">Tipo <span class="text-danger">*</span></label>
+            <input id="tipo" name="tipo" type="text" class="form-control" required
+                   placeholder="Descreva o tipo de manutenção (ex: Troca de óleo, Rodízio...)"
+                   autocomplete="off" value="<%= manuSafe.tipo || '' %>">
+            <div class="form-text">Campo livre: escreva o tipo de manutenção.</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="descricao" class="form-label">Descrição</label>
+            <textarea id="descricao" name="descricao" rows="4" class="form-control"
+                      placeholder="Detalhes da manutenção..."><%= manuSafe.descricao || '' %></textarea>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <label for="km_agendado" class="form-label">KM agendado</label>
+              <input type="number" id="km_agendado" name="km_agendado" class="form-control"
+                     min="0" value="<%= manuSafe.km_agendado || '' %>">
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label for="data_agendada" class="form-label">Data agendada</label>
+              <input type="date" id="data_agendada" name="data_agendada" class="form-control"
+                     value="<%= fmtDateInput(manuSafe.data_agendada) %>">
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label for="status" class="form-label">Status</label>
+              <select id="status" name="status" class="form-select">
+                <option value="pendente" <%= manuSafe.status === 'pendente' ? 'selected' : '' %>>Pendente</option>
+                <option value="em_manutencao" <%= manuSafe.status === 'em_manutencao' ? 'selected' : '' %>>Em manutenção</option>
+                <option value="realizada" <%= manuSafe.status === 'realizada' ? 'selected' : '' %>>Realizada</option>
+              </select>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="d-grid d-md-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Criar manutenção</button>
+            <a href="/manutencoes-manuais" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

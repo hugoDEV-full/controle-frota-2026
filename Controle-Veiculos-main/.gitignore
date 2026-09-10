@@ -34,3 +34,9 @@ build/
 *.iml
 
 certs/
+
+# sessões em arquivo (dados de usuários logados)
+.sessions/
+
+# uploads soltos versionados por engano
+uploads-/

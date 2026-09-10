@@ -1,0 +1,152 @@
+<%
+// manutencoes-manuais.ejs
+// Variáveis esperadas: manutencoes (array), filtro {status, veiculo}, csrfToken, user
+const manutList = typeof manutencoes !== 'undefined' ? manutencoes : [];
+const filtroSafe = typeof filtro !== 'undefined' && filtro ? filtro : { status: '', veiculo: '' };
+const csrfTokenSafe = typeof csrfToken !== 'undefined' ? csrfToken : '';
+
+// YYYY-MM-DD -> DD/MM/YYYY
+function fmtDate(d) {
+  if (!d) return '-';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return d;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+// YYYY-MM-DD HH:MM -> DD/MM/YYYY HH:MM
+function fmtDateTime(d) {
+  if (!d) return '-';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/);
+  if (!m) return fmtDate(d);
+  return `${m[3]}/${m[2]}/${m[1]} ${m[4]}`;
+}
+
+function statusBadge(st) {
+  if (st === 'pendente') return '<span class="badge bg-warning text-dark">Pendente</span>';
+  if (st === 'em_manutencao') return '<span class="badge bg-info text-dark">Em manutenção</span>';
+  if (st === 'realizada') return '<span class="badge bg-success">Realizada</span>';
+  return '<span class="badge bg-secondary">' + (st || '-') + '</span>';
+}
+%>
+
+<div class="container-fluid my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Manutenções Manuais</h3>
+    <a href="/manutencoes-manuais/novo" class="btn btn-success">
+      <i class="bi bi-plus-lg"></i> Nova Manutenção
+    </a>
+  </div>
+
+  <!-- Filtros (GET) -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <form action="/manutencoes-manuais" method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-md-4">
+          <label for="filtroStatus" class="form-label small mb-1">Status</label>
+          <select id="filtroStatus" name="status" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="pendente" <%= filtroSafe.status === 'pendente' ? 'selected' : '' %>>Pendente</option>
+            <option value="em_manutencao" <%= filtroSafe.status === 'em_manutencao' ? 'selected' : '' %>>Em manutenção</option>
+            <option value="realizada" <%= filtroSafe.status === 'realizada' ? 'selected' : '' %>>Realizada</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-4">
+          <label for="filtroVeiculo" class="form-label small mb-1">Veículo (nome ou placa)</label>
+          <input type="search" id="filtroVeiculo" name="veiculo" class="form-control form-control-sm"
+                 placeholder="Ex: ABC-1234 ou Caminhão" value="<%= filtroSafe.veiculo %>">
+        </div>
+        <div class="col-12 col-md-4 d-flex gap-2">
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+          <a href="/manutencoes-manuais" class="btn btn-sm btn-outline-secondary">Limpar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <% if (manutList.length === 0) { %>
+    <div class="alert alert-info">Nenhuma manutenção encontrada.</div>
+  <% } else { %>
+
+    <style>
+      .table-custom tbody tr:nth-child(odd) { background-color: #f8f9fa; }
+      .table-custom tbody tr:hover { background-color: #e9ecef; }
+      .table-custom td, .table-custom th { vertical-align: middle; }
+      .card-manut { margin-bottom: 0.75rem; border-radius: 0.5rem; }
+      .card-manut .card-body { padding: 0.6rem 0.9rem; }
+      .card-manut .meta { font-size: 0.9rem; color: #6c757d; }
+    </style>
+
+    <!-- Tabela para md+ -->
+    <div class="table-responsive d-none d-md-block">
+      <table class="table table-hover table-sm table-custom mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Veículo</th>
+            <th>Tipo</th>
+            <th>Descrição</th>
+            <th class="text-nowrap">KM Agendado</th>
+            <th class="text-nowrap">Data Agendada</th>
+            <th>Status</th>
+            <th class="text-nowrap">Criado em</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% manutList.forEach(m => { %>
+            <tr>
+              <td class="text-nowrap">
+                <div class="fw-bold"><%= m.veiculo_nome || '-' %></div>
+                <small class="text-muted"><%= m.placa || '' %></small>
+              </td>
+              <td><%= m.tipo || '-' %></td>
+              <td style="max-width:320px; white-space:normal; word-break:break-word;">
+                <small><%= m.descricao ? (m.descricao.length > 140 ? m.descricao.substring(0,140) + '...' : m.descricao) : '-' %></small>
+              </td>
+              <td class="text-nowrap"><%= m.km_agendado || '-' %></td>
+              <td class="text-nowrap"><%= fmtDate(m.data_agendada) %></td>
+              <td><%- statusBadge(m.status) %></td>
+              <td class="text-nowrap"><small class="text-muted"><%= fmtDateTime(m.criado_em) %></small></td>
+              <td class="text-end">
+                <a href="/manutencoes-manuais/<%= m.id %>/editar" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-pencil"></i> Editar
+                </a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Cards empilhados para sm (celulares) -->
+    <div class="d-block d-md-none">
+      <% manutList.forEach(m => { %>
+        <div class="card card-manut shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="fw-bold"><%= m.tipo || '-' %></div>
+                <div class="meta"><%= m.veiculo_nome || '-' %> <%= m.placa ? '(' + m.placa + ')' : '' %></div>
+                <% if (m.descricao) { %>
+                  <div class="meta"><%= m.descricao.length > 120 ? m.descricao.substring(0,120) + '...' : m.descricao %></div>
+                <% } %>
+              </div>
+              <div class="text-end">
+                <%- statusBadge(m.status) %>
+                <div class="mt-2">
+                  <a href="/manutencoes-manuais/<%= m.id %>/editar" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div class="row mt-2 small text-muted">
+              <div class="col-6">KM: <strong><%= m.km_agendado || '-' %></strong></div>
+              <div class="col-6 text-end">Data: <strong><%= fmtDate(m.data_agendada) %></strong></div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+  <% } %>
+</div>
